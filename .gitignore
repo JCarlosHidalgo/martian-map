@@ -1,0 +1,6 @@
+# Secrets of the local Docmost instance
+docs/guide/.env
+
+# Python
+__pycache__/
+*.pyc

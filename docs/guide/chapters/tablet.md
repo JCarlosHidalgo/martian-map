@@ -1,0 +1,701 @@
+# Tablet
+
+La tablet es la app que usa el astronauta. Es offline-first: dibuja el terreno desde su caché,
+calcula las rutas y aplica las ediciones sin depender del hábitat ni de la Tierra. Sus cinco
+componentes (`Routing`, `Edits`, `Terrain`, `FX`, `HUD`) y su lugar entre los otros ambientes están
+en [Los ambientes](./ambientes.md).
+
+Los experimentos que esta página nombra (E1 a E9) están en
+[Reparto del trabajo](./reparto.md), con su criterio y su plan B.
+
+## Motor y ficha del dispositivo (D1)
+
+**Unity 6.3 LTS + URP, build nativo Android.** La tablet de la demo es una **Samsung Galaxy Tab S9
+FE**. No hay iPad.
+
+| Ficha | Valor |
+|---|---|
+| SoC | Exynos 1380 |
+| GPU | Mali-G68 MP5 |
+| Vulkan | 1.3.219, driver r38p1 |
+| Sistema | Android 16 |
+| Referencia de rendimiento | 3DMark Wild Life ≈ 2970, 18 fps (gama media-baja) |
+
+Fuentes de la ficha: [gpuinfo #44864](https://vulkan.gpuinfo.org/displayreport.php?id=44864),
+frente A §1–2.
+
+Por qué:
+
+- En Unity, el C# móvil va por IL2CPP (la ruta estándar), lo que deja la librería de rutas como C#
+  portable, probado fuera del motor.
+- Unity Personal es gratis (< USD 200 k).
+- Con una Mali de esa gama, la guía de referencia es la de Arm; con 3,3 Mpx nativos hay que
+  trabajar con render scale < 1 *(inferencia)*.
+- **La versión es Unity 6000.3.28f1 exacta**: corrige artefactos Vulkan en Mali (UUM-147578) y
+  retroporta arreglos de Swappy
+  ([notas 6000.3.28f1](https://unity.com/releases/editor/whats-new/6000.3.28f1), S4). Es el último
+  parche 6.3 a 2026-11-12 y no se sube de parche durante las 48 h.
+
+Cómo:
+
+- App nativa offline. Vulkan principal + GLES3 de respaldo.
+- `vSyncCount = 0` + `targetFrameRate` explícito.
+- Perfil URP de arranque *(inferencia, se ajusta en E1)*: render scale 0,6–0,75 con UI nativa, MSAA
+  2x o FXAA, HDR solo si el bloom lo exige y a 32 bit, bloom a ½, sin sombras en tiempo real.
+
+Factibilidad en 48 h: alta (≥2 personas saben Unity).
+
+Pendientes y riesgos:
+
+- No hay frametimes públicos de Unity 6 en esta GPU (**NO VERIFICADO** → **E1**).
+- La regresión de URP en Android no tiene causa raíz ni arreglo oficial; el síntoma apunta a pacing
+  ([hilo](https://discussions.unity.com/t/unity-6-android-urp-baseline-frametime-50ms-20-fps/1566399)).
+- La variante de RAM (6/8 GB) y la versión de Android de la unidad real → **E2**.
+
+### Build Web
+
+Hay un build Web solo si el núcleo Android está listo en H36, y con un tope de 2–3 h: WebGL2
+single-thread con un snapshot estático. WebGPU es experimental en 6.3 y no hay hilos C# gestionados en Web
+([Unity 6.3 WebGPU](https://docs.unity.com/en-us/engine/6000.3/manual/platform-specific/webgl/develop/graphics/web-gpu),
+frente D §19).
+
+## Mundo y tiles (D2)
+
+**Cada zona es un mundo ENU/equirectangular local, con su origen en `zone.json`. El terreno son
+tiles 257² `uint16` con offset y escala por tile, borde compartido y skirts.**
+
+- El heightmap regular comparte celdas con el costo y con las ediciones (U3).
+- float32 en coordenadas planetocéntricas da pasos de ~0,25 m; a 10 km de un origen local, ~1 mm.
+- `uint16` con escala por tile cuantiza < 1 cm.
+- `zone.json` lleva el CRS IAU_2015:49900, la lat/lon del origen y la proyección; sus campos están
+  en [Tierra](./tierra.md), sección "Tiles (C1)".
+- El LOD es un quadtree propio; CDLOD es una mejora.
+
+El formato del tile es C1, en [Tierra](./tierra.md), sección "Tiles (C1)".
+
+**Vista de contexto global:** una esfera MOLA propia de baja resolución (opcional). Cesium Mars
+solo se usa con conexión y **fuera del build de la tablet**: los ToS de ion §2.2.2 prohíben copiar
+o almacenar su contenido para uso offline; el plugin es Apache-2.0
+([Cesium ToS](https://cesium.com/legal/terms-of-service/), S11; frente D §18).
+
+Factibilidad en 48 h: media-alta (los skirts son ≈ ½ día).
+
+Pendientes y riesgos:
+
+- Bugs de costura y de LOD.
+- Cesium 1.26.1 en Unity 6.3 es **NO VERIFICADO**, e irrelevante: el terreno no depende de Cesium.
+  Si se usa en el video, el logo "Cesium ion" va visible.
+
+## Caché local
+
+La tablet guarda **los tiles C1 como archivos** en `persistentDataPath/zones/…` y **el catálogo y
+el log de ediciones en un SQLite local** (`gilzoide/unity-sqlite-net` 1.3.3).
+
+- Un tile se vuelve a descargar cuando su `?v=` difiere del cacheado, y se verifica su `sha256`.
+- Al recibir `changes`, `Terrain` llama a `apply()` y refresca `_HazardTex`.
+- `apply()` trabaja sobre los tiles de `z = 0`. Para que una edición se vea de lejos, `Terrain`
+  recalcula el `_HazardTex` de los tiles de `z > 0` que la cubren, con la regla de reducción de
+  [Convenciones](./convenciones.md), sección "Datos (C0)" *(equipo)*.
+- **Solo `Terrain` habla HTTP con el hábitat.** `HUD` y `Routing` reciben de `Terrain` lo que
+  necesitan (sección "Orquestación").
+- Las imágenes POV se guardan en `persistentDataPath/zones/{zone}/pov/`, con la misma regla de
+  `?v=` y `sha256`.
+- `gilzoide/unity-sqlite-net` 1.3.3 no tiene ningún reporte con Unity 6000.3 → **E8**.
+
+Los endpoints que alimentan la caché son C3, en [Hábitat](./habitat.md), sección "Los endpoints
+(C3)".
+
+### Gale precargada
+
+*(equipo)*
+
+**Gale viaja dentro del APK**, en `tablet/Assets/StreamingAssets/zones/gale/`.
+
+- El contenido es el bundle `zone_full` de Gale, sin empaquetar: `bundle.json`, que trae el
+  `zone_version`, y `data/` con `zone.json`, `conditions.json`, `tiles/` y `pov/`.
+- **P1 lo entrega y P4 lo mete en el build.** P1 lo sube con un PR a esa carpeta, con los binarios
+  en LFS, en el hito H24 ([Reparto del trabajo](./reparto.md), sección "Hitos"). Hasta entonces el
+  APK lleva la zona `synth` de `contracts/fixtures/` *(equipo)*.
+- En el primer arranque, `Terrain` copia la zona a `persistentDataPath/zones/gale/` y la anota en
+  el catálogo con su `zone_version`. En Android, StreamingAssets está dentro del APK: se lee con
+  `UnityWebRequest`, no con `System.IO`.
+- Es el mismo bundle que Tierra deja en el spool del hábitat, con las mismas versiones y los
+  mismos `sha256`: al conectarse, la tablet no vuelve a descargar nada de Gale.
+- Tamaño: ~100 MB para 3×3 km *(inferencia: 144 tiles de `z = 0` a ~0,5 MB, más los niveles
+  superiores)*.
+- Jezero no va en el APK: llega por el hábitat.
+
+## Costo de caminata (D6)
+
+**El costo de una ruta es solo tiempo.** La radiación es una **restricción** (un límite de
+duración), no un costo.
+
+| Parámetro | Valor | Fuente |
+|---|---|---|
+| Función | Tobler simétrica (c = 0) | |
+| v₀ | **P50 0,70 / P90 0,56 / P10 0,94 m/s** | medición a 0,4 g en vuelo parabólico (≈ 2,5 km/h, n = 3), que coincide con Froude (1,11·√0,38 = 0,68): [Cavagna 2000](https://pmc.ncbi.nlm.nih.gov/articles/PMC2270143) |
+| b | 3,0 (sensibilidad 2,5–3,5) | **sin ningún dato en gravedad reducida (NO VERIFICADO)** |
+| Techo de caminata | ~1,3 m/s | Fr ≈ 0,5, [Kram 1997](https://pubmed.ncbi.nlm.nih.gov/9076966/), *cálculo propio* |
+| Bloqueo por pendiente | > 15° | MoonPath |
+| Bloqueo por relieve local | > 0,61 m | analogía con senderos peatonales USFS clase 1 y 2 ([USFS, copia de terceros](https://santabarbaratrails.org/docs/franklin/National-Forest-System-Trails-Design-Parameters_05_01_2011.pdf)) |
+| Penalización de rugosidad | desde 0,36 m | misma analogía USFS |
+| Otros bloqueos duros | peligro rojo; fuera de cobertura DTM | |
+
+Fuente común: frente B §7–8.
+
+La fórmula, con los parámetros en `cost_params.json`:
+
+`t(e) = longitud_3D / [v₀·exp(−b·|s|)·f_rug·f_terreno] + penalización por peligro ámbar`
+
+- **`s` es la pendiente a lo largo de la arista** *(propuesta)*: el desnivel entre sus dos nodos
+  (la diferencia de `height_m`) dividido por su longitud horizontal, sin unidad. No es el raster
+  `slope`, que solo decide el bloqueo por pendiente. `longitud_3D` es la raíz de la longitud
+  horizontal al cuadrado más el desnivel al cuadrado.
+- La ETA del plan usa **P50**. `ReturnField` y el punto de no-retorno usan **P90**.
+- `f_terreno` no se aplica dos veces: Cavagna midió en plataforma lisa.
+- **La fórmula tiene una sola implementación**, en `Routing`. Ningún otro ambiente calcula ni
+  guarda costo *(equipo)*: Tierra no produce un raster de costo, y la validación de la fórmula
+  son los goldens de la sección "Contrato de rutas (C4)".
+
+Factibilidad en 48 h: alta.
+
+Límites que se declaran:
+
+- No existe un modelo de caminata validado a 0,38 g. **b se presenta como sensibilidad.**
+- P10 es una predicción (Cavagna 1998), no una medición.
+- Los umbrales USFS son una analogía terrestre declarada.
+- El bloqueo es de rugosidad, no de roca: HiRISE no resuelve rocas < 1,5 m
+  ([Golombek 2010](https://marsoweb.nas.nasa.gov/landingsites/msl/workshops/4th_workshop/talks/Golombek_Rocks_4th_Wkshp.pdf)),
+  y bajo ~0,3 m el DTM es ruido.
+
+## Rutas (D7)
+
+| Qué | Algoritmo |
+|---|---|
+| Tramo | **A\* 16-conexo + suavizado**: string-pulling que solo acepta un atajo si no empeora el costo integrado |
+| Regreso | **campo Dijkstra inverso al hábitat**: da radio de regreso, punto de no-retorno y heatmap en una corrida |
+| Alternativas | 3, por suma ponderada |
+| Orden de paradas | **Held-Karp (k ≤ 12) o greedy + 2-opt**, en modos TSP con depósito y orienteering |
+| Opcionales | HPA\*, D\* Lite y OR-Tools |
+
+- Theta\* básico no garantiza el óptimo y cruza zonas de peligro si se implementa mal (contra R4).
+- **El heap binario es propio y obligatorio**, con decrease-key por `heapIndex[celda]`:
+  `PriorityQueue<TElement,TPriority>` solo existe en .NET 6+, y Unity 6.3 solo ofrece .NET Standard
+  2.1 y .NET Framework 4.8
+  ([Microsoft Learn](https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.priorityqueue-2?view=net-9.0),
+  [Unity .NET profiles](https://docs.unity.com/en-us/engine/6000.3/manual/programming-environment/overview-of-dot-net-in-unity/dotnet-profile-support),
+  S6). **E6** lo comprobó: `PriorityQueue` no compila en ningún perfil de API de Unity ni en
+  netstandard2.1.
+
+Cómo:
+
+- Librería C# propia, ~800–1500 líneas, netstandard2.1 y sin `UnityEngine`.
+- Arrays planos (SoA), sin `class Node`, sin LINQ.
+- Llamadas thread-safe; el campo corre en un hilo de fondo.
+- Planificación a 2 m: hasta 4 M de celdas (zona de 4×4 km; la de 3×3 km son 2,25 M).
+- Un CI compila la librería **solo** contra netstandard2.1.
+
+Esfuerzo estimado: ~4–6 h el tramo, ~1–2 h el campo, ~3–4 h las paradas. En qué orden se
+construye y qué parte mide el benchmark de H5: [Reparto del trabajo](./reparto.md), sección "P3:
+motor de rutas y ediciones".
+
+**El rendimiento es NO VERIFICADO**: A\* esquina a esquina 0,3–2 s, campo 1–4 s, memoria 60–90 MB,
+todo *inferencia* (frente A §4) → **E5**, **E7**.
+
+Orden de los planes de rendimiento:
+
+1. **Plan A:** C# con IL2CPP y arrays planos, grilla de 2 m.
+2. **Plan B:** grilla de 4 m, weighted A\* ε = 1,5 y campo precalculado en el hábitat.
+3. **Plan C:** Burst, con un wrapper HPC# aparte. Burst no admite clases ni arrays gestionados y
+   no compila la librería netstandard2.1 tal cual
+   ([Burst 1.8](https://docs.unity3d.com/Packages/com.unity.burst@1.8/manual/csharp-type-support.html)).
+
+## Contrato de rutas (C4)
+
+C4 tiene tres partes: `cost_params.json`, la API de `Routing` y `Edits.Apply`. Lo que esta sección
+marca *(equipo)* ya está decidido: P3 lo transcribe al fijar el contrato.
+
+### `cost_params.json`
+
+| Campo | Valor |
+|---|---|
+| `schema_version` | `1` |
+| `v0_mps` | `{p10:0.94, p50:0.70, p90:0.56}` |
+| `b` | `{p50:3.0, low:2.5, high:3.5}` |
+| `c` | `0` |
+| `walk_ceiling_mps` | `1.3` |
+| `max_slope_deg` | `15` |
+| `relief_block_cm` | `61` |
+| `relief_penalty_from_cm` | `36` |
+| `hazard_red_min`, `hazard_amber_min` | `uint8`; valores en [Convenciones](./convenciones.md), sección "Valores fijados" |
+| `f_terreno`, `f_rug_min`, `amber_penalty_s_per_m` | `f_terreno`, el suelo de `f_rug` y la penalización ámbar; valores en la misma sección |
+| `alt_safest_amber_mult`, `alt_gentlest_s_per_m` | `4` y `10`: los pesos de las alternativas *(equipo)* |
+
+### Tipos
+
+*(equipo)*
+
+`Routing` no lee archivos, red ni JSON: recibe structs y arrays y devuelve resultados. `Terrain`
+lee `cost_params.json` y `conditions.json` y se los pasa ya convertidos; la misión la recibe del
+`HUD` en `RouteRequested`, ya en estos tipos. Quién lo
+llama, en la sección "Orquestación".
+
+| Tipo | Contenido |
+|---|---|
+| `TileRasters` | un tile de `z = 0`: `origin_enu_m` (su esquina suroeste, de `tile.json`), `height` (`ushort[]`), `scale`, `offset`, y `slope`, `roughness` y `hazard` (`byte[]`), tal como vienen en C1 |
+| `Grid` | la grilla de planificación: `width` y `height` en nodos, `cell_m` (2), `origin_enu_m` (el nodo `(0, 0)`, la esquina suroeste) y cuatro arrays planos de `width × height`: `height_m` (`float32`), `slope_deg`, `roughness_cm` y `hazard` (`uint8`). El nodo `(i, j)` está en el índice `j · width + i`; `i` crece al este y `j` al norte. Es inmutable |
+| punto: `start`, `goal`, `home`, `enu_m` de una parada | `(e, n)` en metros ENU de la zona, `float64`. `Routing` lo lleva al nodo más cercano; si ese nodo está bloqueado, el resultado es "no hay ruta" |
+| `Route` | `{found (bool), cells[] (índices de nodo), polyline_enu_m[] ([e, n, u]), length_m, ascent_m, amber_m, eta_s{p10,p50,p90}, max_hazard (uint8)}` |
+| `Field` | `{time_s[]}`: un `float32` por nodo, el tiempo de regreso a `home` con v₀ P90; `+∞` donde no hay regreso |
+| `Alternative` | un enum: `Fastest`, `Safest`, `Gentlest`, con los valores 0, 1 y 2 *(propuesta)*. Todo `Route[]` o `Plan[]` de alternativas trae siempre las tres, en ese orden, aunque dos coincidan |
+| `CostParams` | los campos de `cost_params.json`, uno a uno: es el `params` de todas las llamadas *(propuesta)* |
+| `Stop` | `{id, enu_m, science_value, dwell_s}`; `science_value` es un entero de 0 a 10 |
+| `Budget` | `{t_s, dose_uGy}` |
+| `Conditions` | `{value_uGy_h, modifiers[]{factor, valid_from, valid_to}}`, de `conditions.json`. Toda fecha, aquí y en `t_utc`, es un `DateTime` en UTC *(propuesta)* |
+| `Plan` | `{order[] (los `id` en orden de visita), dropped[] (los `id` que no caben; solo en modo OP), legs[] (una `Route` por tramo, con el regreso a `home`), total_s{p10,p50,p90} (caminata más `dwell_s`), dose_uGy, limit_s, return_ok (bool)}` |
+
+- `height_m` y la `u` de `polyline_enu_m` son altura sobre el areoide menos `origin_height_m`: la
+  Y de la escena.
+- `ascent_m` es el desnivel acumulado, subido más bajado. `amber_m` son los metros recorridos en
+  celda ámbar.
+- `eta_s` nunca incluye penalizaciones ([Convenciones](./convenciones.md), sección "Valores
+  fijados").
+
+### API de `Routing`
+
+| Llamada | Devuelve |
+|---|---|
+| `BuildGrid(tiles, origin_height_m, params)` *(equipo)* | la `Grid`, armada desde los `TileRasters`, ya con las ediciones aplicadas |
+| `PlanRoute(grid, start, goal, params)` | `Route` |
+| `ReturnField(grid, home, params)` | `Field` (usa P90) |
+| `Alternatives(grid, start, goal, params, k = 3)` | `Route[]`, una por alternativa, en el orden de `Alternative` |
+| `DurationLimit(conditions, t_utc, dose_uGy)` *(equipo)* | `limit_s`: el límite de duración por radiación |
+| `OrderStops(grid, start, stops, home, budget, limit_s, mode, params)` | `Plan[]`, una por alternativa, en el orden de `Alternative`; `mode` es TSP u OP. La ruta sale de `start` y termina en `home` |
+| `Benchmark.Run(log)` *(equipo)* | el texto de `Routing/BENCHMARK.md`: genera las grillas con semilla de E5, corre sus casos y devuelve la tabla de resultados. `log` recibe cada línea según sale |
+
+- Las llamadas son thread-safe y reentrantes.
+- **`BuildGrid`** *(equipo)*: el nodo `(i, j)` está en `origin_enu_m + (2i, 2j)` metros. En el
+  tile de `z = 0` que lo contiene es la muestra de la columna `c = 2i` y la fila `r = 256 − 2j`,
+  con `i` y `j` contados desde la esquina suroeste de ese tile: en C0 la fila 0 es el borde
+  norte. `height_m` toma esa muestra; `slope_deg`, `roughness_cm` y `hazard` toman el máximo de
+  las 3 × 3 muestras centradas en ella, que es el lado seguro (R4). Un nodo sobre una muestra
+  `nodata` lleva `height_m` = 0 y `hazard` = 255 *(propuesta)*.
+- **`Benchmark.Run`** *(equipo)* es C# puro, dentro del paquete `Routing` y no en `Tests~/`, para
+  que lo llamen igual `dotnet` en el portátil y la escena de benchmark de la tablet. Entra en la
+  firma de H0:45, con el cuerpo vacío, y P3 lo rellena en H2–4, con el núcleo. Quién escribe la
+  escena y el APK: [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones".
+- **`DurationLimit`** *(equipo)*: `limit_s = dose_uGy / tasa · 3600`. La tasa es `value` por el
+  producto de los `factor` vigentes en `t_utc`, contando como 1 todo factor < 1 (la regla Forbush
+  de [Tierra](./tierra.md), sección "Condiciones (C6)").
+- **`OrderStops`** *(equipo)* planifica contra `min(budget.t_s, limit_s)`. En TSP visita todas
+  las paradas; en OP maximiza la suma de `science_value` y deja el resto en `dropped`. El orden se
+  decide con la alternativa más rápida y es el mismo en las tres `Plan`.
+- `Plan.dose_uGy` es esa misma tasa por `total_s.p50`. `return_ok` es falso si, en alguna parada,
+  el regreso a `home` con P90 ya no cabe en lo que queda de `min(budget.t_s, limit_s)`.
+
+Las tres alternativas *(equipo)*:
+
+| Alternativa | Qué minimiza |
+|---|---|
+| `fastest`, más rápida | la fórmula del costo, tal cual |
+| `safest`, más segura | la fórmula, con la penalización ámbar multiplicada por `alt_safest_amber_mult` |
+| `gentlest`, menos desnivel | la fórmula, más `alt_gentlest_s_per_m` segundos por metro de desnivel |
+
+La tercera mide desnivel y no esfuerzo: el costo metabólico está fuera de alcance
+([Contexto del reto](./contexto.md), sección "Fuera de alcance"). Dos alternativas pueden dar la
+misma ruta.
+
+### `Edits.Apply`
+
+`Apply(baseHazard, origin_enu_m, edits[])` *(equipo)* devuelve el `hazard` de un tile de `z = 0`
+con las ediciones aplicadas. `origin_enu_m` es la esquina suroeste del tile, de `tile.json`: sitúa
+los vértices, que van relativos al origen de la zona. Se pasa en metros enteros *(equipo)*:
+`extent_enu_m` empieza en un metro entero, así que ningún float entra en `apply()`. `baseHazard` es el `byte[]` de C1 y `edits[]` son las ediciones ya
+leídas, que `Terrain` convierte desde el log. `Edits` no usa ningún tipo de `Routing`: los dos
+ensamblados no se referencian.
+
+`LiveEntities(edits[])` *(equipo)* devuelve las entidades vivas de un log: por cada
+`entity_id`, su ganadora, con `entity_id`, `op`, `creator`, `level` y `payload`. Aplica las mismas
+reglas que `Apply`, en el mismo recorrido, así que la regla de merge tiene una sola implementación
+en C#. `Terrain` la llama para emitir `EntitiesChanged`; no calcula ganadoras por su cuenta.
+
+El tipo `Edit` de C# *(equipo)* lleva los campos del esquema de `Edit`, más `from_habitat`
+(bool), que no viaja: `Terrain` lo pone a verdadero en una ganadora recibida por `changes`, y es
+la marca que hace que no se reevalúe su `confirmed`. También lo pone a verdadero en una edición
+local cuando llega su ack `accepted` *(equipo)*: el hábitat ya la evaluó con el log entero. Cómo
+funciona: sección "`apply()` (D5)".
+
+**Los tipos de las ediciones se definen una sola vez, en `Edits`** *(equipo)*, y entran en la
+firma de H0:45. Los asmdef de `Terrain`, `HUD` y `FX` referencian `Edits`, igual que `Routing`:
+
+| Tipo | Contenido |
+|---|---|
+| `Edit` | el de arriba; su `payload` es un `EditPayload` |
+| `EditPayload` | los campos de los tres `payload` del catálogo de `op` ([Convenciones](./convenciones.md), sección "Ediciones"): `polygon` y `point` como enteros en punto fijo, `level` (`byte`), `confirmed` (bool) y `text`. Cada `op` usa los suyos y deja los demás sin valor |
+| `LiveEntity` | `{entity_id, op, creator, level, payload}`: lo que devuelve `LiveEntities` |
+
+`EditRequested` lleva un `EditPayload` y `EntitiesChanged` un `LiveEntity[]`. El `HUD` construye
+el `EditPayload` al crear una edición; `FX` solo lee el `polygon` y el `level` de cada entidad.
+
+### Entregables y goldens
+
+En H0–2 P3 no tiene implementación. Deja en `main` lo que no depende de código, y los goldens que
+sí dependen entran después *(equipo)*:
+
+| Entregable | En H2 | Con código |
+|---|---|---|
+| `cost_params.json` y su esquema | completos | |
+| La firma pública: los tipos y las llamadas de esta sección, en `Routing/` y `Edits/` | compila contra netstandard2.1; cada cuerpo lanza `NotImplementedException` | se rellena según el orden de [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones" |
+| `routing/costgrid_synth.bin` | completo: lo genera un script | |
+| `routing/expected_route.json` | una `Route` que genera el script de `costgrid_synth.bin`, sin A\* *(equipo)*: una recta sobre la rampa de la grilla sintética, con `eta_s` = longitud_3D / (v₀ · exp(−b · s) · `f_terreno`) y s = 20/256. Su `u` sigue la rampa, así que se dibuja sobre el tile sintético. Fija la forma y es el mock de `Terrain`, `FX` y `HUD` | P3 la regenera con el A\* suavizado, por un PR en `contracts/` |
+| `routing/expected_plan.json` | `{schema_version, plans[]}`: las tres `Plan`, en el orden de `Alternative`, que genera el mismo script con las dos paradas de la misión sintética. Sobre la rampa las tres son iguales. Es el mock de `RouteSelected` | P3 la regenera con `OrderStops` |
+| `edits/base_tile/` y `edits/edits_NN.json` | completos; `base_tile/` es una copia del tile sintético de C1 | |
+| `edits/expected_NN.sha256` | no existen | entran con `apply()`, antes de H6: los usa E9 |
+
+- `costgrid_synth.bin` *(equipo)* es una `Grid` serializada, little-endian: `width` y `height`
+  (`int32`), `cell_m` (`float32`), `origin_e` y `origin_n` (`float64`), y después los cuatro
+  arrays en el orden de la tabla de tipos. La sintética es la grilla del tile sintético, con su
+  rampa y su peligro: las fórmulas, el tamaño y el origen están en
+  [Convenciones](./convenciones.md), sección "Cómo se fija un contrato". El script de P3 arma los
+  rasters del tile con esas fórmulas y los reduce con la regla de `BuildGrid`; no lee el tile de
+  P1. Las grillas patológicas viven en los tests de `Routing/`.
+- Las rutas de la tabla son relativas a `contracts/fixtures/`.
+- Resultados del benchmark: `Routing/BENCHMARK.md`.
+
+## `apply()` (D5)
+
+**`apply(baseTile, edits[]) → tile'` es una función pura con una sola implementación, en C#**
+(ensamblado `Edits`, netstandard2.1), **y se ejecuta en la tablet.**
+
+- Dos implementaciones (C# + Python) divergen por float32/64 y por la contracción a FMA que clang
+  activa por defecto ([Clang](https://clang.llvm.org/docs/UsersManual.html#cmdoption-ffp-contract)).
+  Por eso el hábitat solo fusiona metadatos ([Hábitat](./habitat.md), sección "Log de ediciones y
+  merge (D5)").
+- **Aritmética entera:** `hazard` es `uint8` y los vértices van en punto fijo (1/256 de celda).
+- **`apply()` solo cambia `rasters.hazard`** *(equipo)*: ninguna edición toca la altura, y una
+  nota no toca el tile.
+- **Orden determinista:** `(lamport, author, uuid)`. Al recorrerlo, `apply()` evalúa la regla de
+  confirmación igual que el merge ([Convenciones](./convenciones.md), sección "Ediciones").
+- **Una ganadora que llegó por `changes` no se reevalúa** *(equipo)*: el hábitat ya la aceptó
+  viendo el log entero, que la tablet no tiene. `Terrain` la marca al guardarla y `apply()` la
+  aplica sin mirar `confirmed`. Lo mismo vale para una edición local desde que llega su ack
+  `accepted`. La regla solo se evalúa sobre las ediciones locales sin ack. El
+  golden de merge lleva un caso así: una subida de quien no es el creador, sobre una edición
+  intermedia que la tablet no vio.
+- Una muestra queda dentro de un polígono si cae en su interior o en su borde, con la regla
+  par-impar *(equipo)*.
+- Golden hashes en `contracts/fixtures/edits/`: `expected_NN.sha256` es el SHA-256 del `hazard.r8`
+  que resulta *(equipo)*.
+- Los datos originales no se tocan.
+
+La equivalencia entre x64-JIT y ARM64-IL2CPP es **NO VERIFICADA** → **E9**.
+
+## Efectos visuales (D8)
+
+**El holograma es Shader Graph** (fresnel, scanlines, curvas de nivel por `frac` de la altura,
+wireframe, bloom) **y el heatmap es una textura R8.** La niebla tiene dos partes:
+
+- **Niebla lejana:** un tinte en el shader del terreno.
+- **Niebla cercana:** una sola pasada analítica + pocas partículas grandes.
+
+Por qué:
+
+- URP no trae niebla volumétrica nativa. Desde arriba, una niebla estilizada se lee mejor y encaja
+  con la estética holográfica (U6).
+- En Mali el blending reduce la eliminación de superficies ocultas y los algoritmos fragment rinden
+  más que los compute; el driver limita a 512 invocaciones por workgroup; la tablet sí soporta R8,
+  R16 y RG8 como attachment y storage (leído en gpuinfo, no ejecutado en la tablet → **E1**)
+  ([Arm GPU Best Practices 4.0, §8.6, §9.1, §12.7](https://documentation-service.arm.com/static/6ae1e4b40fefe512f5edb01a?token=);
+  [gpuinfo #44864](https://vulkan.gpuinfo.org/displayreport.php?id=44864); frente A §3).
+
+Cómo:
+
+- **Sin compute, sin `discard` y sin framebuffer fetch en shaders propios.**
+- `half` para el color y `float` para la altura de las curvas.
+- Bloom a ½, sin High Quality Filtering.
+
+Factibilidad en 48 h: alta.
+
+Pendientes y riesgos:
+
+- **El overdraw blended de la niebla es el riesgo principal**; su coste no tiene benchmark
+  (**NO VERIFICADO**) → **E3**.
+- Hay un crash de framebuffer fetch reportado en 2021.3 + GLES3 + Mali-G76
+  ([hilo](https://discussions.unity.com/t/urp-shader-framebuffer-fetch-mali-crash/915692)); en 6.3
+  es **NO VERIFICADO** → **E4**.
+- Un raymarch de 8–16 pasos a ¼ de resolución solo entra como fragment shader y tras perfilar en
+  H12–24.
+- Plan B: solo el tinte en el terreno, sin partículas.
+
+## Contrato de escena (C5)
+
+| Qué | Contenido |
+|---|---|
+| Prefabs | `Terrain` (P4), `FX` (P5), `HUD` (P6), `Routes` (P5, en `tablet/Assets/FX/`) |
+| Propiedades de material | por tile y globales: tablas de abajo |
+| Capas | qué une cada capa de C1 con su textura y su toggle: tabla "Capas" |
+| Bus de eventos | tabla "Eventos" |
+| Prohibido en shaders propios | compute, `discard`, framebuffer fetch |
+
+Lo que esta sección marca *(equipo)* ya está decidido: P4 lo transcribe al fijar el contrato.
+
+### Entregables en H2
+
+*(equipo)*
+
+C5 no tiene fixture en `contracts/`: su entregable es código que compila en `tablet/`, en `main`.
+
+| Entregable | Dónde | Contenido en H2 |
+|---|---|---|
+| `MapEvents` y `MapQuery` | `tablet/Assets/Terrain/` | todos los eventos de la tabla "Eventos", con el struct de su carga, y las dos consultas, que en H2 resuelven contra el plano Y = 0: `TryPick` da el punto de ese plano bajo el toque y `HeightAt` da 0. P4 las sustituye por el terreno real sin cambiar la firma |
+| Tipos de datos | `tablet/Assets/Terrain/` | las clases que leen `zone.json` y `conditions.json`, con los campos de sus tablas |
+| `AppConfig` | `tablet/Assets/Terrain/` | completa: es corta y no depende de ningún contrato, así que es lo primero que P4 escribe en H0. Sección "Configuración" |
+| Cargador de fixtures | `tablet/Assets/Terrain/` | lee `expected_route.json`, `expected_plan.json`, `cost_params.json`, el `zone.json` y el `conditions.json` de `contracts/fixtures/` a los tipos de C4 y C5. Lo escribe P4 después de H0:45, cuando la firma de C4 está en `main` |
+| `ShaderIds` | `tablet/Assets/Terrain/` | una constante por propiedad de esta sección |
+| Prefabs `Terrain`, `FX`, `HUD`, `Routes` | la carpeta de cada dueño | vacíos, ya colocados en `Main.unity`. `Terrain` y `HUD` los crea P4 antes de H0, y `FX` y `Routes` los crea P5, con el esqueleto; desde H0 cada uno es de su dueño |
+| Sub Graphs de `FX` | `tablet/Assets/FX/` | los de "Cómo dibuja `FX` sobre el terreno", sin efecto. Los crea P5 antes de H0 *(equipo)*; desde H0 son de P5 |
+
+- El "bus de eventos falso" de cada dueño es un script de su escena de pruebas que emite los
+  eventos de `MapEvents` con los fixtures; lo escribe cada uno, sobre el cargador de fixtures de
+  [Convenciones](./convenciones.md), sección "Unity".
+- `Route` y `Plan` se definen una sola vez, en `Routing`, y `EditPayload` y `LiveEntity` en
+  `Edits`. Los asmdef de `Terrain`, `FX` y `HUD` referencian los dos paquetes, porque los structs
+  de carga llevan esos tipos; de `Routing`, `FX` solo usa `polyline`. Por eso los eventos
+  `RouteRequested`, `RouteSelected`, `EditRequested` y `EntitiesChanged` esperan a la firma de C4 ([Convenciones](./convenciones.md), sección "Qué contratos
+  se fijan y en qué orden").
+- Las clases de "Tipos de datos" leen `zone.json` y `conditions.json`. `mission.json` lo lee el
+  `HUD`, con una clase suya.
+
+### Configuración
+
+*(equipo)*
+
+`AppConfig` es una clase estática de `Terrain` que guarda la configuración de la app. El `HUD` la
+usa desde su pantalla de ajustes y desde la que pide el `author`; `Terrain`, para su cliente HTTP.
+
+| Miembro | Qué hace |
+|---|---|
+| `AppConfig.HabitatUrl`, `AppConfig.FilesUrl`, `AppConfig.Author` | el valor vigente, de solo lectura; una cadena vacía si nunca se guardó |
+| `AppConfig.Save(habitatUrl, filesUrl, author)` | valida, guarda y emite `ConfigChanged`. Lanza una excepción si una URL no tiene la forma `http://host:puerto` o si `author` no cumple su expresión de C0 |
+
+- Qué son las dos URL y qué puertos llevan: [Convenciones](./convenciones.md), sección "API (C3)".
+- Se guarda en `persistentDataPath/config.json`, como `{schema_version, habitat_url, files_url,
+  author}` *(propuesta)*. Solo `Terrain` lee y escribe ese archivo, así que no tiene esquema en
+  `contracts/`.
+- Se carga sola en el primer acceso. Sin `config.json`, toma los valores de
+  `tablet/Assets/StreamingAssets/config.default.json`, con la misma forma *(propuesta)*: P4 lo
+  commitea con las dos URL del portátil del hábitat en el router del equipo y con `author`
+  vacío. Así el walking skeleton de H6 sondea sin pantalla de ajustes.
+- Con una URL vacía `Terrain` no sondea y la app trabaja con su caché; con `author` vacío el
+  `HUD` abre la pantalla de `author` y no deja editar hasta que se guarda.
+- **Los fixtures llegan al APK por un paso de build** *(propuesta)*: un script de editor de P4,
+  en `tablet/Assets/Terrain/Editor/`, copia `contracts/fixtures/` a
+  `tablet/Assets/StreamingAssets/fixtures/` antes de cada build y al abrir el proyecto. Esa
+  carpeta está en `.gitignore`: no hay una segunda copia en git. Está en el esqueleto, así que
+  vale también para los APK de P5.
+- **El `author` se guarda una sola vez** ([Convenciones](./convenciones.md), sección
+  "Ediciones"): `Save` con un `author` distinto del ya guardado lanza una excepción.
+- En H2 la clase está completa, así que no necesita mock: la escena de pruebas del `HUD` la usa
+  tal cual.
+
+### Propiedades por tile
+
+Las pone `Terrain` en cada tile, con un `MaterialPropertyBlock`.
+
+| Propiedad | Formato | Contenido |
+|---|---|---|
+| `_HeightTex` | **R16_UNORM**, 257² | el `uint16` de C1 tal cual |
+| `_HeightScale`, `_HeightOffset` | float *(equipo)* | Y de la escena en metros = `_HeightOffset + _HeightScale · muestra`, con la muestra leída como 0–1. `_HeightScale` = `height.scale · 65535`; `_HeightOffset` = `height.offset − origin_height_m` |
+| `_HazardTex` | R8, 257² | el `uint8` de C1 leído como 0–1 |
+| `_LayerTex0`, `_LayerTex1`, `_LayerTex2` | R8, 257² | las capas del tile: tabla "Capas" |
+| UV0 | | el tile, de 0 a 1 |
+
+- Una textura tiene 257 muestras para 256 celdas: la muestra `k` cae en UV = `k / 256`, y el
+  shader la lee en `(UV · 256 + 0,5) / 257`.
+- **UV (0, 0) es la esquina suroeste del tile.** Los archivos de C1 empiezan por la fila norte, así
+  que `Terrain` invierte las filas al cargar cada textura.
+- Si a un tile le falta una capa, `Terrain` le pone una textura negra.
+
+### Propiedades globales
+
+*(equipo)*
+
+Se ponen con `Shader.SetGlobal…`, así que ningún material necesita una referencia a otro.
+
+| Propiedad | La pone | Contenido |
+|---|---|---|
+| `_ZoneOriginHeightM` | `Terrain` | `origin_height_m`: sumado a Y da la altura sobre el areoide, la de las curvas de nivel |
+| `_LayerOn0`, `_LayerOn1`, `_LayerOn2` | `Terrain` | 0 o 1, según `LayerToggled` |
+| `_HeatTex` | `Terrain` | R8, una por zona, con un texel por nodo de la `Grid` de C4. Sale del `Field` de `ReturnField`: `round(254 · min(time_s / _HeatMaxS, 1))`, y 255 donde no hay regreso |
+| `_HeatMaxS` | `Terrain` | los segundos que valen 254: el `budget.t_s` de la misión; sin misión, el máximo finito del campo |
+| `_HazardZoneTex` | `Terrain` | R8, una por zona: el `hazard` de la `Grid`, con las ediciones. Para lo que `FX` dibuja fuera del terreno |
+| `_HeatTexRect` | `Terrain` | `(e_0, n_0, 1/(width · cell_m), 1/(height · cell_m))`, con `(e_0, n_0)` medio nodo al suroeste del nodo `(0, 0)`: lleva una posición ENU, la X y la Z de la escena, a la UV de `_HeatTex`, con cada nodo en el centro de su texel |
+| `_FogFarColor` | `FX` | el color del tinte lejano |
+| `_FogFarStrength` | `FX` | 0–1: cuánto tiñe |
+| `_FogFarAmberMin`, `_FogFarRedMin` | `Terrain` | 0–1: `hazard_amber_min` y `hazard_red_min` de `cost_params.json`, divididos por 255 |
+
+- **El tinte de niebla lejana vive en el material del terreno** (P4): lee `_HazardTex` y las
+  cuatro propiedades `_FogFar…`. El color y la fuerza los fija `FX`; los umbrales, `Terrain`.
+
+### Cómo dibuja `FX` sobre el terreno
+
+*(equipo)*
+
+**El terreno se dibuja en una sola pasada, con un solo shader, que es de P4.** Ese Shader Graph
+incluye los Sub Graphs de P5, y así `FX` no añade overdraw sobre el terreno.
+
+| Sub Graph (P5, en `tablet/Assets/FX/`) | Entradas | Salida |
+|---|---|---|
+| `SG_Hologram` | UV0, posición de mundo, normal, color base | color y emisión: fresnel, scanlines, curvas de nivel y wireframe |
+| `SG_FogFar` | color, muestra de `_HazardTex` | color con el tinte lejano |
+| `SG_Heatmap` | color, posición de mundo | color con el heatmap, leído de `_HeatTex` |
+
+- P4 escribe el Shader Graph del terreno, en `tablet/Assets/Terrain/`: muestrea las texturas por
+  tile, elige la capa base y encadena los tres Sub Graphs. P5 no toca ese archivo ni el material.
+- En H2 los tres Sub Graphs existen con esas entradas y devuelven el color sin cambiarlo; P5 los
+  rellena después.
+- **Lo que `FX` dibuja con geometría propia** (la niebla cercana, sus partículas y el prefab
+  `Routes`) no ve las texturas por tile. Lee el peligro de `_HazardZoneTex`, global: R8, con un
+  texel por nodo de la `Grid` y la misma UV que `_HeatTex`. `Terrain` la llena con `Grid.hazard`
+  cada vez que rearma la grilla.
+- **Wireframe** *(equipo)*: es una rejilla que sale de UV0, sin atributo de vértice ni
+  coordenadas baricéntricas. Hay línea donde `frac(UV0 · N)` queda cerca de 0 o de 1, con `fwidth`
+  para el grosor; N = 256 da una línea por celda.
+- Las curvas de nivel salen de `frac` de la altura sobre el areoide: Y + `_ZoneOriginHeightM`.
+
+### Capas
+
+*(equipo)*
+
+| `layer_id` | Indicador | En el tile (P1) | En el material (P4) | Quién lo dibuja |
+|---|---|---|---|---|
+| `topo` | topográfico | `height` | `_HeightTex` | `FX`: las curvas de nivel del holograma |
+| `ortho` | óptico | `layers[]`, `ortho` | `_LayerTex0` | el material del terreno |
+| `thermal` | térmico | `layers[]`, `thermal` | `_LayerTex1` | el material del terreno, con una rampa de color |
+| `thermal_ir` | térmico, cualitativo | `layers[]`, `thermal_ir` | `_LayerTex2` | el material del terreno |
+| `hazard` | peligro | `rasters.hazard` | `_HazardTex` | el tinte lejano (material) y la niebla cercana (`FX`) |
+| `heat` | regreso al hábitat | | `_HeatTex` | `FX`: el heatmap |
+
+- El `HUD` (P6) tiene un toggle por fila y emite `LayerToggled` con ese `layer_id`.
+- `ortho`, `thermal` y `thermal_ir` son excluyentes: el `HUD` apaga una al encender otra.
+- `topo`, `hazard` y `heat` se ofrecen siempre. De `ortho`, `thermal` y `thermal_ir`, el `HUD`
+  solo ofrece las que la zona tiene: el campo `layers[]` de `zone.json`, que trae también la
+  unidad y el rango de la leyenda.
+- La radiación no es una capa: es un número en el `HUD`.
+- Los archivos de `layers[]`: [Tierra](./tierra.md), sección "Tiles (C1)".
+
+### Eventos
+
+Quién emite cada evento y quién lo escucha *(equipo)*; la carga es *(equipo)*:
+
+| Evento | Lo emite | Lo escuchan | Qué avisa | Carga |
+|---|---|---|---|---|
+| `TileLoaded` | `Terrain` | `FX`, `HUD` | un tile quedó cargado o cambió por una edición | `zone_id`, `z`, `x`, `y` |
+| `ZoneLoaded` | `Terrain` | `FX`, `HUD` | hay una zona activa, con su `zone.json` | el `zone.json` ya leído, la carpeta local de sus imágenes POV y el `author` de esta tablet |
+| `ConditionsChanged` | `Terrain` | `HUD` | llegó un `conditions.json`, de la caché o del hábitat | `zone_id` y el `conditions.json` ya leído |
+| `RouteRequested` | `HUD` | `Terrain` | el astronauta pide una ruta para un `mission.json`, o elige otra alternativa | la misión en tipos de C4: `stops[]`, `home`, `budget` y `mode`; más `start` y `alternative`, un `Alternative` de C4 |
+| `RouteSelected` | `Terrain` | `FX`, `HUD` | hay una ruta calculada y elegida | `plans[]` (una `Plan` de C4 por alternativa, en el orden de `Alternative`), `selected` (el `Alternative` elegido, que es también su índice en `plans[]`) y `polyline`: la elegida, como `Vector3[]` en coordenadas de escena |
+| `EditRequested` | `HUD` | `Terrain` | el astronauta creó, cambió o borró una entidad | `op`, `entity_id`, `payload` y `tombstone` |
+| `EditRejected` *(equipo)* | `Terrain` | `HUD` | el hábitat rechazó una edición | `entity_id` y `code` |
+| `EntitiesChanged` *(equipo)* | `Terrain` | `HUD`, `FX` | cambiaron las entidades vivas de la zona, por una edición local o por `changes` | la lista de entidades vivas: `entity_id`, `op`, `creator`, `level` y `payload` |
+| `StopHovered` | `HUD` | `FX` | una parada está señalada | el `id` de la parada |
+| `LayerToggled` | `HUD` | `Terrain`, `FX` | se encendió o apagó una capa | `layer_id` y `on` |
+| `AstronautMoved` *(equipo)* | `HUD` | `Terrain`, `FX` | cambió la posición del astronauta | `enu_m` |
+| `EditModeChanged` *(equipo)* | `HUD` | `Terrain` | entró o salió el modo edición: la cámara deja de usar los gestos de un dedo | `on` |
+| `ZonesChanged` *(equipo)* | `Terrain` | `HUD` | cambió la lista de zonas de la caché | `zones[]`, con `zone_id`, `name` y `zone_version` |
+| `ZoneRequested` *(equipo)* | `HUD` | `Terrain` | el astronauta elige otra zona; `Terrain` responde con `ZoneLoaded` | `zone_id` |
+| `ConfigChanged` *(equipo)* | `Terrain` | `HUD` | `AppConfig.Save` guardó la configuración; `Terrain` reinicia su sondeo con las URL nuevas | `habitat_url`, `files_url` y `author` |
+
+`Terrain` ofrece además dos consultas, en la clase estática `MapQuery` *(equipo)*, que el `HUD`
+usa para situar toques, pines y paradas:
+
+| Consulta | Devuelve |
+|---|---|
+| `MapQuery.TryPick(screenPosition, out enu_m)` | el punto del terreno bajo un toque, o falso si no toca terreno |
+| `MapQuery.HeightAt(enu_m)` | la Y de la escena en ese punto |
+
+- `FX` y el prefab `Routes` no usan los tipos de `Routing`: dibujan `polyline`. De `Edits`, `FX`
+  lee `LiveEntity`.
+- Los ejes de la escena, cómo se nombra un asset nuevo, qué es el bus y qué capas de Unity hay:
+  [Convenciones](./convenciones.md), sección "Unity".
+- El raster de peligro es uno solo ([Convenciones](./convenciones.md), sección "Reglas de todo el
+  equipo"): una edición actualiza a la vez la niebla y la ruta.
+
+## Orquestación
+
+*(equipo)*
+
+**`Terrain` es el único que llama a `Routing` y a `Edits`**, porque es quien tiene los tiles, la
+caché y el log. `Routing` y `Edits` no ven el bus ni el motor
+([Convenciones](./convenciones.md), sección "Código").
+
+Una ruta:
+
+1. El `HUD` emite `RouteRequested` con las paradas de `mission.json`.
+2. `Terrain` entrega a `Routing` los rasters de los tiles, `cost_params.json` y las condiciones
+   vigentes, y lo llama en un hilo de fondo: `BuildGrid` y `ReturnField` si la grilla cambió, y
+   después `DurationLimit` y `OrderStops`, que devuelve una `Plan` por alternativa.
+3. De vuelta en el hilo principal, `Terrain` llena `_HeatTex` y emite `RouteSelected`.
+4. El prefab `Routes` dibuja la polilínea, `FX` el resaltado y el heatmap, y el `HUD` la ETA y el
+   presupuesto.
+
+Una edición:
+
+1. El **modo edición es del `HUD`**: el gesto, el polígono, el nivel y el diálogo de `confirmed`.
+   El `HUD` emite `EditRequested` con `op`, `entity_id`, `payload` (ya en punto fijo) y
+   `tombstone`.
+2. `Terrain` completa `uuid`, `lamport`, `author`, `creator` y `zone_id`, agrega la edición al log local,
+   llama a `apply()`, refresca `_HazardTex` y emite `TileLoaded` y `EntitiesChanged`.
+3. `Terrain` rearma la grilla y recalcula el campo y la ruta activa, como en una ruta.
+4. `Terrain` encola la edición para `POST /edits`.
+5. Si el ack es `rejected`, `Terrain` quita la edición del log local, vuelve a llamar a `apply()`
+   y emite `EditRejected`. Con `confirmation_required`, el `HUD` reabre el diálogo de
+   confirmación.
+
+## HUD e indicadores (D10)
+
+El `HUD` muestra los cuatro indicadores de [Contexto del reto](./contexto.md): las capas
+topográfica, óptica y térmica, y la dosis de radiación.
+
+- **Radiación:** todo valor se muestra con su `basis` (medido o modelado). Un factor Forbush < 1 se
+  muestra, sin alargar el límite de duración (regla Forbush de [Tierra](./tierra.md), sección
+  "Condiciones (C6)").
+- **Térmico:** el texto del HUD es "Inercia térmica (100 m/px): baja = material fino o suelto; alta
+  = consolidado o rocoso; no resuelve rocas individuales". La interfaz lo muestra en inglés.
+- **Pines POV:** cada pin muestra el `credit` de su entrada en `pov[]` ([Tierra](./tierra.md),
+  sección "Tiles (C1)"). El `HUD` los recibe con `ZoneLoaded`.
+- **Entidades editadas:** el `HUD` dibuja las notas y el contorno de cada zona de peligro y
+  obstáculo, con la lista de `EntitiesChanged`. Con ella sabe también si quien edita es el
+  `creator`, y abre el diálogo de `confirmed` antes de emitir `EditRequested` *(equipo)*.
+- **Sin logos de NASA ni JPL** en la app.
+- **Ruta:** ETA en P50 con rango P10–P90, y presupuesto. De cada alternativa muestra la ETA, los
+  metros en celda ámbar y el desnivel *(equipo)*.
+- **Posición del astronauta** *(equipo)*: es del `HUD`. La demo no tiene sensor de posición:
+  empieza en la base de la misión y el astronauta la mueve con una pulsación larga sobre el mapa.
+  El `HUD` dibuja el marcador y emite `AstronautMoved`; `Terrain` la usa para recentrar la cámara,
+  y es el `start` de la ruta.
+
+El idioma, el formato de cada magnitud, cómo se ven `basis` y los créditos, y los gestos de
+navegación: [Convenciones](./convenciones.md), sección "Presentación".
+
+## Misión (C6)
+
+`mission.json` es la mitad de C6 que produce el `HUD`. Sus campos son *(equipo)*:
+
+| Campo | Contenido |
+|---|---|
+| `schema_version` | int |
+| `zone_id` | la zona de la misión |
+| `name` | string |
+| `base_enu_m` | `[e, n]`: la base, adonde se regresa; es el `home` de C4. Si se omite, es el `habitat_enu_m` de `zone.json` |
+| `stops[]` | `{id, name, enu_m, objective, science_value, dwell_s}`: el objetivo científico en texto, su valor de 0 a 10 y el tiempo en la parada |
+| `budget` | `{t_s, dose_uGy}`; `dose_uGy` es el `dose_budget_uGy` de [Convenciones](./convenciones.md), sección "Valores fijados" |
+| `mode` | `"TSP"` u `"OP"` |
+
+- Hay una misión por zona, en `tablet/Assets/HUD/` *(equipo)*; el fixture está en
+  `contracts/fixtures/mission/`.
+- En ejecución, `cost_params.json` es una copia del fixture en StreamingAssets *(equipo)*.
+- **`mission.json` lo lee el `HUD`**, que lo entrega en `RouteRequested` convertido a los tipos
+  de C4: `Terrain` no conoce la clase del `HUD`.
+- `Routing` no lee el archivo: `Terrain` le pasa las paradas, la base y el presupuesto, con los
+  tipos de la sección "Contrato de rutas (C4)".

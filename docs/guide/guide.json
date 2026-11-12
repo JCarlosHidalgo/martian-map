@@ -1,0 +1,33 @@
+{
+  "space": {
+    "name": "Martian Map",
+    "slug": "martian-map",
+    "description": "La guía de Martian Map, publicada desde su repositorio. Se lee en orden."
+  },
+  "pages": [
+    {
+      "source": "docs/guide/chapters/contexto.md"
+    },
+    {
+      "source": "docs/guide/chapters/ambientes.md"
+    },
+    {
+      "source": "docs/guide/chapters/convenciones.md"
+    },
+    {
+      "source": "docs/guide/chapters/tierra.md"
+    },
+    {
+      "source": "docs/guide/chapters/habitat.md"
+    },
+    {
+      "source": "docs/guide/chapters/tablet.md"
+    },
+    {
+      "source": "docs/guide/chapters/reparto.md"
+    },
+    {
+      "source": "docs/guide/chapters/fuentes.md"
+    }
+  ]
+}
