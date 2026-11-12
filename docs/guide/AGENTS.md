@@ -15,9 +15,8 @@ con el original están en "Desviaciones respecto a Centinela".
 | `chapters/` | las páginas de la guía: el contexto del reto, los ambientes, las convenciones, una página por ambiente, el reparto del trabajo y las fuentes |
 | `publish.py` | construye el zip desde el manifiesto y lo importa en Docmost como el espacio `martian-map` |
 | `docker-compose.yml` | Docmost con su propio Postgres y Redis |
-| `.env.example` | cada ajuste que leen el compose y `publish.py`, sin secretos: la plantilla de una instancia nueva, cuyo `APP_SECRET` sale de `openssl rand -hex 32` |
-| `.env` | los ajustes de la instancia local, creados desde `.env.example`; contiene secretos y no se imprime |
-| `.env.docs` | un `.env` ya relleno, para levantar la guía en un repositorio recién clonado con `cp .env.docs .env`. Sus tres secretos son públicos: valen solo para una instancia local que no sale de `localhost` |
+| `.env` | cada ajuste que leen el compose y `publish.py`, ya relleno y commiteado: un repositorio recién clonado levanta la guía sin crear nada. Todo el equipo entra con `nasa@mail.com` y `admin1234`. Sus secretos son públicos: valen solo para una instancia local que no sale de `localhost` |
+| `.env.example` | la plantilla sin secretos, para una instancia que otros alcancen por la red: su `APP_SECRET` sale de `openssl rand -hex 32` |
 
 ## Decisiones
 
@@ -69,9 +68,9 @@ Se corren desde este directorio, con Python 3 y Docker Compose:
 | `python3 publish.py` | construye la guía y reemplaza el espacio `martian-map`; imprime su dirección |
 | `python3 publish.py --build-only DIR` | escribe el árbol Markdown de la guía en `DIR` y no toca Docmost |
 
-Una instancia nueva necesita su `.env`. Para leer la guía en local basta `cp .env.docs .env`. Una
-instancia que otros alcancen por la red parte de `.env.example`, con `APP_SECRET`,
-`POSTGRES_PASSWORD` y `DOCMOST_ADMIN_PASSWORD` propios.
+El `.env` commiteado basta para leer la guía en local. Una instancia que otros alcancen por la red
+parte de `.env.example`, con `APP_SECRET`, `POSTGRES_PASSWORD` y `DOCMOST_ADMIN_PASSWORD` propios, y
+no se commitea.
 
 ## Reglas de este nivel
 
