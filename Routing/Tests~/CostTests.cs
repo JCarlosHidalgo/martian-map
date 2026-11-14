@@ -19,7 +19,8 @@ namespace MartianMap.Routing.Tests
         public void SymmetricToblerGivesTheSameSpeedUpAndDown()
         {
             Assert.That(Cost.SpeedMps(0.1, 0, P.V0Mps.P50, P), Is.EqualTo(Cost.SpeedMps(-0.1, 0, P.V0Mps.P50, P)));
-            Assert.That(Cost.SpeedMps(0.1, 0, P.V0Mps.P50, P), Is.EqualTo(0.42 * Math.Exp(-0.3)).Within(1e-12));
+            // 0.70 · 0.6 · e^(−3 · 0.1), computed outside Routing.
+            Assert.That(Cost.SpeedMps(0.1, 0, P.V0Mps.P50, P), Is.EqualTo(0.3111436526863215).Within(1e-12));
         }
 
         [TestCase((byte)0, 1.0)]
@@ -33,7 +34,8 @@ namespace MartianMap.Routing.Tests
         [Test]
         public void FRugIsLinearBetween36And61Centimetres()
         {
-            Assert.That(Cost.FRug(46, P), Is.EqualTo(1.0 - 0.5 * 10 / 25).Within(1e-12));
+            // 46 cm is 10/25 of the way from 36 to 61 cm, from 1 down to 0.5: 0.8, by hand.
+            Assert.That(Cost.FRug(46, P), Is.EqualTo(0.8).Within(1e-12));
         }
 
         [TestCase((byte)15, (byte)0, (byte)0, false)]
@@ -60,22 +62,23 @@ namespace MartianMap.Routing.Tests
         public void AmberPenaltyDoublesTheFlatGroundTime()
         {
             // 2.4 s/m in amber doubles the 1/0.42 s/m of flat ground (Valores fijados).
-            Grid g = FlatPair(hazard: 128);
-            double plain = Cost.EdgeTimeS(g, 0, 1, P.V0Mps.P50, P, withAmberPenalty: false);
-            double penalised = Cost.EdgeTimeS(g, 0, 1, P.V0Mps.P50, P, withAmberPenalty: true);
-            Assert.That(plain, Is.EqualTo(2 / 0.42).Within(1e-9));
-            Assert.That(penalised, Is.EqualTo(plain + 2 * 2.4).Within(1e-9));
-            Assert.That(Cost.EdgeAmberM(g, 0, 1, P), Is.EqualTo(2).Within(1e-12));
+            CostGrid g = FlatPair(hazard: 128);
+            double plain = Cost.SegmentTimeS(g, 0, 1, P.V0Mps.P50, P, withAmberPenalty: false);
+            double penalised = Cost.SegmentTimeS(g, 0, 1, P.V0Mps.P50, P, withAmberPenalty: true);
+            // 2 m at 0.42 m/s, and 2 m · 2.4 s/m more: computed outside Routing.
+            Assert.That(plain, Is.EqualTo(4.761904761904762).Within(1e-9));
+            Assert.That(penalised, Is.EqualTo(9.561904761904762).Within(1e-9));
+            Assert.That(Cost.SegmentAmberM(g, 0, 1, P), Is.EqualTo(2).Within(1e-12));
         }
 
         [Test]
         public void AnEdgeToABlockedNodeIsInfinite()
         {
-            Grid g = FlatPair(hazard: 255);
-            Assert.That(Cost.EdgeTimeS(g, 0, 1, P.V0Mps.P50, P, withAmberPenalty: false), Is.EqualTo(double.PositiveInfinity));
+            CostGrid g = FlatPair(hazard: 255);
+            Assert.That(Cost.SegmentTimeS(g, 0, 1, P.V0Mps.P50, P, withAmberPenalty: false), Is.EqualTo(double.PositiveInfinity));
         }
 
-        private static Grid FlatPair(byte hazard) =>
-            new Grid(2, 1, 2f, new EnuPoint(0, 0), new float[2], new byte[2], new byte[2], new[] { hazard, hazard });
+        private static CostGrid FlatPair(byte hazard) =>
+            new CostGrid(2, 1, 2f, new EnuPoint(0, 0), new float[2], new byte[2], new byte[2], new[] { hazard, hazard });
     }
 }

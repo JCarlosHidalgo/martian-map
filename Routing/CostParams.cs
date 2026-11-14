@@ -35,9 +35,11 @@ namespace MartianMap.Routing
                 throw new ArgumentException("Expected 0 < v0 p90 <= p50 <= p10.", nameof(v0Mps));
             }
 
-            if (!(walkCeilingMps > 0))
+            // The walking ceiling bounds v0: nobody walks faster than the walk-to-run transition.
+            // The formula never exceeds v0, so it is a check on the parameters, not a cap.
+            if (!(walkCeilingMps > 0 && v0Mps.P10 <= walkCeilingMps))
             {
-                throw new ArgumentOutOfRangeException(nameof(walkCeilingMps));
+                throw new ArgumentOutOfRangeException(nameof(walkCeilingMps), "Expected 0 < v0 p10 <= walk_ceiling_mps.");
             }
 
             if (!(reliefPenaltyFromCm < reliefBlockCm))

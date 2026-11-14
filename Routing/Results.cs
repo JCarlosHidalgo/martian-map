@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 
 namespace MartianMap.Routing
 {
     /// <summary>
     /// A route. When <see cref="Found"/> is false the other fields are empty: "no route" is a
-    /// result, not an exception.
+    /// result, not an exception. It is immutable: the constructor copies the arrays.
     /// </summary>
     public sealed class Route
     {
@@ -22,8 +23,8 @@ namespace MartianMap.Routing
             byte maxHazard)
         {
             Found = found;
-            Cells = cells ?? throw new ArgumentNullException(nameof(cells));
-            PolylineEnuM = polylineEnuM ?? throw new ArgumentNullException(nameof(polylineEnuM));
+            Cells = ReadOnly.List(cells, nameof(cells));
+            PolylineEnuM = ReadOnly.List(polylineEnuM, nameof(polylineEnuM));
             LengthM = lengthM;
             AscentM = ascentM;
             AmberM = amberM;
@@ -34,9 +35,9 @@ namespace MartianMap.Routing
         public bool Found { get; }
 
         /// <summary>Node indices, from start to goal.</summary>
-        public int[] Cells { get; }
+        public IReadOnlyList<int> Cells { get; }
 
-        public EnuPoint3[] PolylineEnuM { get; }
+        public IReadOnlyList<EnuPoint3> PolylineEnuM { get; }
 
         public double LengthM { get; }
 
@@ -54,16 +55,30 @@ namespace MartianMap.Routing
 
     /// <summary>
     /// The return field: one value per node, the time back to <c>home</c> at v₀ P90;
-    /// <see cref="float.PositiveInfinity"/> where there is no way back.
+    /// <see cref="float.PositiveInfinity"/> where there is no way back, indexed like
+    /// <see cref="Grid"/>. Only <see cref="Router.ReturnField"/> makes one, and it carries the
+    /// <see cref="Grid"/> and the <see cref="Home"/> it was computed for, so
+    /// <see cref="Router.OrderStops"/> cannot be given a field of another grid or another base.
+    /// It is immutable: the constructor copies the array.
     /// </summary>
     public sealed class Field
     {
-        public Field(float[] timeS)
+        internal Field(CostGrid grid, EnuPoint home, float[] timeS)
         {
-            TimeS = timeS ?? throw new ArgumentNullException(nameof(timeS));
+            Grid = grid ?? throw new ArgumentNullException(nameof(grid));
+            Home = home;
+            TimeSArray = ReadOnly.Array(timeS, grid.Width * grid.Height, nameof(timeS));
         }
 
-        public float[] TimeS { get; }
+        /// <summary>The grid the field was computed on.</summary>
+        public CostGrid Grid { get; }
+
+        /// <summary>The base the field leads back to.</summary>
+        public EnuPoint Home { get; }
+
+        public ReadOnlySpan<float> TimeS => TimeSArray;
+
+        internal float[] TimeSArray { get; }
     }
 
     /// <summary>A mission stop. <see cref="ScienceValue"/> goes from 0 to 10.</summary>
@@ -149,7 +164,7 @@ namespace MartianMap.Routing
         public DateTime ValidTo { get; }
     }
 
-    /// <summary>The fields of <c>conditions.json</c> that Routing needs. Every date is UTC.</summary>
+    /// <summary>The fields of <c>conditions.json</c> that Routing needs. Every date is UTC. The constructor copies the array.</summary>
     public sealed class Conditions
     {
         public Conditions(double valueUGyH, ConditionModifier[] modifiers)
@@ -160,12 +175,12 @@ namespace MartianMap.Routing
             }
 
             ValueUGyH = valueUGyH;
-            Modifiers = modifiers ?? throw new ArgumentNullException(nameof(modifiers));
+            Modifiers = ReadOnly.List(modifiers, nameof(modifiers));
         }
 
         public double ValueUGyH { get; }
 
-        public ConditionModifier[] Modifiers { get; }
+        public IReadOnlyList<ConditionModifier> Modifiers { get; }
 
         internal static void RequireUtc(DateTime t, string name)
         {
@@ -176,7 +191,10 @@ namespace MartianMap.Routing
         }
     }
 
-    /// <summary>A plan: the stop order and one leg per stretch, including the return to <c>home</c>.</summary>
+    /// <summary>
+    /// A plan: the stop order and one leg per stretch, including the return to <c>home</c>. It is
+    /// immutable: the constructor copies the arrays.
+    /// </summary>
     public sealed class Plan
     {
         public Plan(
@@ -188,9 +206,9 @@ namespace MartianMap.Routing
             double limitS,
             bool returnOk)
         {
-            Order = order ?? throw new ArgumentNullException(nameof(order));
-            Dropped = dropped ?? throw new ArgumentNullException(nameof(dropped));
-            Legs = legs ?? throw new ArgumentNullException(nameof(legs));
+            Order = ReadOnly.List(order, nameof(order));
+            Dropped = ReadOnly.List(dropped, nameof(dropped));
+            Legs = ReadOnly.List(legs, nameof(legs));
             TotalS = totalS;
             DoseUGy = doseUGy;
             LimitS = limitS;
@@ -198,12 +216,12 @@ namespace MartianMap.Routing
         }
 
         /// <summary>Stop ids in visiting order.</summary>
-        public string[] Order { get; }
+        public IReadOnlyList<string> Order { get; }
 
         /// <summary>Stop ids that do not fit; only in <see cref="StopMode.Op"/>.</summary>
-        public string[] Dropped { get; }
+        public IReadOnlyList<string> Dropped { get; }
 
-        public Route[] Legs { get; }
+        public IReadOnlyList<Route> Legs { get; }
 
         /// <summary>Walking plus <c>dwell_s</c>.</summary>
         public Percentiles TotalS { get; }

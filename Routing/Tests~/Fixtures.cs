@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text.Json;
 using MartianMap.Routing.FixtureGen;
 using NUnit.Framework;
 
@@ -44,6 +45,52 @@ namespace MartianMap.Routing.Tests
             // int32 width, int32 height, float32 cell_m, float64 origin_e, float64 origin_n,
             // then float32 height_m and three uint8 arrays.
             Assert.That(Generated.Costgrid.Length, Is.EqualTo(28 + 129 * 129 * (4 + 1 + 1 + 1)));
+        }
+    }
+
+    /// <summary>
+    /// The committed goldens against values computed outside Routing, by hand from the synthetic
+    /// ramp: along the row n = −20 every 2 m edge rises 40/256 m, so s = 0.078125, one edge is
+    /// sqrt(4 + (40/256)²) m and takes that over v₀ · e^(−3 · s) · 0.6. The up-to-date tests only
+    /// say a golden matches the code; these say it is right. The goldens round to 1 ms and 1 mm.
+    /// </summary>
+    public class SynthGoldenValuesTests
+    {
+        private const double Rounding = 0.0005;
+
+        [Test]
+        public void TheRouteMatchesTheRampByHand()
+        {
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(Fixtures.Dir, "expected_route.json")));
+            JsonElement r = doc.RootElement;
+            Assert.That(r.GetProperty("length_m").GetDouble(), Is.EqualTo(200.60942307130043).Within(Rounding));
+            Assert.That(r.GetProperty("ascent_m").GetDouble(), Is.EqualTo(15.625).Within(Rounding));
+            Assert.That(r.GetProperty("eta_s").GetProperty("p10").GetDouble(), Is.EqualTo(449.6348803149127).Within(Rounding));
+            Assert.That(r.GetProperty("eta_s").GetProperty("p50").GetDouble(), Is.EqualTo(603.795410708597).Within(Rounding));
+            Assert.That(r.GetProperty("eta_s").GetProperty("p90").GetDouble(), Is.EqualTo(754.7442633857462).Within(Rounding));
+            Assert.That(r.GetProperty("cells").GetArrayLength(), Is.EqualTo(101));
+
+            // u = 20 · (e + 128) / 256 + 5 · (n + 128) / 256 − 12.5 at e = −100 and e = 100.
+            JsonElement line = r.GetProperty("polyline_enu_m");
+            Assert.That(line[0][2].GetDouble(), Is.EqualTo(-8.203125).Within(Rounding));
+            Assert.That(line[line.GetArrayLength() - 1][2].GetDouble(), Is.EqualTo(7.421875).Within(Rounding));
+        }
+
+        [Test]
+        public void ThePlanMatchesTheRampByHand()
+        {
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(Fixtures.Dir, "expected_plan.json")));
+            JsonElement plan = doc.RootElement.GetProperty("plans")[0];
+
+            // Twice the 200 m of the route (out in two legs, back in one) plus 2 × 600 s of dwell.
+            Assert.That(plan.GetProperty("total_s").GetProperty("p10").GetDouble(), Is.EqualTo(2099.269760629825).Within(Rounding));
+            Assert.That(plan.GetProperty("total_s").GetProperty("p50").GetDouble(), Is.EqualTo(2407.590821417194).Within(Rounding));
+            Assert.That(plan.GetProperty("total_s").GetProperty("p90").GetDouble(), Is.EqualTo(2709.4885267714926).Within(Rounding));
+
+            // 50 uGy at 6 uGy/h is 30000 s; the dose is 6 uGy/h over total_s.p50.
+            Assert.That(plan.GetProperty("limit_s").GetDouble(), Is.EqualTo(30000).Within(Rounding));
+            Assert.That(plan.GetProperty("dose_uGy").GetDouble(), Is.EqualTo(4.0126513690286565).Within(Rounding));
+            Assert.That(plan.GetProperty("return_ok").GetBoolean(), Is.True);
         }
     }
 }

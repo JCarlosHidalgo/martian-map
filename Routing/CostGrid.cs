@@ -5,11 +5,11 @@ namespace MartianMap.Routing
     /// <summary>
     /// The planning grid. Node <c>(i, j)</c> is at index <c>j · Width + i</c>, at
     /// <c>OriginEnuM + (CellM·i, CellM·j)</c>; <c>i</c> grows east and <c>j</c> north. It is
-    /// immutable: the constructor copies the arrays.
+    /// immutable: the constructor copies the arrays, and they are read as <see cref="ReadOnlySpan{T}"/>.
     /// </summary>
-    public sealed class Grid
+    public sealed class CostGrid
     {
-        public Grid(
+        public CostGrid(
             int width,
             int height,
             float cellM,
@@ -34,10 +34,10 @@ namespace MartianMap.Routing
             Height = height;
             CellM = cellM;
             OriginEnuM = originEnuM;
-            HeightMArray = Copy(heightM, count, nameof(heightM));
-            SlopeDegArray = Copy(slopeDeg, count, nameof(slopeDeg));
-            RoughnessCmArray = Copy(roughnessCm, count, nameof(roughnessCm));
-            HazardArray = Copy(hazard, count, nameof(hazard));
+            HeightMArray = ReadOnly.Array(heightM, count, nameof(heightM));
+            SlopeDegArray = ReadOnly.Array(slopeDeg, count, nameof(slopeDeg));
+            RoughnessCmArray = ReadOnly.Array(roughnessCm, count, nameof(roughnessCm));
+            HazardArray = ReadOnly.Array(hazard, count, nameof(hazard));
         }
 
         public int Width { get; }
@@ -74,21 +74,6 @@ namespace MartianMap.Routing
             }
 
             return j * Width + i;
-        }
-
-        private static T[] Copy<T>(T[] source, int count, string name)
-        {
-            if (source == null)
-            {
-                throw new ArgumentNullException(name);
-            }
-
-            if (source.Length != count)
-            {
-                throw new ArgumentException($"Expected {count} values.", name);
-            }
-
-            return (T[])source.Clone();
         }
     }
 }

@@ -62,7 +62,7 @@ namespace MartianMap.Routing.FixtureGen
 
         public static Output Generate(CostParams p)
         {
-            Grid grid = BuildSynthGrid();
+            CostGrid grid = BuildSynthGrid();
 
             // expected_route.json: the straight line from [-100, -20] to [100, -20].
             Route route = StraightRoute(grid, p, Base, Stops[1].EnuM);
@@ -81,7 +81,7 @@ namespace MartianMap.Routing.FixtureGen
         }
 
         /// <summary>The grid that BuildGrid gives for the synthetic tile, with BuildGrid's rule.</summary>
-        internal static Grid BuildSynthGrid()
+        internal static CostGrid BuildSynthGrid()
         {
             int n = Samples * Samples;
             var height = new ushort[n];
@@ -139,11 +139,11 @@ namespace MartianMap.Routing.FixtureGen
                 }
             }
 
-            return new Grid(Nodes, Nodes, CellM, new EnuPoint(TileOriginE, TileOriginN), heightM, slopeDeg, roughnessCm, nodeHazard);
+            return new CostGrid(Nodes, Nodes, CellM, new EnuPoint(TileOriginE, TileOriginN), heightM, slopeDeg, roughnessCm, nodeHazard);
         }
 
         /// <summary>The 3 × 3 maximum; samples outside the tile are skipped (BuildGrid's edge rule).</summary>
-        private static byte Max3x3(byte[] raster, int r, int c)
+        private static byte Max3x3(ReadOnlySpan<byte> raster, int r, int c)
         {
             byte max = 0;
             for (int dr = -1; dr <= 1; dr++)
@@ -162,7 +162,7 @@ namespace MartianMap.Routing.FixtureGen
             return max;
         }
 
-        private static byte[] SerializeGrid(Grid g)
+        private static byte[] SerializeGrid(CostGrid g)
         {
             using var ms = new MemoryStream();
             using (var w = new BinaryWriter(ms))
@@ -191,7 +191,7 @@ namespace MartianMap.Routing.FixtureGen
         }
 
         /// <summary>A route along one grid row; both ends must sit exactly on nodes of that row.</summary>
-        private static Route StraightRoute(Grid g, CostParams p, EnuPoint from, EnuPoint to)
+        private static Route StraightRoute(CostGrid g, CostParams p, EnuPoint from, EnuPoint to)
         {
             (int i0, int j) = NodeAt(g, from);
             (int i1, int j1) = NodeAt(g, to);
@@ -203,41 +203,21 @@ namespace MartianMap.Routing.FixtureGen
             int step = Math.Sign(i1 - i0);
             int[] cells = Enumerable.Range(0, Math.Abs(i1 - i0) + 1).Select(k => g.Index(i0 + step * k, j)).ToArray();
 
-            double length = 0, ascent = 0, amber = 0, t10 = 0, t50 = 0, t90 = 0;
-            for (int k = 1; k < cells.Length; k++)
-            {
-                int a = cells[k - 1];
-                int b = cells[k];
-                double rise = g.HeightM[b] - g.HeightM[a];
-                length += Cost.Length3DM(g.CellM, rise);
-                ascent += Math.Abs(rise);
-                amber += Cost.EdgeAmberM(g, a, b, p);
-                t10 += Cost.EdgeTimeS(g, a, b, p.V0Mps.P10, p, withAmberPenalty: false);
-                t50 += Cost.EdgeTimeS(g, a, b, p.V0Mps.P50, p, withAmberPenalty: false);
-                t90 += Cost.EdgeTimeS(g, a, b, p.V0Mps.P90, p, withAmberPenalty: false);
-            }
-
-            if (double.IsInfinity(t50))
+            // Every node is a waypoint: the route of A* before smoothing, measured by Routing.
+            Route route = Cost.Trace(g, cells, p);
+            if (!route.Found)
             {
                 throw new InvalidOperationException("The synthetic route crosses a blocked node.");
             }
 
-            var polyline = cells
-                .Select(c => new EnuPoint3(
-                    g.OriginEnuM.E + g.CellM * (c % g.Width),
-                    g.OriginEnuM.N + g.CellM * (c / g.Width),
-                    g.HeightM[c]))
-                .ToArray();
-            byte maxHazard = cells.Select(c => g.Hazard[c]).Max();
-            return new Route(true, cells, polyline, length, ascent, amber, new Percentiles(t10, t50, t90), maxHazard);
+            return route;
         }
 
         /// <summary>The TSP plan of the synthetic mission, in the given stop order: base → s1 → s2 → base.</summary>
-        private static Plan BuildPlan(Grid g, CostParams p)
+        private static Plan BuildPlan(CostGrid g, CostParams p)
         {
             double limitS = Router.DurationLimit(SynthConditions, PlanTimeUtc, MissionBudget.DoseUGy);
             double availableS = Math.Min(MissionBudget.TS, limitS);
-            double rate = Router.DoseRateUGyH(SynthConditions, PlanTimeUtc);
 
             var legs = new Route[Stops.Length + 1];
             EnuPoint at = Base;
@@ -251,9 +231,9 @@ namespace MartianMap.Routing.FixtureGen
                 t90 += legs[k].EtaS.P90 + Stops[k].DwellS;
                 at = Stops[k].EnuM;
 
-                // The return at P90 must fit in what is left after leaving this stop.
+                // On leaving this stop, the elapsed time at P90 plus the return at P90 must fit.
                 double backP90 = StraightRoute(g, p, at, Base).EtaS.P90;
-                returnOk &= t50 + backP90 <= availableS;
+                returnOk &= Router.ReturnFits(t90, backP90, availableS);
             }
 
             legs[Stops.Length] = StraightRoute(g, p, at, Base);
@@ -266,7 +246,7 @@ namespace MartianMap.Routing.FixtureGen
                 Array.Empty<string>(),
                 legs,
                 new Percentiles(t10, t50, t90),
-                rate * t50 / 3600.0,
+                Router.DoseUGy(SynthConditions, PlanTimeUtc, t50),
                 limitS,
                 returnOk);
         }
@@ -301,7 +281,7 @@ namespace MartianMap.Routing.FixtureGen
             { "p90", x.P90 },
         };
 
-        private static (int I, int J) NodeAt(Grid g, EnuPoint pt)
+        private static (int I, int J) NodeAt(CostGrid g, EnuPoint pt)
         {
             double fi = (pt.E - g.OriginEnuM.E) / g.CellM;
             double fj = (pt.N - g.OriginEnuM.N) / g.CellM;
