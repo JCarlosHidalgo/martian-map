@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "cost_params.schema.json",
+  "title": "cost_params",
+  "description": "Walking cost parameters (C4). Fields one to one with MartianMap.Routing.CostParams.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "v0_mps", "b", "c", "walk_ceiling_mps", "max_slope_deg",
+    "relief_block_cm", "relief_penalty_from_cm", "hazard_red_min", "hazard_amber_min",
+    "f_terreno", "f_rug_min", "amber_penalty_s_per_m", "alt_safest_amber_mult", "alt_gentlest_s_per_m"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "v0_mps": {
+      "description": "Flat-ground walking speed at 0.38 g, m/s.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p10", "p50", "p90"],
+      "properties": {
+        "p10": {"type": "number", "exclusiveMinimum": 0},
+        "p50": {"type": "number", "exclusiveMinimum": 0},
+        "p90": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "b": {
+      "description": "Tobler exponent; sensitivity range low..high (NOT VERIFIED at reduced gravity).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p50", "low", "high"],
+      "properties": {
+        "p50": {"type": "number", "exclusiveMinimum": 0},
+        "low": {"type": "number", "exclusiveMinimum": 0},
+        "high": {"type": "number", "exclusiveMinimum": 0}
+      }
+    },
+    "c": {"description": "Tobler grade offset; 0 is the symmetric function.", "type": "number"},
+    "walk_ceiling_mps": {"type": "number", "exclusiveMinimum": 0},
+    "max_slope_deg": {"description": "Nodes with slope above this are blocked.", "type": "number", "minimum": 0, "maximum": 90},
+    "relief_block_cm": {"description": "Nodes with local relief above this are blocked.", "type": "number", "minimum": 0},
+    "relief_penalty_from_cm": {"description": "f_rug drops below 1 from this relief on.", "type": "number", "minimum": 0},
+    "hazard_red_min": {"description": "Hazard at or above this is red: blocked.", "type": "integer", "minimum": 0, "maximum": 255},
+    "hazard_amber_min": {"description": "Hazard at or above this and below red is amber.", "type": "integer", "minimum": 0, "maximum": 255},
+    "f_terreno": {"description": "Off-trail terrain factor.", "type": "number", "exclusiveMinimum": 0, "maximum": 1},
+    "f_rug_min": {"description": "Floor of f_rug, reached at relief_block_cm.", "type": "number", "exclusiveMinimum": 0, "maximum": 1},
+    "amber_penalty_s_per_m": {"description": "Seconds per metre walked in amber cells; route choice only, never in eta_s.", "type": "number", "minimum": 0},
+    "alt_safest_amber_mult": {"description": "Amber penalty multiplier of the safest alternative.", "type": "number", "minimum": 0},
+    "alt_gentlest_s_per_m": {"description": "Seconds per metre of height change added by the gentlest alternative.", "type": "number", "minimum": 0}
+  }
+}
