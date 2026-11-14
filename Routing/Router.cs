@@ -34,19 +34,30 @@ namespace MartianMap.Routing
         public static CostGrid BuildGrid(TileRasters[] tiles, double originHeightM, CostParams p) =>
             throw new NotImplementedException();
 
-        public static Route PlanRoute(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p) =>
+        public static Route PlanRoute(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
+        {
+            RequirePointIn(grid, start, nameof(start));
+            RequirePointIn(grid, goal, nameof(goal));
             throw new NotImplementedException();
+        }
 
         /// <summary>The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90.</summary>
-        public static Field ReturnField(CostGrid grid, EnuPoint home, CostParams p) =>
+        public static Field ReturnField(CostGrid grid, EnuPoint home, CostParams p)
+        {
+            RequirePointIn(grid, home, nameof(home));
             throw new NotImplementedException();
+        }
 
         /// <summary>
         /// One route per value of <see cref="Alternative"/>, in that order: always all of them, even
         /// when two coincide.
         /// </summary>
-        public static Route[] Alternatives(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p) =>
+        public static Route[] Alternatives(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
+        {
+            RequirePointIn(grid, start, nameof(start));
+            RequirePointIn(grid, goal, nameof(goal));
             throw new NotImplementedException();
+        }
 
         /// <summary>
         /// The radiation duration limit in seconds: the first <c>t</c> at which the dose absorbed
@@ -174,6 +185,22 @@ namespace MartianMap.Routing
             CostParams p)
         {
             RequireFieldOf(grid, homeField);
+            RequirePointIn(grid, start, nameof(start));
+            if (stops == null)
+            {
+                throw new ArgumentNullException(nameof(stops));
+            }
+
+            foreach (Stop stop in stops)
+            {
+                if (stop == null)
+                {
+                    throw new ArgumentException("No stop may be null.", nameof(stops));
+                }
+
+                RequirePointIn(grid, stop.EnuM, nameof(stops));
+            }
+
             throw new NotImplementedException();
         }
 
@@ -184,6 +211,31 @@ namespace MartianMap.Routing
         /// </summary>
         internal static bool ReturnFits(double elapsedP90S, double backP90S, double availableS) =>
             elapsedP90S + backP90S <= availableS;
+
+        /// <summary>
+        /// Throws <see cref="ArgumentException"/> if <paramref name="point"/> is not finite, and
+        /// <see cref="ArgumentOutOfRangeException"/> if it is outside the box of the grid's nodes,
+        /// <c>[origin, origin + cell_m · (size − 1)]</c> on each axis, edges included.
+        /// </summary>
+        private static void RequirePointIn(CostGrid grid, EnuPoint point, string name)
+        {
+            if (grid == null)
+            {
+                throw new ArgumentNullException(nameof(grid));
+            }
+
+            if (!double.IsFinite(point.E) || !double.IsFinite(point.N))
+            {
+                throw new ArgumentException("A point must be finite.", name);
+            }
+
+            double e = point.E - grid.OriginEnuM.E;
+            double n = point.N - grid.OriginEnuM.N;
+            if (!(e >= 0 && e <= (double)grid.CellM * (grid.Width - 1) && n >= 0 && n <= (double)grid.CellM * (grid.Height - 1)))
+            {
+                throw new ArgumentOutOfRangeException(name, "The point is outside the grid.");
+            }
+        }
 
         /// <summary>Throws unless <paramref name="field"/> was computed on <paramref name="grid"/>.</summary>
         private static void RequireFieldOf(CostGrid grid, Field field)
