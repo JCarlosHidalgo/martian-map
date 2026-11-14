@@ -9,6 +9,9 @@
     <AssemblyName>MartianMap.Routing.BenchmarkRunner</AssemblyName>
     <IsPackable>false</IsPackable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Fully optimised code from the first call, closer to the tablet's AOT build: with 1 + 5
+         runs, tiered JIT would time the first cases in unoptimised code. -->
+    <TieredCompilation>false</TieredCompilation>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../../MartianMap.Routing.csproj" />

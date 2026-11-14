@@ -41,6 +41,9 @@ namespace MartianMap.Routing
         /// goes to its nearest node (a point midway goes to the east or north one);
         /// <see cref="Route.NotFound"/> if either node is blocked or there is no path. With both points
         /// on the same free node, the route is found and stays there: one cell, one point, all 0.
+        /// A goal that cannot be reached is only known after exploring the whole connected part of
+        /// the grid around <paramref name="start"/>, which on a large grid takes as long as a field:
+        /// call it off the main thread.
         /// </summary>
         public static Route PlanRoute(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
         {
