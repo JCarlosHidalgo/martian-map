@@ -330,12 +330,12 @@ dentro de un método síncrono.
     (menor `n`, luego menor `e`). El resultado no depende del orden de `tiles`.
 - **`Benchmark.Run`** *(equipo)* es C# puro, dentro del paquete `Routing` y no en `Tests~/`, para
   que lo llamen igual `dotnet` en el portátil y la escena de benchmark de la tablet. Entra en la
-  firma de H0:45, con el cuerpo vacío, y P3 lo rellena en H2–4, con el núcleo. Corre, de menor a
-  mayor tamaño, los 5 terrenos en 1000², 2000² y 4000²: tramos de A\* de 500 m y el campo en 1000²
-  y 2000², con 3 corridas de calentamiento y 20 medidas, más un campo de estrés en la grilla
-  uniforme de 4000² (1 + 1), fuera del criterio. La memoria que da es el heap gestionado, con la
-  grilla y la memoria de trabajo de la búsqueda vivas (`GC.GetTotalMemory(true)`) *(propuesta de
-  P3)*. Quién escribe la
+  firma de H0:45, con el cuerpo vacío, y P3 lo rellena en H2–4, con el núcleo. Se corre solo en
+  el portátil, con `dotnet run -c Release --project "Routing/Tests~/BenchmarkRunner"`: la tablet no
+  se prueba *(decisión de P3, 2026-11-14)*. Corre, de menor a mayor tamaño, los 5 terrenos en 1000²
+  y 2000²: tramos de A\* de 500 m con 1 corrida de calentamiento y 5 medidas, y el campo con 1 + 1.
+  La memoria que da es el heap gestionado, con la grilla y la memoria de trabajo de la búsqueda
+  vivas (`GC.GetTotalMemory(true)`) *(propuesta de P3)*. Quién escribe la
   escena y el APK: [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones".
 - **`DurationLimit`** *(equipo)*: `limit_s` es el primer `t` en que la dosis absorbida desde
   `t_utc` llega a `dose_uGy`; con una tasa constante, `dose_uGy / tasa · 3600`. La tasa es

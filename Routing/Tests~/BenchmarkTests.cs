@@ -121,27 +121,16 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
-        public void TheE5ConfigIsTheProtocol()
+        public void TheE5ConfigIsTheLaptopScenario()
         {
+            // The user's decision (2026-11-14): nothing is tested on the tablet; the benchmark runs
+            // on the laptop only, 5 terrains on 1000² and 2000², A* 1 + 5 runs, field 1 + 1.
             BenchmarkConfig c = BenchmarkConfig.E5;
-            Assert.That(c.Sizes, Is.EqualTo(new[] { 1000, 2000, 4000 }));
-            Assert.That((c.RouteWarmUp, c.RouteRuns, c.RouteM), Is.EqualTo((3, 20, 500.0)));
+            Assert.That(c.Sizes, Is.EqualTo(new[] { 1000, 2000 }));
+            Assert.That((c.RouteWarmUp, c.RouteRuns, c.RouteM), Is.EqualTo((1, 5, 500.0)));
             Assert.That(c.FieldSizes, Is.EqualTo(new[] { 1000, 2000 }));
-            Assert.That((c.FieldWarmUp, c.FieldRuns, c.StressFieldSize), Is.EqualTo((3, 20, 4000)));
-        }
-
-        [Test]
-        public void TheQuickConfigIsTheLaptopScenario()
-        {
-            BenchmarkConfig q = BenchmarkConfig.Quick;
-            Assert.That(q.Sizes, Is.EqualTo(new[] { 1000, 2000 }));
-            Assert.That((q.RouteWarmUp, q.RouteRuns, q.RouteM), Is.EqualTo((1, 5, 500.0)));
-            Assert.That(q.FieldSizes, Is.EqualTo(new[] { 1000, 2000 }));
-            Assert.That((q.FieldWarmUp, q.FieldRuns, q.StressFieldSize), Is.EqualTo((1, 1, 0)));
-            Assert.That(q.Seed, Is.EqualTo(BenchmarkConfig.E5.Seed));
-            Assert.That(Same(q.Params, BenchmarkConfig.E5.Params), Is.True);
-            Assert.That(q.Label, Does.Contain("not the E5 protocol"));
-            Assert.That(BenchmarkConfig.E5.Label, Does.StartWith("E5"));
+            Assert.That((c.FieldWarmUp, c.FieldRuns, c.StressFieldSize), Is.EqualTo((1, 1, 0)));
+            Assert.That(c.Label, Does.Contain("laptop"));
         }
 
         [Test]

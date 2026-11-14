@@ -4,6 +4,3 @@ using System.Runtime.CompilerServices;
 // generator call it instead of copying it.
 [assembly: InternalsVisibleTo("MartianMap.Routing.Tests")]
 [assembly: InternalsVisibleTo("MartianMap.Routing.FixtureGen")]
-
-// The laptop benchmark runner picks the quick scenario, which is not public.
-[assembly: InternalsVisibleTo("MartianMap.Routing.BenchmarkRunner")]

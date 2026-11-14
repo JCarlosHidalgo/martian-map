@@ -7,8 +7,8 @@ using System.Text;
 namespace MartianMap.Routing
 {
     /// <summary>
-    /// The E5 benchmark of the routing core. Plain C#, so <c>dotnet</c> and the tablet's benchmark
-    /// scene call it the same way.
+    /// The E5 benchmark of the routing core. Plain C#, run with <c>dotnet</c> on the laptop
+    /// (<c>Routing/Tests~/BenchmarkRunner</c>); the tablet is not tested.
     /// </summary>
     public static class Benchmark
     {
@@ -19,10 +19,9 @@ namespace MartianMap.Routing
         /// <summary>
         /// Generates the seeded grids of E5, runs its cases and returns the results table, the
         /// text of <c>Routing/BENCHMARK.md</c>. <paramref name="log"/> receives each line as it comes.
-        /// Per size, ascending: an A* row of 500 m routes for each terrain, then a field row for
-        /// each terrain (20 measured runs after 3 of warm-up), and one stress field on the uniform
-        /// 4000² grid (1 + 1), outside the criterion. The memory is the managed heap with the grid
-        /// and the search's workspace alive.
+        /// Per size, ascending (1000² and 2000²): an A* row of 500 m routes for each terrain (1 warm-up
+        /// + 5 runs), then a field row for each terrain (1 + 1). It runs on the laptop; the tablet is
+        /// not tested. The memory is the managed heap with the grid and the search's workspace alive.
         /// </summary>
         public static string Run(Action<string> log) => Run(log, BenchmarkConfig.E5);
 
@@ -53,7 +52,7 @@ namespace MartianMap.Routing
                 + $"field at v0 P90 on {Join(c.FieldSizes)}², {c.FieldWarmUp} + {c.FieldRuns}"
                 + (c.StressFieldSize > 0 ? $"; stress field on Uniform {c.StressFieldSize}², 1 + 1, outside the criterion" : string.Empty));
             Line($"- E5 (docs/guide/chapters/reparto.md): A* p95 <= {F(RouteP95Ms)} ms, field p95 <= {F(FieldP95Ms)} ms, 0 GC during the measured runs, managed heap <= {F(MaxManagedMb)} MB. "
-                + "The criterion is the tablet's (IL2CPP ARM64 Release); values from a laptop are not the criterion of E5.");
+                + "Measured on the laptop only: the tablet is not tested.");
             Line(string.Empty);
             Line("| size | terrain | query | runs | found | p50 ms | p95 ms | max ms | GC | managed MB | E5 |");
             Line("|---|---|---|---|---|---|---|---|---|---|---|");
@@ -330,21 +329,22 @@ namespace MartianMap.Routing
         internal CostParams Params { get; set; }
 
         /// <summary>
-        /// E5: 1000², 2000² and 4000², five terrains, 500 m routes and fields with 3 warm-up and 20
-        /// measured runs; a uniform 4000² stress field. <see cref="Params"/> is
+        /// E5 as it is run (the user's decision, 2026-11-14: only on the laptop, nothing on the
+        /// tablet): the five terrains on 1000² and 2000², 500 m routes with 1 warm-up + 5 runs and
+        /// fields with 1 + 1; no 4000² and no stress field. <see cref="Params"/> is
         /// <c>contracts/fixtures/routing/cost_params.json</c>, schema 1 (a test compares them).
         /// </summary>
         internal static BenchmarkConfig E5 => new BenchmarkConfig
         {
-            Label = "E5, the full protocol: 5 terrains, 3 warm-up + 20 measured runs (what the tablet runs)",
-            Sizes = new[] { 1000, 2000, 4000 },
-            RouteRuns = 20,
-            RouteWarmUp = 3,
+            Label = "laptop only (the tablet is not tested): 5 terrains on 1000²/2000², A* 1 + 5 runs, field 1 + 1",
+            Sizes = new[] { 1000, 2000 },
+            RouteRuns = 5,
+            RouteWarmUp = 1,
             RouteM = 500,
             FieldSizes = new[] { 1000, 2000 },
-            FieldRuns = 20,
-            FieldWarmUp = 3,
-            StressFieldSize = 4000,
+            FieldRuns = 1,
+            FieldWarmUp = 1,
+            StressFieldSize = 0,
             Seed = 0x4D41525321UL,
             Params = new CostParams(
                 schemaVersion: 1,
@@ -363,27 +363,5 @@ namespace MartianMap.Routing
                 altSafestAmberMult: 4,
                 altGentlestSPerM: 10),
         };
-
-        /// <summary>
-        /// The quick laptop scenario of <c>BenchmarkRunner</c>: the 5 terrains on 1000² and 2000²,
-        /// A* with 1 warm-up + 5 runs and the field with 1 + 1, no 4000² and no stress field. It is
-        /// not the E5 protocol; the tablet runs <see cref="E5"/>.
-        /// </summary>
-        internal static BenchmarkConfig Quick
-        {
-            get
-            {
-                BenchmarkConfig c = E5;
-                c.Label = "quick laptop run, not the E5 protocol: 5 terrains on 1000²/2000², A* 1 + 5 runs, field 1 + 1, no 4000²; the tablet runs the full E5";
-                c.Sizes = new[] { 1000, 2000 };
-                c.RouteWarmUp = 1;
-                c.RouteRuns = 5;
-                c.FieldSizes = new[] { 1000, 2000 };
-                c.FieldWarmUp = 1;
-                c.FieldRuns = 1;
-                c.StressFieldSize = 0;
-                return c;
-            }
-        }
     }
 }
