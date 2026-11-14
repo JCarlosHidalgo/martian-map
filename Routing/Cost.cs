@@ -42,6 +42,13 @@ namespace MartianMap.Routing
         internal static double SpeedMps(double grade, byte reliefCm, double v0Mps, CostParams p) =>
             v0Mps * Math.Exp(-p.B.P50 * Math.Abs(grade + p.C)) * FRug(reliefCm, p) * p.FTerreno;
 
+        /// <summary>
+        /// An upper bound of <see cref="SpeedMps"/> over horizontal metres: <c>v₀ · f_terreno</c>.
+        /// Every other factor is at most 1 and <c>length_3D</c> is at least the horizontal length,
+        /// so the horizontal distance over it never overestimates a time: the A* heuristic.
+        /// </summary>
+        internal static double MaxSpeedMps(double v0Mps, CostParams p) => v0Mps * p.FTerreno;
+
         internal static double Length3DM(double horizontalM, double riseM) =>
             Math.Sqrt(horizontalM * horizontalM + riseM * riseM);
 
@@ -51,15 +58,31 @@ namespace MartianMap.Routing
         /// blocked node. The same rule serves an A* edge of any of the 16 moves and a shortcut of
         /// the smoothing: see <see cref="Walk"/>.
         /// </summary>
-        internal static double SegmentTimeS(CostGrid g, int a, int b, double v0Mps, CostParams p, bool withAmberPenalty) =>
-            Walk(g, a, b, v0Mps, p, withAmberPenalty, null).TimeS;
+        internal static double SegmentTimeS(CostGrid g, int a, int b, double v0Mps, CostParams p, bool withAmberPenalty)
+        {
+            Segment m = Walk(g, a, b, v0Mps, p, 1.0, null);
+            return withAmberPenalty ? m.ChoiceS : m.TimeS;
+        }
+
+        /// <summary>
+        /// The cost a search minimises on the segment from <paramref name="a"/> to
+        /// <paramref name="b"/>: its time plus the amber penalty times <paramref name="amberMult"/>.
+        /// <paramref name="timeS"/> gets the time without penalty, from the same walk. Both are
+        /// <see cref="double.PositiveInfinity"/> if it is blocked.
+        /// </summary>
+        internal static double SegmentCostS(CostGrid g, int a, int b, double v0Mps, CostParams p, double amberMult, out double timeS)
+        {
+            Segment m = Walk(g, a, b, v0Mps, p, amberMult, null);
+            timeS = m.TimeS;
+            return m.ChoiceS;
+        }
 
         /// <summary>
         /// Metres of the segment walked in amber nodes' cells, with the same rule as
         /// <see cref="SegmentTimeS"/>; <see cref="double.PositiveInfinity"/> if it is blocked.
         /// </summary>
         internal static double SegmentAmberM(CostGrid g, int a, int b, CostParams p) =>
-            Walk(g, a, b, p.V0Mps.P50, p, withAmberPenalty: false, null).AmberM;
+            Walk(g, a, b, p.V0Mps.P50, p, 1.0, null).AmberM;
 
         internal static bool IsBlockedNode(CostGrid g, int node, CostParams p) =>
             IsBlocked(g.SlopeDegArray[node], g.RoughnessCmArray[node], g.HazardArray[node], p);
@@ -70,7 +93,8 @@ namespace MartianMap.Routing
         /// segment is blocked. <c>cells</c> are the nodes whose cell the route crosses, in order and
         /// without consecutive repeats; <c>polyline_enu_m</c> has the start, every crossing of a line
         /// of nodes, every waypoint and the goal, with the bilinear height; <c>max_hazard</c> is the
-        /// maximum over <c>cells</c>. <c>eta_s</c> never includes penalties.
+        /// maximum over <c>cells</c>. <c>eta_s</c> never includes penalties. A single waypoint is a
+        /// found route that stays on its node, with no length and no time.
         /// </summary>
         internal static Route Trace(CostGrid g, int[] waypoints, CostParams p)
         {
@@ -79,9 +103,9 @@ namespace MartianMap.Routing
                 throw new ArgumentNullException(nameof(waypoints));
             }
 
-            if (waypoints.Length < 2)
+            if (waypoints.Length < 1)
             {
-                throw new ArgumentException("A route has at least two waypoints.", nameof(waypoints));
+                throw new ArgumentException("A route has at least one waypoint.", nameof(waypoints));
             }
 
             var tracer = new Tracer();
@@ -92,20 +116,30 @@ namespace MartianMap.Routing
             }
 
             tracer.Points.Add(NodePoint(g, w0));
+            if (waypoints.Length == 1)
+            {
+                if (IsBlockedNode(g, w0, p))
+                {
+                    return Route.NotFound;
+                }
+
+                return new Route(true, new[] { w0 }, tracer.Points.ToArray(), 0, 0, 0, new Percentiles(0, 0, 0), g.HazardArray[w0]);
+            }
+
             double length = 0, ascent = 0, amber = 0, t10 = 0, t50 = 0, t90 = 0;
             for (int k = 1; k < waypoints.Length; k++)
             {
                 int a = waypoints[k - 1];
                 int b = waypoints[k];
-                Segment m50 = Walk(g, a, b, p.V0Mps.P50, p, withAmberPenalty: false, tracer);
+                Segment m50 = Walk(g, a, b, p.V0Mps.P50, p, 1.0, tracer);
                 if (double.IsPositiveInfinity(m50.TimeS))
                 {
                     return Route.NotFound;
                 }
 
-                t10 += Walk(g, a, b, p.V0Mps.P10, p, withAmberPenalty: false, null).TimeS;
+                t10 += Walk(g, a, b, p.V0Mps.P10, p, 1.0, null).TimeS;
                 t50 += m50.TimeS;
-                t90 += Walk(g, a, b, p.V0Mps.P90, p, withAmberPenalty: false, null).TimeS;
+                t90 += Walk(g, a, b, p.V0Mps.P90, p, 1.0, null).TimeS;
                 length += m50.LengthM;
                 ascent += m50.AscentM;
                 amber += m50.AmberM;
@@ -136,11 +170,13 @@ namespace MartianMap.Routing
         /// takes its own grade: its rise over its horizontal length.</item>
         /// </list>
         /// The cuts are found in exact integer arithmetic. Along one row or column this is the
-        /// half-edge rule: half the edge per node, with the grade of the whole edge. With a
+        /// half-edge rule: half the edge per node, with the grade of the whole edge. The time and the
+        /// choice cost (the time plus the amber penalty times <paramref name="amberMult"/>) are
+        /// summed piece by piece in the same walk. With a
         /// <paramref name="tracer"/>, it also records the cells and the points of
         /// <see cref="Trace"/>; the segment's first point is not recorded, it is the previous end.
         /// </summary>
-        private static Segment Walk(CostGrid g, int a, int b, double v0Mps, CostParams p, bool withAmberPenalty, Tracer tracer)
+        private static Segment Walk(CostGrid g, int a, int b, double v0Mps, CostParams p, double amberMult, Tracer tracer)
         {
             int count = g.Width * g.Height;
             if ((uint)a >= (uint)count || (uint)b >= (uint)count)
@@ -195,10 +231,12 @@ namespace MartianMap.Routing
                 double rise = hNext - hPrev;
                 double pieceM = Length3DM(pieceH, rise);
                 bool amber = IsAmber(g.HazardArray[cell], p);
-                m.TimeS += pieceM / SpeedMps(rise / pieceH, g.RoughnessCmArray[cell], v0Mps, p);
-                if (withAmberPenalty && amber)
+                double pieceS = pieceM / SpeedMps(rise / pieceH, g.RoughnessCmArray[cell], v0Mps, p);
+                m.TimeS += pieceS;
+                m.ChoiceS += pieceS;
+                if (amber)
                 {
-                    m.TimeS += pieceM * p.AmberPenaltySPerM;
+                    m.ChoiceS += pieceM * p.AmberPenaltySPerM * amberMult;
                 }
 
                 m.LengthM += pieceM;
@@ -288,12 +326,18 @@ namespace MartianMap.Routing
             public static readonly Segment Blocked = new Segment
             {
                 TimeS = double.PositiveInfinity,
+                ChoiceS = double.PositiveInfinity,
                 LengthM = double.PositiveInfinity,
                 AscentM = double.PositiveInfinity,
                 AmberM = double.PositiveInfinity,
             };
 
+            /// <summary>The time without penalties.</summary>
             public double TimeS;
+
+            /// <summary>The time plus the amber penalty times the multiplier: what a search minimises.</summary>
+            public double ChoiceS;
+
             public double LengthM;
             public double AscentM;
             public double AmberM;

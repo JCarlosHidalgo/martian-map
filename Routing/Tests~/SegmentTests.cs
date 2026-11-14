@@ -98,6 +98,58 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
+        public void SegmentCostMatchesBothSegmentTimes()
+        {
+            float[] height =
+            {
+                0f, 0.5f, 1.25f, 0.75f, 0f,
+                0.25f, 1f, 2f, 1.5f, 0.5f,
+                0.5f, 1.25f, 2.5f, 2f, 1f,
+            };
+            byte[] relief =
+            {
+                0, 40, 0, 50, 0,
+                10, 0, 45, 0, 0,
+                0, 0, 0, 38, 0,
+            };
+            CostGrid g = Grid(5, 3, heightM: height, hazard: Set(5, 3, (2, 1, 128)), relief: relief);
+            foreach (((int, int) a, (int, int) b) in new[] { ((0, 0), (4, 2)), ((1, 0), (3, 1)), ((3, 2), (2, 0)) })
+            {
+                int na = g.Index(a.Item1, a.Item2), nb = g.Index(b.Item1, b.Item2);
+                double choice = Cost.SegmentCostS(g, na, nb, P.V0Mps.P50, P, 1.0, out double time);
+                Assert.That(choice, Is.EqualTo(Cost.SegmentTimeS(g, na, nb, P.V0Mps.P50, P, withAmberPenalty: true)), $"{a} -> {b}");
+                Assert.That(time, Is.EqualTo(Cost.SegmentTimeS(g, na, nb, P.V0Mps.P50, P, withAmberPenalty: false)), $"{a} -> {b}");
+            }
+        }
+
+        [Test]
+        public void TheAmberMultiplierScalesOnlyThePenalty()
+        {
+            // Oracle (~/scratch/c4-verify/oracle, route_oracle.segment, mult=4): the knight move of
+            // AKnightMoveGivesAQuarterToEachOfItsFourNodes, 10.647942749999 + 4 · 2.4 · 1.118033988749895.
+            CostGrid g = Grid(3, 2, hazard: Set(3, 2, (1, 0, 128)));
+            double choice = Cost.SegmentCostS(g, g.Index(0, 0), g.Index(2, 1), P.V0Mps.P50, P, 4.0, out double time);
+            Assert.That(choice, Is.EqualTo(21.381069041997993).Within(Tol));
+            Assert.That(time, Is.EqualTo(10.647942749999).Within(Tol));
+        }
+
+        [Test]
+        public void ABlockedSegmentCostsInfinityBothWays()
+        {
+            CostGrid g = Grid(3, 2, hazard: Set(3, 2, (1, 0, 255)));
+            double choice = Cost.SegmentCostS(g, g.Index(0, 0), g.Index(2, 1), P.V0Mps.P50, P, 1.0, out double time);
+            Assert.That(choice, Is.EqualTo(double.PositiveInfinity));
+            Assert.That(time, Is.EqualTo(double.PositiveInfinity));
+        }
+
+        [Test]
+        public void TheSpeedBoundIsV0TimesFTerreno()
+        {
+            // 0.70 · 0.6, by hand.
+            Assert.That(Cost.MaxSpeedMps(0.70, P), Is.EqualTo(0.42).Within(1e-12));
+        }
+
+        [Test]
         public void ASegmentNeedsTwoDifferentNodesInsideTheGrid()
         {
             CostGrid g = Grid(2, 2);

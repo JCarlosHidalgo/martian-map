@@ -78,9 +78,29 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
-        public void ARouteNeedsTwoWaypoints()
+        public void ASingleWaypointIsARouteThatStaysThere()
         {
-            Assert.Throws<ArgumentException>(() => Cost.Trace(G, new[] { 0 }, P));
+            var hazard = new byte[] { 0, 0, 0, 50 };
+            var g = new CostGrid(2, 2, 2f, new EnuPoint(0, 0), new[] { 1f, 2f, 3f, 4f }, new byte[4], new byte[4], hazard);
+            Route r = Cost.Trace(g, new[] { 3 }, P);
+            Assert.That(r.Found, Is.True);
+            Assert.That(r.Cells, Is.EqualTo(new[] { 3 }));
+            AssertPolyline(r, (2, 2, 4));
+            Assert.That(r.LengthM, Is.EqualTo(0));
+            Assert.That(r.AscentM, Is.EqualTo(0));
+            Assert.That(r.AmberM, Is.EqualTo(0));
+            Assert.That((r.EtaS.P10, r.EtaS.P50, r.EtaS.P90), Is.EqualTo((0.0, 0.0, 0.0)));
+            Assert.That(r.MaxHazard, Is.EqualTo(50));
+
+            hazard[3] = 255;
+            var blocked = new CostGrid(2, 2, 2f, new EnuPoint(0, 0), new[] { 1f, 2f, 3f, 4f }, new byte[4], new byte[4], hazard);
+            Assert.That(Cost.Trace(blocked, new[] { 3 }, P), Is.SameAs(Route.NotFound));
+        }
+
+        [Test]
+        public void ARouteNeedsAWaypoint()
+        {
+            Assert.Throws<ArgumentException>(() => Cost.Trace(G, new int[0], P));
             Assert.Throws<ArgumentNullException>(() => Cost.Trace(G, null, P));
             Assert.Throws<ArgumentOutOfRangeException>(() => Cost.Trace(G, new[] { 15, 0 }, P));
         }
