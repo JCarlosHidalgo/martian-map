@@ -202,6 +202,12 @@ namespace MartianMap.Routing
                 RequirePointIn(grid, stop.EnuM, nameof(stops));
             }
 
+            if (conditions == null)
+            {
+                throw new ArgumentNullException(nameof(conditions));
+            }
+
+            Conditions.RequireUtc(tUtc, nameof(tUtc));
             throw new NotImplementedException();
         }
 

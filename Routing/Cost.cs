@@ -124,7 +124,7 @@ namespace MartianMap.Routing
 
         /// <summary>
         /// Walks the segment from the centre of node <paramref name="a"/> to the centre of node
-        /// <paramref name="b"/> (docs/guide/chapters/tablet.md, "Costo"):
+        /// <paramref name="b"/> (docs/guide/chapters/tablet.md, "Costo de caminata (D6)"):
         /// <list type="bullet">
         /// <item>Each node owns its cell, the closed square of side <c>cell_m</c> centred on it. The
         /// segment is cut exactly where it crosses a cell edge, and each piece takes the relief and

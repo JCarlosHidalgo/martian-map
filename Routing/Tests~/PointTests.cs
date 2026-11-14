@@ -61,5 +61,16 @@ namespace MartianMap.Routing.Tests
             Assert.Throws<ArgumentException>(() => Router.OrderStops(G, In, new Stop[] { null }, field, budget, c, T, StopMode.Tsp, P));
             Assert.Throws<NotImplementedException>(() => Router.OrderStops(G, In, With(new EnuPoint(14, 22)), field, budget, c, T, StopMode.Tsp, P));
         }
+
+        [Test]
+        public void OrderStopsChecksItsConditionsAndTimeBeforeTheBody()
+        {
+            var field = new Field(G, In, new float[6]);
+            var stops = new[] { new Stop("s1", In, 5, 0) };
+            var budget = new Budget(14400, 50);
+            var c = new Conditions(6, Array.Empty<ConditionModifier>());
+            Assert.Throws<ArgumentException>(() => Router.OrderStops(G, In, stops, field, budget, c, DateTime.SpecifyKind(T, DateTimeKind.Local), StopMode.Tsp, P));
+            Assert.Throws<ArgumentNullException>(() => Router.OrderStops(G, In, stops, field, budget, null, T, StopMode.Tsp, P));
+        }
     }
 }
