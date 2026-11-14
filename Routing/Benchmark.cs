@@ -47,6 +47,7 @@ namespace MartianMap.Routing
 
             Line("# Routing benchmark (E5)");
             Line(string.Empty);
+            Line($"- Scenario: {c.Label}");
             Line($"- Machine: {RuntimeInformation.FrameworkDescription}, {RuntimeInformation.OSArchitecture}, {Environment.ProcessorCount} logical CPUs");
             Line($"- Config: seed 0x{c.Seed:X}; A* routes of {G(c.RouteM)} m on {Join(c.Sizes)}², {c.RouteWarmUp} warm-up + {c.RouteRuns} runs; "
                 + $"field at v0 P90 on {Join(c.FieldSizes)}², {c.FieldWarmUp} + {c.FieldRuns}"
@@ -322,6 +323,9 @@ namespace MartianMap.Routing
 
         internal ulong Seed { get; set; }
 
+        /// <summary>What the scenario is, for the header of the table.</summary>
+        internal string Label { get; set; } = string.Empty;
+
         /// <summary>The cost parameters: Routing reads no JSON, so E5 carries a copy of <c>cost_params.json</c>.</summary>
         internal CostParams Params { get; set; }
 
@@ -332,6 +336,7 @@ namespace MartianMap.Routing
         /// </summary>
         internal static BenchmarkConfig E5 => new BenchmarkConfig
         {
+            Label = "E5, the full protocol: 5 terrains, 3 warm-up + 20 measured runs (what the tablet runs)",
             Sizes = new[] { 1000, 2000, 4000 },
             RouteRuns = 20,
             RouteWarmUp = 3,
@@ -358,5 +363,27 @@ namespace MartianMap.Routing
                 altSafestAmberMult: 4,
                 altGentlestSPerM: 10),
         };
+
+        /// <summary>
+        /// The quick laptop scenario of <c>BenchmarkRunner</c>: the 5 terrains on 1000² and 2000²,
+        /// A* with 1 warm-up + 5 runs and the field with 1 + 1, no 4000² and no stress field. It is
+        /// not the E5 protocol; the tablet runs <see cref="E5"/>.
+        /// </summary>
+        internal static BenchmarkConfig Quick
+        {
+            get
+            {
+                BenchmarkConfig c = E5;
+                c.Label = "quick laptop run, not the E5 protocol: 5 terrains on 1000²/2000², A* 1 + 5 runs, field 1 + 1, no 4000²; the tablet runs the full E5";
+                c.Sizes = new[] { 1000, 2000 };
+                c.RouteWarmUp = 1;
+                c.RouteRuns = 5;
+                c.FieldSizes = new[] { 1000, 2000 };
+                c.FieldWarmUp = 1;
+                c.FieldRuns = 1;
+                c.StressFieldSize = 0;
+                return c;
+            }
+        }
     }
 }

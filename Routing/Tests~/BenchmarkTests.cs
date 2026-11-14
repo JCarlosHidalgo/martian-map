@@ -130,6 +130,33 @@ namespace MartianMap.Routing.Tests
             Assert.That((c.FieldWarmUp, c.FieldRuns, c.StressFieldSize), Is.EqualTo((3, 20, 4000)));
         }
 
+        [Test]
+        public void TheQuickConfigIsTheLaptopScenario()
+        {
+            BenchmarkConfig q = BenchmarkConfig.Quick;
+            Assert.That(q.Sizes, Is.EqualTo(new[] { 1000, 2000 }));
+            Assert.That((q.RouteWarmUp, q.RouteRuns, q.RouteM), Is.EqualTo((1, 5, 500.0)));
+            Assert.That(q.FieldSizes, Is.EqualTo(new[] { 1000, 2000 }));
+            Assert.That((q.FieldWarmUp, q.FieldRuns, q.StressFieldSize), Is.EqualTo((1, 1, 0)));
+            Assert.That(q.Seed, Is.EqualTo(BenchmarkConfig.E5.Seed));
+            Assert.That(Same(q.Params, BenchmarkConfig.E5.Params), Is.True);
+            Assert.That(q.Label, Does.Contain("not the E5 protocol"));
+            Assert.That(BenchmarkConfig.E5.Label, Does.StartWith("E5"));
+        }
+
+        [Test]
+        public void TheHeaderSaysWhichScenarioRan()
+        {
+            var lines = new List<string>();
+            BenchmarkConfig c = Small(stress: 0);
+            c.Label = "a tiny test scenario";
+            Benchmark.Run(lines.Add, c);
+            Assert.That(lines, Has.Some.EqualTo("- Scenario: a tiny test scenario"));
+        }
+
+        private static bool Same(CostParams a, CostParams b) =>
+            typeof(CostParams).GetProperties(BindingFlags.Public | BindingFlags.Instance).All(prop => Equals(prop.GetValue(a), prop.GetValue(b)));
+
         private static BenchmarkConfig Small(int stress) => new BenchmarkConfig
         {
             Sizes = new[] { 64 },
