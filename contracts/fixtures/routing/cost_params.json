@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "v0_mps": {"p10": 0.94, "p50": 0.70, "p90": 0.56},
+  "b": {"p50": 3.0, "low": 2.5, "high": 3.5},
+  "c": 0,
+  "walk_ceiling_mps": 1.3,
+  "max_slope_deg": 15,
+  "relief_block_cm": 61,
+  "relief_penalty_from_cm": 36,
+  "hazard_red_min": 192,
+  "hazard_amber_min": 96,
+  "f_terreno": 0.6,
+  "f_rug_min": 0.5,
+  "amber_penalty_s_per_m": 2.4,
+  "alt_safest_amber_mult": 4,
+  "alt_gentlest_s_per_m": 10
+}

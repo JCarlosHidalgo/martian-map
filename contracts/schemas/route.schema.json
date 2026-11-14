@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "route.schema.json",
+  "title": "route",
+  "description": "A Route of C4 (expected_route.json): the route fields plus schema_version at the root. plan.schema.json reuses $defs/route for its legs.",
+  "type": "object",
+  "$ref": "#/$defs/route",
+  "required": ["schema_version"],
+  "properties": {
+    "schema_version": {"const": 1}
+  },
+  "unevaluatedProperties": false,
+  "$defs": {
+    "percentiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["p10", "p50", "p90"],
+      "properties": {
+        "p10": {"type": "number", "minimum": 0},
+        "p50": {"type": "number", "minimum": 0},
+        "p90": {"type": "number", "minimum": 0}
+      }
+    },
+    "route": {
+      "type": "object",
+      "required": ["found", "cells", "polyline_enu_m", "length_m", "ascent_m", "amber_m", "eta_s", "max_hazard"],
+      "properties": {
+        "found": {"type": "boolean"},
+        "cells": {
+          "description": "Indices j * width + i of the nodes whose cell the route crosses, in order from start to goal, without consecutive repeats (not the A* nodes nor the smoothing waypoints).",
+          "type": "array",
+          "items": {"type": "integer", "minimum": 0}
+        },
+        "polyline_enu_m": {
+          "description": "[e, n, u] in metres; u is height over the areoid minus origin_height_m.",
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [{"type": "number"}, {"type": "number"}, {"type": "number"}],
+            "items": false,
+            "minItems": 3
+          }
+        },
+        "length_m": {"description": "3D length.", "type": "number", "minimum": 0},
+        "ascent_m": {"description": "Accumulated height change, climbed plus descended.", "type": "number", "minimum": 0},
+        "amber_m": {"description": "Metres walked in amber cells.", "type": "number", "minimum": 0},
+        "eta_s": {"description": "Walking time at v0 P10/P50/P90; never includes penalties.", "$ref": "#/$defs/percentiles"},
+        "max_hazard": {"type": "integer", "minimum": 0, "maximum": 255}
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "com.martianmap.edits",
+  "version": "0.1.0",
+  "displayName": "Martian Map Edits",
+  "description": "Pure C# (netstandard2.1) edits library of Martian Map, with no engine references.",
+  "unity": "6000.3"
+}
