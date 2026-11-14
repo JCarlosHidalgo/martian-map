@@ -10,7 +10,7 @@ namespace MartianMap.Terrain
     /// <list type="bullet">
     /// <item>1 topo · 2 hazard · 3 heat · 4 ortho · 5 thermal · 6 thermal_ir</item>
     /// <item>H: fake heat field from the habitat (straight line at 1 m/s, a stand-in for ReturnField)</item>
-    /// <item>Z: demo zone · X: fixture-like tile</item>
+    /// <item>C: local cache (preloaded zones) · N: next cached zone · Z: demo zone · X: fixture-like tile</item>
     /// </list>
     /// </summary>
     public sealed class TerrainSandboxKeys : MonoBehaviour
@@ -40,7 +40,7 @@ namespace MartianMap.Terrain
                 bootstrap = FindAnyObjectByType<TerrainBootstrap>();
             }
 
-            Debug.Log("[Terrain] sandbox keys: 1-6 layers, H fake heat, Z demo zone, X fixture tile");
+            Debug.Log("[Terrain] sandbox keys: 1-6 layers, H fake heat, C cache, N next zone, Z demo zone, X fixture tile");
         }
 
         private void Update()
@@ -65,6 +65,16 @@ namespace MartianMap.Terrain
                 FakeHeatField(map.Current.Zone);
             }
 
+            if (bootstrap != null && keyboard.cKey.wasPressedThisFrame)
+            {
+                _ = bootstrap.LoadAsync(TerrainBootstrap.ZoneSource.Cache);
+            }
+
+            if (bootstrap != null && keyboard.nKey.wasPressedThisFrame && bootstrap.Cache != null)
+            {
+                RequestNextZone();
+            }
+
             if (bootstrap != null && keyboard.zKey.wasPressedThisFrame)
             {
                 _ = bootstrap.LoadAsync(TerrainBootstrap.ZoneSource.Demo);
@@ -74,6 +84,27 @@ namespace MartianMap.Terrain
             {
                 _ = bootstrap.LoadAsync(TerrainBootstrap.ZoneSource.FixtureLike);
             }
+        }
+
+        private void RequestNextZone()
+        {
+            var zones = bootstrap.Cache.Zones;
+            if (zones.Count == 0)
+            {
+                return;
+            }
+
+            var current = map.Current?.Zone.ZoneId;
+            var index = 0;
+            for (var i = 0; i < zones.Count; i++)
+            {
+                if (zones[i].ZoneId == current)
+                {
+                    index = (i + 1) % zones.Count;
+                }
+            }
+
+            MapEvents.Emit(new ZoneRequested(zones[index].ZoneId));
         }
 
         private void FakeHeatField(ZoneInfo zone)

@@ -5,15 +5,15 @@
 ## Fuente y estado de verificación
 
 La referencia oficial es la [página del reto](https://www.spaceappschallenge.org/2026/challenges/interplanetary-survival-guide-martian-map/),
-con sus pestañas *Details* y *Resources*. El enunciado y los cuatro enlaces de este capítulo
-fueron aportados por P6 el **2026-11-14**. El enunciado se presenta íntegramente traducido del
-inglés al español; no es una traducción oficial. Se conserva el carácter opcional de las
-sugerencias del original.
+con sus pestañas *Details* y *Resources*. Este capítulo se cotejó con las transcripciones de
+ambas pestañas aportadas por P6 el **2026-11-14**. La copia de *Resources* procede de la consulta
+de P6 en su navegador e incluye el aviso sobre sitios externos y cinco recursos con sus
+descripciones y enlaces.
 
-**NO VERIFICADO:** el cotejo directo con la versión oficial vigente y la exhaustividad de
-*Resources*. Para cerrarlo, P6 debe abrir ambas pestañas, comparar el texto, las descripciones y
-los enlaces con este capítulo, incorporar cualquier contenido faltante y registrar la fecha del
-cotejo. Los enlaces aportados no incluyen las descripciones originales de *Resources*.
+El enunciado, el aviso y las descripciones se presentan íntegramente traducidos del inglés al
+español; no es una traducción oficial. Se conserva el carácter opcional de las sugerencias del
+original. El cotejo documental se basa en el contenido aportado por P6; no acredita una consulta
+automática independiente de la página ni el funcionamiento de las aplicaciones enlazadas.
 
 ## Resumen
 
@@ -108,13 +108,33 @@ hackathon.
 
 ## Recursos (Resources)
 
-Estos son los cuatro enlaces aportados por P6. Los nombres sirven para identificar sus destinos;
-no son una transcripción de las descripciones de la pestaña oficial.
+> NASA no respalda a ninguna entidad ajena al Gobierno de Estados Unidos ni se responsabiliza
+> de la información contenida en sitios web que no pertenezcan a dicho Gobierno. Al utilizar
+> esos sitios, los participantes deben cumplir las condiciones de uso de datos de cada sitio.
 
-1. [Mars Trek](https://trek.nasa.gov/mars/).
-2. [Mapas interactivos de Marte de USGS](https://astrogeology-usgs.hub.arcgis.com/pages/interactive-maps-mars).
-3. [Ruta propuesta de Curiosity por Mount Sharp](https://science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/).
-4. [NASA Worldview](https://worldview.earthdata.nasa.gov/).
+### Datos y recursos de NASA
+
+1. **[Mars Trek del Laboratorio de Propulsión a Chorro (JPL)](https://trek.nasa.gov/mars/):**
+   portal web de NASA para la exploración de Marte que presenta datos recopilados por NASA en
+   distintos lugares de aterrizaje.
+
+2. **[Programa de Cartografía Geológica Planetaria de USGS-NASA](https://astrogeology-usgs.hub.arcgis.com/pages/interactive-maps-mars):**
+   mapa geológico de Marte estandarizado y de alta calidad.
+
+3. **[Ejemplo visual de un mapa de ruta para el caso de Curiosity mencionado en el enunciado](https://science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/):**
+   esta animación muestra una ruta propuesta para el rover Curiosity de NASA, que asciende por
+   la parte baja de Mount Sharp en Marte. La versión anotada del mapa identifica distintas
+   regiones que el equipo científico del rover desea explorar en los próximos años. Un video de
+   sobrevuelo las explica con más detalle.
+
+4. **[NASA Worldview](https://worldview.earthdata.nasa.gov/):** explora visualmente el pasado y el
+   presente de nuestro dinámico planeta desde la perspectiva de un satélite. Selecciona una de
+   las historias disponibles para conocer mejor Worldview, que forma parte de NASA Earthdata,
+   las imágenes satelitales que ofrece y los acontecimientos que ocurren en todo el mundo.
+
+5. **[Galería de imágenes sin procesar de Mars Perseverance](https://mars.nasa.gov/mars2020/multimedia/raw-images/):**
+   más de un millón de imágenes captadas por el rover durante su recorrido por la superficie de
+   Marte.
 
 ## Relación con el diseño del equipo
 

@@ -20,7 +20,7 @@ dice qué pide el reto, qué queda fuera, qué zona se eligió y qué indicadore
 | [Tablet](./tablet.md) | cómo la app dibuja el terreno, calcula rutas, aplica ediciones y muestra indicadores |
 | [Reparto del trabajo en 6 personas](./reparto.md) | quién construye qué, con qué mocks, en qué orden y qué mide |
 | [Fuentes](./fuentes.md) | de dónde sale cada afirmación con fuente, y qué URL se sondean en H0 |
-| [El reto](./reto.md) | qué dice el enunciado aportado por P6, qué recursos incluye y qué falta cotejar con la fuente oficial |
+| [El reto](./reto.md) | qué dice el enunciado, qué recursos incluye y de dónde procede la copia aportada por P6 |
 
 ## Cómo leer las fuentes
 
@@ -45,9 +45,9 @@ en Marte. Debe ser una vista **hiperlocal**, por capas e integrada, de un lugar 
 datos de **varias misiones de NASA** para planear y ejecutar una Marswalk segura con ciencia en el
 camino.
 
-El enunciado aportado por P6, traducido íntegramente al español, y sus cuatro enlaces de recursos
+El enunciado aportado por P6, traducido íntegramente al español, y la lista de recursos
 están en [El reto](./reto.md), al final del orden de lectura. Su sección "Fuente y estado de
-verificación" identifica lo que falta cotejar con la página oficial.
+verificación" documenta la procedencia y el alcance del cotejo.
 
 ## Requisitos del reto
 
