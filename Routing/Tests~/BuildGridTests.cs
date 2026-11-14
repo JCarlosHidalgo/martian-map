@@ -82,6 +82,108 @@ namespace MartianMap.Routing.Tests
             Assert.That(blocked, Is.EqualTo(0));
         }
 
+        private static TileRasters Flat(double e0, double n0, ushort h) => Tiles.Make(e0, n0, (r, c) => h);
+
+        [Test]
+        public void TheGridCoversTheBoxOfTheTiles()
+        {
+            CostGrid g = Router.BuildGrid(new[] { Flat(256, 256, 0), Flat(0, 0, 0) }, 0, P);
+            Assert.That(g.Width, Is.EqualTo(257));
+            Assert.That(g.Height, Is.EqualTo(257));
+            Assert.That(g.CellM, Is.EqualTo(2f));
+            Assert.That(g.OriginEnuM.E, Is.EqualTo(0));
+            Assert.That(g.OriginEnuM.N, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ANodeInNoTileIsNodata()
+        {
+            // cases_buildgrid.py t2, "L": tiles at (0, 0), (256, 0) and (0, 256), all samples 1024 (1 m).
+            CostGrid g = Router.BuildGrid(new[] { Flat(0, 0, 1024), Flat(256, 0, 1024), Flat(0, 256, 1024) }, 0, P);
+            foreach ((int i, int j) in new[] { (129, 129), (256, 256) })
+            {
+                Assert.That(g.HeightM[Node(g, i, j)], Is.EqualTo(0f), $"({i}, {j})");
+                Assert.That(g.Hazard[Node(g, i, j)], Is.EqualTo(255), $"({i}, {j})");
+            }
+
+            // The edges of the present tiles are theirs: their window samples in the missing tile are skipped.
+            foreach ((int i, int j) in new[] { (128, 129), (129, 128), (128, 128), (128, 256), (256, 128) })
+            {
+                Assert.That(g.HeightM[Node(g, i, j)], Is.EqualTo(1f), $"({i}, {j})");
+                Assert.That(g.Hazard[Node(g, i, j)], Is.EqualTo(0), $"({i}, {j})");
+            }
+        }
+
+        [Test]
+        public void ASharedEdgeTakesTheMaximumAndAnyNodata()
+        {
+            // cases_buildgrid.py t2, "edge": the west tile's column c = 256 is the east tile's c = 0.
+            // West: slope 30, hazard 10 on it, height 100 at r = 128. East: slope 5, hazard 90 on it,
+            // height 200 at r = 128 and nodata at r = 64. origin_height_m = 2.
+            TileRasters west = Tiles.Make(
+                0, 0,
+                (r, c) => (ushort)(c == 256 && r == 128 ? 100 : 0),
+                (r, c) => (byte)(c == 256 ? 30 : 0),
+                hazard: (r, c) => (byte)(c == 256 ? 10 : 0));
+            TileRasters east = Tiles.Make(
+                256, 0,
+                (r, c) => c == 0 && r == 128 ? (ushort)200 : c == 0 && r == 64 ? TileRasters.HeightNodata : (ushort)0,
+                (r, c) => (byte)(c == 0 ? 5 : 0),
+                hazard: (r, c) => (byte)(c == 0 ? 90 : 0));
+            CostGrid g = Router.BuildGrid(new[] { east, west }, 2, P);
+
+            int n = Node(g, 128, 64);
+            Assert.That(g.HeightM[n], Is.EqualTo(-1.90234375f), "the west tile's 100 / 1024 − 2");
+            Assert.That(g.SlopeDeg[n], Is.EqualTo(30));
+            Assert.That(g.Hazard[n], Is.EqualTo(90));
+
+            int nodata = Node(g, 128, 96);
+            Assert.That(g.HeightM[nodata], Is.EqualTo(0f));
+            Assert.That(g.Hazard[nodata], Is.EqualTo(255));
+            Assert.That(g.SlopeDeg[nodata], Is.EqualTo(30));
+
+            Assert.That(g.SlopeDeg[Node(g, 127, 64)], Is.EqualTo(0), "its window stops at c = 255");
+            Assert.That(g.Hazard[Node(g, 129, 64)], Is.EqualTo(0), "its window starts at the east tile's c = 1");
+        }
+
+        [TestCase(128, 128, 1f)]
+        [TestCase(64, 128, 1f)]
+        [TestCase(192, 128, 2f)]
+        [TestCase(128, 64, 1f)]
+        [TestCase(128, 192, 3f)]
+        [TestCase(200, 200, 4f)]
+        public void TheHeightComesFromTheSouthWestmostTile(int i, int j, float heightM)
+        {
+            // cases_buildgrid.py t2, "four": 2 × 2 tiles at 1, 2, 3 and 4 m (SW, SE, NW, NE).
+            CostGrid g = Router.BuildGrid(new[] { Flat(256, 256, 4096), Flat(0, 256, 3072), Flat(256, 0, 2048), Flat(0, 0, 1024) }, 0, P);
+            Assert.That(g.HeightM[Node(g, i, j)], Is.EqualTo(heightM));
+        }
+
+        [Test]
+        public void TheGridDoesNotDependOnTheOrderOfTheTiles()
+        {
+            // cases_buildgrid.py t2, "three"; origin_height_m = 7.25.
+            TileRasters[] three =
+            {
+                Tiles.Make(0, 0, (r, c) => (ushort)((3 * r + 5 * c) % 60000), (r, c) => (byte)(r * c % 37), (r, c) => (byte)((r ^ c) % 23), (r, c) => (byte)((7 * r + c) % 256)),
+                Tiles.Make(256, 0, (r, c) => (ushort)((11 * r + c) % 60000), (r, c) => (byte)((r + c) % 41), (r, c) => (byte)((3 * r + c) % 29), (r, c) => (byte)((r * 13 + c * 5) % 256)),
+                Tiles.Make(256, 256, (r, c) => (ushort)(r * c % 60000), (r, c) => (byte)((2 * r + 3 * c) % 47), (r, c) => (byte)((r * 5 + c) % 31), (r, c) => (byte)((r + c * 9) % 256)),
+            };
+            int[][] permutations = { new[] { 0, 1, 2 }, new[] { 0, 2, 1 }, new[] { 1, 0, 2 }, new[] { 1, 2, 0 }, new[] { 2, 0, 1 }, new[] { 2, 1, 0 } };
+            foreach (int[] perm in permutations)
+            {
+                CostGrid g = Router.BuildGrid(new[] { three[perm[0]], three[perm[1]], three[perm[2]] }, 7.25, P);
+                Assert.That(Tiles.Sha256(Tiles.Serialize(g)), Is.EqualTo("25ab5d16137b70ad92763e18a6d6c3da650a414d3c98e127c1f476e3b13b1234"), string.Join(",", perm));
+            }
+        }
+
+        [Test]
+        public void ABoxTooLargeForAnIntThrows()
+        {
+            const double Far = 256.0 * (1 << 20);
+            Assert.Throws<ArgumentException>(() => Router.BuildGrid(new[] { Flat(0, 0, 0), Flat(Far, Far, 0) }, 0, P));
+        }
+
         [Test]
         public void ArgumentsAreChecked()
         {
