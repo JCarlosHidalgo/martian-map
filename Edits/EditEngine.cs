@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace MartianMap.Edits
 {
@@ -23,6 +24,19 @@ namespace MartianMap.Edits
         /// The live entities of a log, one per <c>entity_id</c>, with the same rules and the same
         /// walk as <see cref="Apply"/>. A tombstoned entity is not live.
         /// </summary>
-        public static IReadOnlyList<LiveEntity> LiveEntities(Edit[] edits) => throw new NotImplementedException();
+        public static IReadOnlyList<LiveEntity> LiveEntities(Edit[] edits)
+        {
+            Edit[] winners = EditMerge.Winners(edits);
+            var live = new List<LiveEntity>(winners.Length);
+            foreach (Edit w in winners)
+            {
+                if (!w.Tombstone)
+                {
+                    live.Add(new LiveEntity(w.EntityId, w.Op, w.Creator, EditMerge.LevelOf(w), w.Payload));
+                }
+            }
+
+            return new ReadOnlyCollection<LiveEntity>(live);
+        }
     }
 }
