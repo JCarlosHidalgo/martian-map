@@ -189,7 +189,7 @@ Límites que se declaran:
 
 | Qué | Algoritmo |
 |---|---|
-| Tramo | **A\* 16-conexo + suavizado**: string-pulling que solo acepta un atajo si no empeora el costo integrado, que es el de la regla de los tramos aplicada al atajo entero *(propuesta)* |
+| Tramo | **A\* 16-conexo + suavizado**: string-pulling que solo acepta un atajo si no empeora el costo integrado, que es el de la regla de los tramos aplicada al atajo entero *(propuesta)*. El atajo de un ancla a un nodo posterior del camino de A\* se acepta si su costo (tiempo P50 más la penalización ámbar, el mismo que minimiza A\*) no pasa de la suma de las aristas que sustituye, con un margen relativo de 10⁻⁹ para los empates de redondeo de un atajo colineal; desde cada ancla se alarga nodo a nodo y para en el primer rechazo, y el último aceptado es el ancla siguiente. Así la ruta suavizada nunca cuesta más que la de A\* *(propuesta de P3)* |
 | Regreso | **campo Dijkstra inverso al hábitat**: da radio de regreso, punto de no-retorno y heatmap en una corrida |
 | Alternativas | 3, por suma ponderada |
 | Orden de paradas | **Held-Karp (k ≤ 12) o greedy + 2-opt**, en modos TSP con depósito y orienteering |
@@ -271,7 +271,7 @@ dentro de un método síncrono.
 | `CostGrid` | la grilla de planificación: `width` y `height` en nodos, `cell_m` (2), `origin_enu_m` (el nodo `(0, 0)`, la esquina suroeste) y cuatro arrays planos de `width × height`: `height_m` (`float32`), `slope_deg`, `roughness_cm` y `hazard` (`uint8`). El nodo `(i, j)` está en el índice `j · width + i`; `i` crece al este y `j` al norte |
 | punto: `start`, `goal`, `home`, `enu_m` de una parada | `(e, n)` en metros ENU de la zona, `float64`. Tiene que ser finito y caer en la caja de los nodos de la `CostGrid`, bordes incluidos; si no, la llamada lanza *(propuesta de P3)*. `Routing` lo lleva al nodo más cercano, `i = floor((e − origin_e) / cell_m + 0,5)` e ídem `j`: el punto medio entre dos nodos va al de índice mayor, al este o al norte *(propuesta de P3)*; si ese nodo está bloqueado, el resultado es "no hay ruta". Si `start` y `goal` caen en el mismo nodo libre, la ruta se encuentra y se queda en él: `cells` = ese nodo, un punto, y todo lo demás a 0 *(propuesta de P3)* |
 | `Route` | `{found (bool), cells[] (índices de nodo), polyline_enu_m[] ([e, n, u]), length_m, ascent_m, amber_m, eta_s{p10,p50,p90}, max_hazard (uint8)}` |
-| `Field` | `{grid, home, time_s[]}`: un `float32` por nodo, el tiempo de regreso a `home` con v₀ P90; `+∞` donde no hay regreso. El regreso se elige como la ruta, con la penalización ámbar, y `time_s` guarda su tiempo P90 sin ella, igual que `eta_s` *(propuesta de P3)*. Solo lo crea `ReturnField`, y lleva la `CostGrid` y el `home` con que se calculó *(propuesta)* |
+| `Field` | `{grid, home, time_s[]}`: un `float32` por nodo, el tiempo de regreso a `home` con v₀ P90; `+∞` donde no hay regreso. El regreso se elige como la ruta, con la penalización ámbar, y `time_s` guarda su tiempo P90 sin ella, igual que `eta_s` *(propuesta de P3)*. Solo lo crea `ReturnField`, y lleva la `CostGrid` y el `home` con que se calculó *(propuesta)*: el punto tal como se pasó, aunque el campo sale de su nodo más cercano. Si ese nodo está bloqueado, todo el campo es `+∞`, sin excepción *(propuesta de P3)* |
 | `Alternative` | un enum: `Fastest`, `Safest`, `Gentlest`, con los valores 0, 1 y 2 *(propuesta)*. Toda lista de `Route` o de `Plan` de alternativas trae siempre las tres, en ese orden, aunque dos coincidan |
 | `CostParams` | los campos de `cost_params.json`, uno a uno: es el `params` de todas las llamadas *(propuesta)* |
 | `Stop` | `{id, enu_m, science_value, dwell_s}`; `science_value` es un entero de 0 a 10 |
@@ -337,7 +337,9 @@ dentro de un método síncrono.
   firma de H0:45, con el cuerpo vacío, y P3 lo rellena en H2–4, con el núcleo. Se corre solo en
   el portátil, con `dotnet run -c Release --project "Routing/Tests~/BenchmarkRunner"`: la tablet no
   se prueba *(decisión de P3, 2026-11-14)*. Corre, de menor a mayor tamaño, los 5 terrenos en 1000²
-  y 2000²: tramos de A\* de 500 m con 1 corrida de calentamiento y 5 medidas, y el campo con 1 + 1.
+  y 2000²: tramos de A\* de 500 m con 1 corrida de calentamiento y 5 medidas, y el campo con 1 + 1. La fila de
+  A\* cronometra `PlanRoute` entero (A\*, suavizado y trazado) y su columna `smooth ms` da el p50 del
+  suavizado solo; la del campo cronometra `ReturnField` *(propuesta de P3)*.
   La memoria que da es el heap gestionado, con la grilla y la memoria de trabajo de la búsqueda
   vivas (`GC.GetTotalMemory(true)`) *(propuesta de P3)*. Quién escribe la
   escena y el APK: [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones".
@@ -480,7 +482,7 @@ sí dependen entran después *(equipo)*:
 | `cost_params.json` y su esquema | completos | |
 | La firma pública: los tipos y las llamadas de esta sección, en `Routing/` y `Edits/` | compila contra netstandard2.1; cada cuerpo de cálculo lanza `NotImplementedException`, pero los constructores, la comprobación de los argumentos, `DurationLimit` y `EditOpText` ya funcionan | se rellena según el orden de [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones" |
 | `routing/costgrid_synth.bin` | completo: lo genera un script | |
-| `routing/expected_route.json` | una `Route` que genera el script de `costgrid_synth.bin`, sin A\* *(equipo)*: una recta sobre la rampa de la grilla sintética, con `eta_s` = longitud_3D / (v₀ · exp(−b · |s + c|) · `f_terreno`), `c` = 0 y s = ±20/256 (+ hacia el este, − hacia el oeste): la función es simétrica, así que la ida y la vuelta sobre la misma recta tardan lo mismo. Su `u` sigue la rampa, así que se dibuja sobre el tile sintético. Fija la forma y es el mock de `Terrain`, `FX` y `HUD` | P3 la regenera con el A\* suavizado, por un PR en `contracts/` |
+| `routing/expected_route.json` | una `Route` que genera el script de `costgrid_synth.bin`, sin A\* *(equipo)*: una recta sobre la rampa de la grilla sintética, con `eta_s` = longitud_3D / (v₀ · exp(−b · |s + c|) · `f_terreno`), `c` = 0 y s = ±20/256 (+ hacia el este, − hacia el oeste): la función es simétrica, así que la ida y la vuelta sobre la misma recta tardan lo mismo. Su `u` sigue la rampa, así que se dibuja sobre el tile sintético. Fija la forma y es el mock de `Terrain`, `FX` y `HUD` | P3 la regenera con el A\* suavizado, por un PR en `contracts/`. Desde H6–12 la genera `PlanRoute`, y también los tramos de `expected_plan.json`: sobre la rampa la ruta suavizada es la misma recta, así que ninguno de los dos cambió ni un byte *(P3, 2026-11-14)* |
 | `routing/expected_plan.json` | `{schema_version, plans[]}`: las tres `Plan`, en el orden de `Alternative`, que genera el mismo script con las dos paradas de la misión sintética. Sobre la rampa las tres son iguales. Es el mock de `RouteSelected` | P3 la regenera con `OrderStops` |
 | `edits/base_tile/` y `edits/edits_NN.json` | completos; `base_tile/` es una copia del tile sintético de C1 | |
 | `edits/expected_NN.sha256` | no existen | entran con `apply()`, antes de H6: los usa E9 |
