@@ -11,9 +11,10 @@ inglés al español; no es una traducción oficial. Se conserva el carácter opc
 sugerencias del original.
 
 **NO VERIFICADO:** el cotejo directo con la versión oficial vigente y la exhaustividad de
-*Resources*. Para cerrarlo, P6 debe abrir ambas pestañas, comparar el texto, las descripciones y
-los enlaces con este capítulo, incorporar cualquier contenido faltante y registrar la fecha del
-cotejo. Los enlaces aportados no incluyen las descripciones originales de *Resources*.
+*Resources*. Los enlaces aportados no incluyen las descripciones originales de esa pestaña.
+El procedimiento para cerrar el cotejo está en "Cómo completar la verificación". Las consultas
+independientes a los destinos, documentadas en "Recursos (Resources)", no confirman que la lista
+oficial esté completa.
 
 ## Resumen
 
@@ -111,10 +112,35 @@ hackathon.
 Estos son los cuatro enlaces aportados por P6. Los nombres sirven para identificar sus destinos;
 no son una transcripción de las descripciones de la pestaña oficial.
 
-1. [Mars Trek](https://trek.nasa.gov/mars/).
-2. [Mapas interactivos de Marte de USGS](https://astrogeology-usgs.hub.arcgis.com/pages/interactive-maps-mars).
-3. [Ruta propuesta de Curiosity por Mount Sharp](https://science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/).
-4. [NASA Worldview](https://worldview.earthdata.nasa.gov/).
+Consulta documental de los destinos: **2026-11-14**. La extracción de texto no comprueba el
+funcionamiento completo de una aplicación interactiva. Una respuesta sin texto extraíble tampoco
+demuestra que el recurso esté caído.
+
+| Recurso | Evidencia obtenida en su destino | Qué queda por comprobar |
+|---|---|---|
+| [Mars Trek](https://trek.nasa.gov/mars/) | La herramienta de consulta extrae el título "Mars Trek". | Inspección de la interfaz y descripción original en *Resources*. |
+| [Mapas interactivos de Marte de USGS](https://astrogeology-usgs.hub.arcgis.com/pages/interactive-maps-mars) | La herramienta recibe una página sin texto extraíble. | Inspección en navegador y descripción original en *Resources*. |
+| [Ruta propuesta de Curiosity por Mount Sharp](https://science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/) | El texto de NASA describe una animación de una ruta propuesta y regiones científicas de Mount Sharp; combina datos de instrumentos de MRO y Mars Express. | Correspondencia con la descripción original de *Resources*. |
+| [NASA Worldview](https://worldview.earthdata.nasa.gov/) | La herramienta recibe una página sin contenido textual suficiente para revisar la aplicación. | Inspección de la interfaz y descripción original en *Resources*. |
+
+### Cómo completar la verificación
+
+P6 realiza este cotejo sobre la página oficial del reto:
+
+1. Abrir las pestañas *Details* y *Resources* en un navegador. Si el acceso falla, comprobarlo
+   desde otra conexión o pedir a una persona del equipo que copie el contenido visible.
+2. Obtener el texto completo de *Resources*, incluidos títulos, descripciones y destinos de los
+   enlaces. Los cuatro enlaces aportados por sí solos no permiten confirmar la exhaustividad.
+3. Comparar ese contenido con este capítulo; incorporar los recursos que falten y corregir
+   cualquier diferencia. Una descripción editorial debe identificarse como tal.
+4. Registrar aquí la fecha del cotejo y la procedencia del contenido. Si se conserva una copia
+   local adicional, identificarla como captura de la fuente y registrarla en `guide.json` si es
+   una página de la guía.
+5. Retirar únicamente las marcas **NO VERIFICADO** que el cotejo permita cerrar y volver a
+   generar la guía antes de publicar.
+
+Una reproducción de una sede o una copia archivada puede ayudar a detectar diferencias, pero
+debe conservar su procedencia y fecha. No confirma por sí sola la versión oficial vigente.
 
 ## Relación con el diseño del equipo
 
