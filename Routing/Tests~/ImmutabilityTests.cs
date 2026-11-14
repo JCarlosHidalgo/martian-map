@@ -95,6 +95,7 @@ namespace MartianMap.Routing.Tests
             Assert.That(f.Home, Is.EqualTo(new EnuPoint(3, 4)));
             Assert.That(typeof(Field).GetConstructors(), Is.Empty, "Only ReturnField makes a Field.");
             Assert.Throws<ArgumentException>(() => new Field(g, default, new float[3]));
+            Assert.Throws<ArgumentNullException>(() => new Field(null, default, new float[2]));
         }
 
         [Test]

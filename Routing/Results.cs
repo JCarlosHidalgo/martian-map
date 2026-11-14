@@ -76,7 +76,7 @@ namespace MartianMap.Routing
     public sealed class Field
     {
         internal Field(CostGrid grid, EnuPoint home, float[] timeS)
-            : this(grid, home, ReadOnly.Array(timeS, grid?.Width * grid?.Height ?? 0, nameof(timeS)), true)
+            : this(grid ?? throw new ArgumentNullException(nameof(grid)), home, ReadOnly.Array(timeS, grid.Width * grid.Height, nameof(timeS)), true)
         {
         }
 
