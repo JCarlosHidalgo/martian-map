@@ -74,14 +74,23 @@ namespace MartianMap.Routing.Tests
             Assert.That(Router.PlanRoute(maze, new EnuPoint(2, 2), new EnuPoint(198, 198), p).Found, Is.True);
         }
 
+        // One small run shared by the tests that read its text: each run costs seconds in Debug.
+        private static readonly Lazy<(List<string> Lines, string Text)> SmallRun = new Lazy<(List<string>, string)>(() =>
+        {
+            var lines = new List<string>();
+            BenchmarkConfig c = Small(stress: 0);
+            c.Label = "a tiny test scenario";
+            string text = Benchmark.Run(lines.Add, c);
+            return (lines, text);
+        });
+
         [Test]
         public void RunWritesOneRowPerCaseAndLogsEveryLine()
         {
-            var lines = new List<string>();
-            string text = Benchmark.Run(lines.Add, Small(stress: 0));
+            (List<string> lines, string text) = SmallRun.Value;
             Assert.That(string.Concat(lines.Select(l => l + "\n")), Is.EqualTo(text));
-            string[] rows = lines.Where(l => l.StartsWith("| 64 |", StringComparison.Ordinal)).ToArray();
-            Assert.That(rows.Count(r => r.Contains("| A* 40 m |")), Is.EqualTo(5));
+            string[] rows = lines.Where(l => l.StartsWith("| 32 |", StringComparison.Ordinal)).ToArray();
+            Assert.That(rows.Count(r => r.Contains("| A* 20 m |")), Is.EqualTo(5));
             Assert.That(rows.Count(r => r.Contains("| field |")), Is.EqualTo(5));
             foreach (Terrain t in AllTerrains)
             {
@@ -95,8 +104,8 @@ namespace MartianMap.Routing.Tests
         public void TheStressFieldIsOneRowOutsideTheCriterion()
         {
             var lines = new List<string>();
-            Benchmark.Run(lines.Add, Small(stress: 32));
-            string[] stress = lines.Where(l => l.StartsWith("| 32 |", StringComparison.Ordinal)).ToArray();
+            Benchmark.Run(lines.Add, Small(stress: 16));
+            string[] stress = lines.Where(l => l.StartsWith("| 16 |", StringComparison.Ordinal)).ToArray();
             Assert.That(stress.Length, Is.EqualTo(1));
             Assert.That(stress[0], Does.Contain("| Uniform | field |"));
             Assert.That(stress[0].TrimEnd().EndsWith("| stress |", StringComparison.Ordinal), Is.True, stress[0]);
@@ -136,11 +145,7 @@ namespace MartianMap.Routing.Tests
         [Test]
         public void TheHeaderSaysWhichScenarioRan()
         {
-            var lines = new List<string>();
-            BenchmarkConfig c = Small(stress: 0);
-            c.Label = "a tiny test scenario";
-            Benchmark.Run(lines.Add, c);
-            Assert.That(lines, Has.Some.EqualTo("- Scenario: a tiny test scenario"));
+            Assert.That(SmallRun.Value.Lines, Has.Some.EqualTo("- Scenario: a tiny test scenario"));
         }
 
         private static bool Same(CostParams a, CostParams b) =>
@@ -148,11 +153,11 @@ namespace MartianMap.Routing.Tests
 
         private static BenchmarkConfig Small(int stress) => new BenchmarkConfig
         {
-            Sizes = new[] { 64 },
+            Sizes = new[] { 32 },
             RouteRuns = 2,
             RouteWarmUp = 1,
-            RouteM = 40,
-            FieldSizes = new[] { 64 },
+            RouteM = 20,
+            FieldSizes = new[] { 32 },
             FieldRuns = 2,
             FieldWarmUp = 1,
             StressFieldSize = stress,

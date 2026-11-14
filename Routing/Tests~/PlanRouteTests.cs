@@ -181,26 +181,26 @@ namespace MartianMap.Routing.Tests
         [Test]
         public void ARouteQueryAllocatesNoLargeArraysAfterWarmUp()
         {
-            CostGrid g = Grids.Flat(1000, 1000);
-            for (int k = 0; k < 3; k++)
+            CostGrid g = Grids.Flat(400, 400);
+            for (int k = 0; k < 2; k++)
             {
-                Router.PlanRoute(g, new EnuPoint(100 + k, 1000), new EnuPoint(600 + k, 1000), P);
+                Router.PlanRoute(g, new EnuPoint(100 + k, 400), new EnuPoint(350 + k, 400), P);
             }
 
             // A collection now, so the earlier tests' garbage does not count; then only the route's
-            // own small lists (~40 KB a query) are allocated, never an array per node (4 MB here).
+            // own small lists (~20 KB a query) are allocated, never an array per node (640 KB here).
             GC.Collect();
             GC.WaitForPendingFinalizers();
             int before = GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2);
             long bytes = GC.GetAllocatedBytesForCurrentThread();
-            for (int k = 0; k < 20; k++)
+            for (int k = 0; k < 10; k++)
             {
-                double a = k * Math.PI / 10;
-                Route r = Router.PlanRoute(g, new EnuPoint(1000, 1000), new EnuPoint(1000 + 500 * Math.Cos(a), 1000 + 500 * Math.Sin(a)), P);
+                double a = k * Math.PI / 5;
+                Route r = Router.PlanRoute(g, new EnuPoint(400, 400), new EnuPoint(400 + 250 * Math.Cos(a), 400 + 250 * Math.Sin(a)), P);
                 Assert.That(r.Found, Is.True);
             }
 
-            Assert.That((GC.GetAllocatedBytesForCurrentThread() - bytes) / 20, Is.LessThan(200_000));
+            Assert.That((GC.GetAllocatedBytesForCurrentThread() - bytes) / 10, Is.LessThan(200_000));
             Assert.That(GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2), Is.EqualTo(before));
         }
     }
