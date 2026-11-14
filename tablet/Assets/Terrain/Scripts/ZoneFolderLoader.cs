@@ -37,7 +37,15 @@ namespace MartianMap.Terrain
                 }
 
                 var tileFolder = Combine(folder, "tiles", reference.Z.ToString(), reference.X.ToString(), reference.Y.ToString());
-                tiles.Add(await LoadTileAsync(tileFolder));
+                try
+                {
+                    tiles.Add(await LoadTileAsync(tileFolder));
+                }
+                catch (FileNotFoundException missing)
+                {
+                    // A tile not downloaded yet: show the rest of the zone.
+                    Debug.LogWarning($"[Terrain] tile skipped zone_id={zone.ZoneId} z={reference.Z} x={reference.X} y={reference.Y} missing={missing.FileName}");
+                }
             }
 
             Debug.Log($"[Terrain] zone loaded zone_id={zone.ZoneId} tiles={tiles.Count} z={level} folder={folder}");
