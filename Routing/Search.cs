@@ -151,6 +151,97 @@ namespace MartianMap.Routing
             }
         }
 
+        /// <summary>
+        /// The reverse Dijkstra field to <paramref name="home"/>: fills <paramref name="timeS"/> with
+        /// each node's time back to <paramref name="home"/> without penalty, along the return that
+        /// minimises <see cref="Cost.SegmentCostS"/> with the amber penalty (the same choice as
+        /// <see cref="AStar"/>); +∞ where there is no return. <paramref name="home"/> is 0 if it is
+        /// free; if it is blocked, every node is +∞. The edge from <c>u</c> to an already closed
+        /// <c>v</c> is the segment <c>u → v</c>, walked toward home. Of two parents with the same
+        /// cost, the first relaxed wins.
+        /// </summary>
+        internal static void Field(CostGrid g, int home, double v0Mps, CostParams p, float[] timeS)
+        {
+            if (timeS == null)
+            {
+                throw new ArgumentNullException(nameof(timeS));
+            }
+
+            int count = g.Width * g.Height;
+            if (timeS.Length != count)
+            {
+                throw new ArgumentException("The field has one value per node.", nameof(timeS));
+            }
+
+            if ((uint)home >= (uint)count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(home), "Node outside the grid.");
+            }
+
+            for (int n = 0; n < count; n++)
+            {
+                timeS[n] = float.PositiveInfinity;
+            }
+
+            if (Cost.IsBlockedNode(g, home, p))
+            {
+                return;
+            }
+
+            Workspace w = Workspace.Rent(count);
+            try
+            {
+                int width = g.Width, height = g.Height;
+                float[] key = w.Key;
+                byte[] move = w.Move;
+                NodeHeap heap = w.Heap;
+                key[home] = 0;
+                timeS[home] = 0;
+                heap.PushOrDecrease(home, 0);
+                while (heap.Count > 0)
+                {
+                    int v = heap.PopMin(out float kv);
+                    move[v] = Workspace.Closed;
+                    int vi = v % width, vj = v / width;
+                    float tv = timeS[v];
+                    for (int m = 0; m < Moves.Length; m++)
+                    {
+                        int ui = vi + Moves[m].Di, uj = vj + Moves[m].Dj;
+                        if ((uint)ui >= (uint)width || (uint)uj >= (uint)height)
+                        {
+                            continue;
+                        }
+
+                        int u = uj * width + ui;
+                        if (move[u] == Workspace.Closed || Cost.IsBlockedNode(g, u, p))
+                        {
+                            continue;
+                        }
+
+                        double edge = Cost.SegmentCostS(g, u, v, v0Mps, p, 1.0, out double edgeTimeS);
+                        if (double.IsPositiveInfinity(edge))
+                        {
+                            continue;
+                        }
+
+                        float ku = (float)(kv + edge);
+                        if (ku < key[u])
+                        {
+                            key[u] = ku;
+                            timeS[u] = (float)(tv + edgeTimeS);
+                            heap.PushOrDecrease(u, ku);
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                // The field reaches every node, so it resets them all instead of a touched list.
+                w.ResetAll(count);
+                Workspace.Return(w);
+            }
+        }
+
         private static double Heuristic(int di, int dj, double hPerNode) =>
             Math.Sqrt((double)di * di + (double)dj * dj) * hPerNode;
 
@@ -237,6 +328,18 @@ namespace MartianMap.Routing
 
                 Key = key;
                 Move = move;
+            }
+
+            /// <summary>Resets the first <paramref name="nodeCount"/> nodes, for a search that touched them all.</summary>
+            internal void ResetAll(int nodeCount)
+            {
+                for (int n = 0; n < nodeCount; n++)
+                {
+                    Key[n] = float.PositiveInfinity;
+                    Move[n] = Unseen;
+                }
+
+                touchedCount = 0;
             }
 
             private void Reset()

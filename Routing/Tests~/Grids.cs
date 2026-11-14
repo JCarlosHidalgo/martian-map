@@ -131,6 +131,28 @@ namespace MartianMap.Routing.Tests
             return new CostGrid(width, height, 2f, new EnuPoint(0, 0), h, new byte[n], relief, hazard);
         }
 
+        /// <summary>
+        /// A 200 × 200 flat grid with hazard 255 on about 30 % of the nodes, where an integer hash
+        /// of <c>(i, j)</c> is below 3 mod 10: <c>((i·2654435761) ^ (j·2246822519))·3266489917 &gt;&gt; 16</c>,
+        /// in <c>uint</c>. About 68 % of the nodes reach <c>(0, 1)</c>.
+        /// </summary>
+        internal static CostGrid Pattern200()
+        {
+            const int size = 200;
+            var hazard = new byte[size * size];
+            for (int j = 0; j < size; j++)
+            {
+                for (int i = 0; i < size; i++)
+                {
+                    uint hash = ((((uint)i * 2654435761u) ^ ((uint)j * 2246822519u)) * 3266489917u) >> 16;
+                    hazard[(j * size) + i] = (byte)(hash % 10 < 3 ? 255 : 0);
+                }
+            }
+
+            int n = size * size;
+            return new CostGrid(size, size, 2f, new EnuPoint(0, 0), new float[n], new byte[n], new byte[n], hazard);
+        }
+
         /// <summary>A flat, free grid.</summary>
         internal static CostGrid Flat(int width, int height)
         {
