@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "edits": [
+    {
+      "uuid": "3fcf98b4-78c1-400e-8cc1-4a081aa5922e",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "9eab799a-d39f-4939-a636-434280525154",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-7680, -7680],
+          [7680, -7680],
+          [7680, -5120],
+          [-5120, -5120],
+          [-5120, 5120],
+          [7680, 5120],
+          [7680, 7680],
+          [-7680, 7680]
+        ],
+        "level": 70
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "450a905f-bd19-47ae-9144-84f31906228f",
+      "lamport": 1,
+      "author": "ev2",
+      "creator": "ev2",
+      "zone_id": "synth",
+      "entity_id": "1d0f4bcc-ba1f-41b6-9cf5-1cf1dfd6f664",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [12345, -6789],
+          [20000, -6000],
+          [15000, -3000],
+          [19999, 0],
+          [12000, 1],
+          [14000, -3333]
+        ],
+        "level": 110
+      },
+      "tombstone": false
+    }
+  ]
+}
