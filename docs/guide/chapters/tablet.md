@@ -410,6 +410,31 @@ ensamblados no se referencian.
 reglas que `Apply`, en el mismo recorrido, así que la regla de merge tiene una sola implementación
 en C#. `Terrain` la llama para emitir `EntitiesChanged`; no calcula ganadoras por su cuenta.
 
+Cómo se fusiona y qué lanza *(propuesta de P3)*:
+
+- Las ediciones se recorren en orden `(lamport, author, uuid)`, con `author` y `uuid` comparados
+  byte a byte; por cada `entity_id` queda una ganadora, y cada edición la reemplaza (LWW) salvo
+  que la regla la ignore entera.
+- Una edición se ignora si la entidad está viva y la edición la baja (un tombstone, o un nivel
+  menor en `hazard.set`/`obstacle.set`), su `author` no es su `creator`, su `confirmed` no es
+  verdadero y no es `from_habitat`. `note.set` siempre es LWW.
+- Una entidad borrada no tiene nivel: la edición siguiente del mismo `op` la recrea, la escriba
+  quien la escriba.
+- Una edición con otro `op` que la ganadora vigente de su entidad se ignora, también si la
+  ganadora es un tombstone: una entidad no cambia de `op`.
+- `LiveEntities` devuelve las ganadoras sin tombstone en el orden `(lamport, author, uuid)` de la
+  ganadora, el de `log_merged.json`; `creator` es el de la ganadora y `level` el de su `payload`,
+  255 o nulo.
+- `Apply` copia `baseHazard` y, por cada entidad viva con polígono, escribe `max(muestra, level)`
+  en las muestras de dentro. La muestra `(r, c)` está en `(256 · (origin.E + c),
+  256 · (origin.N + 256 − r))`, en punto fijo; dentro es en el borde (vértices incluidos) o en el
+  interior por par-impar, con productos exactos de 128 bits, así que ningún vértice `int`
+  desborda. `zone_id` no se mira: `Terrain` pasa las ediciones de la zona.
+- Lanzan `ArgumentNullException` con `edits` nulo o con un elemento nulo, y `ArgumentException`
+  con dos ediciones del mismo `uuid`; `Apply`, además, `ArgumentNullException` con `baseHazard`
+  nulo y `ArgumentException` si no tiene 257 × 257 muestras. Una edición que la regla ignora no
+  lanza.
+
 El tipo `Edit` de C# *(equipo)* lleva los campos del esquema de `Edit`, más `from_habitat`
 (bool), que no viaja: `Terrain` lo pone a verdadero en una ganadora recibida por `changes`, y es
 la marca que hace que no se reevalúe su `confirmed`. También lo pone a verdadero en una edición
@@ -460,6 +485,12 @@ sí dependen entran después *(equipo)*:
 | `edits/base_tile/` y `edits/edits_NN.json` | completos; `base_tile/` es una copia del tile sintético de C1 | |
 | `edits/expected_NN.sha256` | no existen | entran con `apply()`, antes de H6: los usa E9 |
 
+Los fixtures de E9 viven por ahora en `Edits/Tests~/fixtures/edits/` *(propuesta de P3)*, con el
+mismo layout (`base_tile/` + `edits_NN.json` + `expected_NN.sha256`, N = 6): `base_tile/` es una
+copia del tile sintético de P1 de `origin/p1/ingest`, y `validate.py` no acepta un `edits_NN.json`
+sin el esquema de `edit_log` de P2. Cuando el tile de P1 y el `edit_log` de P2 estén en `main`,
+pasan a `contracts/fixtures/edits/` con `git mv`, y en los tests solo cambia `GoldenTests.Dir`.
+
 - `costgrid_synth.bin` *(equipo)* es una `CostGrid` serializada, little-endian: `width` y `height`
   (`int32`), `cell_m` (`float32`), `origin_e` y `origin_n` (`float64`), y después los cuatro
   arrays en el orden de la tabla de tipos. La sintética es la grilla del tile sintético, con su
@@ -497,6 +528,8 @@ sí dependen entran después *(equipo)*:
 - Los datos originales no se tocan.
 
 La equivalencia entre x64-JIT y ARM64-IL2CPP es **NO VERIFICADA** → **E9**.
+P3 no corre E9 en la tablet *(propuesta de P3)*: E9 se cierra con N/N hashes iguales en
+`dotnet test`, y la ejecución en IL2CPP ARM64 queda fuera de alcance por decisión.
 
 ## Efectos visuales (D8)
 

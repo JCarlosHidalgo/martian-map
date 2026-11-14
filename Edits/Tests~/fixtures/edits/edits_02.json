@@ -1,0 +1,118 @@
+{
+  "schema_version": 1,
+  "edits": [
+    {
+      "uuid": "275894a0-d532-4a30-b4bd-8619df28bc9a",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "6029957e-43a3-4815-9b6d-d36dcb794a3e",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-5120, 0],
+          [0, 0],
+          [0, 5120],
+          [-5120, 5120]
+        ],
+        "level": 150
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "39cccb8f-ff04-4598-bb25-39bc0b83a03e",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "8e078fec-d3e8-4378-9173-864c1bfad3ae",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [0, -10240],
+          [5120, -10240],
+          [5120, -5120],
+          [0, -5120]
+        ],
+        "level": 200
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "5388d849-6296-4c3f-938b-b1fa1a41ae02",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "782c7475-15d0-4af6-a624-49e5794b2d7d",
+      "op": "obstacle.set",
+      "payload": {
+        "polygon": [
+          [-15360, 0],
+          [-10240, 0],
+          [-10240, 5120],
+          [-15360, 5120]
+        ]
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "493dad83-ae24-412b-b2d6-c0f8ec0d1fda",
+      "lamport": 2,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "6029957e-43a3-4815-9b6d-d36dcb794a3e",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-5120, 0],
+          [0, 0],
+          [0, 5120],
+          [-5120, 5120]
+        ],
+        "level": 150
+      },
+      "tombstone": true
+    },
+    {
+      "uuid": "9142db9d-c8fb-4544-a0db-51487ef3b1fa",
+      "lamport": 3,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "8e078fec-d3e8-4378-9173-864c1bfad3ae",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [0, -10240],
+          [5120, -10240],
+          [5120, -5120],
+          [0, -5120]
+        ],
+        "level": 200
+      },
+      "tombstone": true
+    },
+    {
+      "uuid": "05261a3c-8488-4922-bb34-fdc51f447ce5",
+      "lamport": 3,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "782c7475-15d0-4af6-a624-49e5794b2d7d",
+      "op": "obstacle.set",
+      "payload": {
+        "polygon": [
+          [-15360, 0],
+          [-10240, 0],
+          [-10240, 5120],
+          [-15360, 5120]
+        ],
+        "confirmed": true
+      },
+      "tombstone": true
+    }
+  ]
+}
