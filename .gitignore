@@ -1,3 +1,43 @@
 # Python
 __pycache__/
 *.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node (Prism, mocks)
+node_modules/
+
+# .NET packages (Routing/, Edits/): build output goes to .build/
+.build/
+bin/
+obj/
+
+# Unity (tablet/)
+tablet/[Ll]ibrary/
+tablet/[Tt]emp/
+tablet/[Oo]bj/
+tablet/[Bb]uild/
+tablet/[Bb]uilds/
+tablet/[Ll]ogs/
+tablet/[Uu]ser[Ss]ettings/
+tablet/[Mm]emoryCaptures/
+tablet/[Rr]ecordings/
+tablet/*.csproj
+tablet/*.sln
+tablet/*.slnx
+tablet/.vs/
+tablet/.vscode/
+tablet/.idea/
+tablet/*.apk
+tablet/*.aab
+tablet/*.symbols.zip
+
+# Fixtures are copied into the APK by a build step; there is no second copy in git.
+tablet/Assets/StreamingAssets/fixtures/
+tablet/Assets/StreamingAssets/fixtures.meta
+
+# Editors and OS
+.idea/
+*.swp
+.DS_Store
