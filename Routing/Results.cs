@@ -34,7 +34,10 @@ namespace MartianMap.Routing
 
         public bool Found { get; }
 
-        /// <summary>Node indices, from start to goal.</summary>
+        /// <summary>
+        /// The nodes whose cell the route crosses, in order from start to goal and without
+        /// consecutive repeats: not the A* nodes nor the smoothing waypoints.
+        /// </summary>
         public IReadOnlyList<int> Cells { get; }
 
         public IReadOnlyList<EnuPoint3> PolylineEnuM { get; }

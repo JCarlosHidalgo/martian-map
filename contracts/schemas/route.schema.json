@@ -27,7 +27,7 @@
       "properties": {
         "found": {"type": "boolean"},
         "cells": {
-          "description": "Node indices j * width + i, from start to goal.",
+          "description": "Indices j * width + i of the nodes whose cell the route crosses, in order from start to goal, without consecutive repeats (not the A* nodes nor the smoothing waypoints).",
           "type": "array",
           "items": {"type": "integer", "minimum": 0}
         },

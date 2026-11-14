@@ -156,7 +156,8 @@ namespace MartianMap.Routing
         /// Orders the stops and plans every leg, from <paramref name="start"/> to
         /// <c>homeField.Home</c>, against <c>min(budget.t_s, limit_s)</c>, with
         /// <c>limit_s = DurationLimit(conditions, tUtc, budget.dose_uGy)</c>. <c>Plan.dose_uGy</c> is
-        /// the dose rate valid at <paramref name="tUtc"/> times <c>total_s.p50</c>. One plan per
+        /// the dose absorbed from <paramref name="tUtc"/> to <c>tUtc + total_s.p50</c>, the integral of
+        /// the same rate as <see cref="DurationLimit"/>. One plan per
         /// <see cref="Alternative"/>, in that order, all with the order of the fastest.
         /// <paramref name="homeField"/> is the <see cref="ReturnField"/> already computed for the
         /// heatmap, used again for <c>return_ok</c>; it throws if it was computed on another grid.
