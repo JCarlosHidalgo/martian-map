@@ -253,17 +253,37 @@ namespace MartianMap.Edits
 
     /// <summary>
     /// A live entity: the winner of one <c>entity_id</c>. <see cref="Level"/> is the
-    /// <c>hazard.set</c> level, 255 for <c>obstacle.set</c> and null for a note.
+    /// <c>hazard.set</c> level, 255 for <c>obstacle.set</c> and null for a note. The constructor
+    /// throws unless <c>op</c> is defined, the payload was built for it and the level matches it.
     /// </summary>
     public sealed class LiveEntity
     {
+        /// <summary>The level of an <c>obstacle.set</c>.</summary>
+        private const byte ObstacleLevel = 255;
+
         public LiveEntity(string entityId, EditOp op, string creator, byte? level, EditPayload payload)
         {
             EntityId = entityId ?? throw new ArgumentNullException(nameof(entityId));
-            Op = op;
             Creator = creator ?? throw new ArgumentNullException(nameof(creator));
-            Level = level;
             Payload = payload ?? throw new ArgumentNullException(nameof(payload));
+            if (op != EditOp.HazardSet && op != EditOp.ObstacleSet && op != EditOp.NoteSet)
+            {
+                throw new ArgumentOutOfRangeException(nameof(op));
+            }
+
+            if (payload.Op != op)
+            {
+                throw new ArgumentException($"The payload was built for {payload.Op}, not {op}.", nameof(payload));
+            }
+
+            byte? expected = op == EditOp.HazardSet ? payload.Level : op == EditOp.ObstacleSet ? ObstacleLevel : (byte?)null;
+            if (level != expected)
+            {
+                throw new ArgumentException($"The level of {op} must be {(expected.HasValue ? expected.ToString() : "null")}.", nameof(level));
+            }
+
+            Op = op;
+            Level = level;
         }
 
         public string EntityId { get; }
