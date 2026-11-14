@@ -42,6 +42,17 @@ namespace MartianMap.Edits.Tests
         }
 
         [Test]
+        public void TheRuleComparesTheAuthorWithTheEditsOwnCreator()
+        {
+            // Q1 / A6 (b): the author is compared with the creator the edit carries, not with the
+            // winner's. ev2's lowering carries creator "ev2", so it is the creator lowering: LWW.
+            Edit[] log = { E(1, "ev1", "1", H(200)), E(2, "ev2", "1", H(50), creator: "ev2") };
+
+            // Oracle (cases_apply.py q1): [1].
+            AssertLive(log, 1);
+        }
+
+        [Test]
         public void RaisingOrMovingIsPlainLww()
         {
             Edit[] log =
