@@ -113,12 +113,23 @@ namespace MartianMap.Routing
 
         /// <summary>
         /// The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90: each node's way back is
-        /// chosen with the amber penalty, and its value is that way's time without it.
+        /// chosen with the amber penalty, and its value is that way's time without it. It is
+        /// computed from the node nearest to <paramref name="home"/> (the same rounding as
+        /// <see cref="PlanRoute"/>), and <see cref="Field.Home"/> keeps the point as given. With that
+        /// node blocked every value is +∞: there is no return, which is a result, not an error. It
+        /// visits the whole grid: call it off the main thread.
         /// </summary>
         public static Field ReturnField(CostGrid grid, EnuPoint home, CostParams p)
         {
             RequirePointIn(grid, home, nameof(home));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            var timeS = new float[grid.Width * grid.Height];
+            Search.Field(grid, NearestNode(grid, home), p.V0Mps.P90, p, timeS);
+            return Field.Adopt(grid, home, timeS);
         }
 
         /// <summary>

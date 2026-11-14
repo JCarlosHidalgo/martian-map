@@ -76,10 +76,40 @@ namespace MartianMap.Routing
     public sealed class Field
     {
         internal Field(CostGrid grid, EnuPoint home, float[] timeS)
+            : this(grid, home, ReadOnly.Array(timeS, grid?.Width * grid?.Height ?? 0, nameof(timeS)), true)
+        {
+        }
+
+        private Field(CostGrid grid, EnuPoint home, float[] timeS, bool adopted)
         {
             Grid = grid ?? throw new ArgumentNullException(nameof(grid));
             Home = home;
-            TimeSArray = ReadOnly.Array(timeS, grid.Width * grid.Height, nameof(timeS));
+            TimeSArray = timeS;
+        }
+
+        /// <summary>
+        /// A field that keeps <paramref name="timeS"/> without copying it: only for an array that
+        /// nobody else holds, as <see cref="Router.ReturnField"/>'s own. It saves a copy of one
+        /// <c>float</c> per node (16 MB at 2000²).
+        /// </summary>
+        internal static Field Adopt(CostGrid grid, EnuPoint home, float[] timeS)
+        {
+            if (grid == null)
+            {
+                throw new ArgumentNullException(nameof(grid));
+            }
+
+            if (timeS == null)
+            {
+                throw new ArgumentNullException(nameof(timeS));
+            }
+
+            if (timeS.Length != grid.Width * grid.Height)
+            {
+                throw new ArgumentException($"Expected {grid.Width * grid.Height} values.", nameof(timeS));
+            }
+
+            return new Field(grid, home, timeS, true);
         }
 
         /// <summary>The grid the field was computed on.</summary>
