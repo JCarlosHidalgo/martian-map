@@ -1,0 +1,140 @@
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Martian Terrain Tile",
+  "description": "Contrato de um tile de terreno marciano.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "zone_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "z": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "x": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "y": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "size_px": {
+      "type": "integer",
+      "const": 257
+    },
+    "m_per_px": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "origin_enu_m": {
+      "type": "array",
+      "prefixItems": [
+        {"type": "number"},
+        {"type": "number"}
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "height": {
+      "type": "object",
+      "properties": {
+        "file": {"type": "string", "minLength": 1},
+        "dtype": {"const": "uint16"},
+        "scale": {"type": "number"},
+        "offset": {"type": "number"},
+        "nodata": {"const": 65535},
+        "row_order": {"const": "north_up"},
+        "endian": {"const": "le"},
+        "vertical_datum": {"const": "areoid"}
+      },
+      "required": [
+        "file", "dtype", "scale", "offset",
+        "nodata", "row_order", "endian", "vertical_datum"
+      ],
+      "additionalProperties": false
+    },
+    "rasters": {
+      "type": "object",
+      "properties": {
+        "slope": {
+          "type": "object",
+          "properties": {
+            "dtype": {"const": "uint8"},
+            "unit": {"const": "deg"}
+          },
+          "required": ["dtype", "unit"]
+        },
+        "roughness": {
+          "type": "object",
+          "properties": {
+            "dtype": {"const": "uint8"},
+            "unit": {"const": "cm"},
+            "window_m": {"type": "number", "exclusiveMinimum": 0}
+          },
+          "required": ["dtype", "unit", "window_m"]
+        },
+        "hazard": {
+          "type": "object",
+          "properties": {
+            "dtype": {"const": "uint8"}
+          },
+          "required": ["dtype"]
+        }
+      },
+      "required": ["slope", "roughness", "hazard"]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "layers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "file": {"type": "string", "minLength": 1}
+        },
+        "required": ["id", "file"]
+      }
+    },
+    "source_ids": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "sha256": {
+      "type": "object",
+      "propertyNames": {
+        "minLength": 1
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-fA-F0-9]{64}$"
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "zone_id",
+    "z",
+    "x",
+    "y",
+    "size_px",
+    "m_per_px",
+    "origin_enu_m",
+    "height",
+    "rasters",
+    "version",
+    "layers",
+    "source_ids",
+    "sha256"
+  ],
+  "additionalProperties": false
+}

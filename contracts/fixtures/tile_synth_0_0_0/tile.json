@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "zone_id": "synth",
+  "z": 0,
+  "x": 0,
+  "y": 0,
+  "size_px": 257,
+  "m_per_px": 1.0,
+  "origin_enu_m": [
+    -128,
+    -128
+  ],
+  "height": {
+    "file": "height.r16",
+    "dtype": "uint16",
+    "scale": 0.0009765625,
+    "offset": 0,
+    "nodata": 65535,
+    "row_order": "north_up",
+    "endian": "le",
+    "vertical_datum": "areoid"
+  },
+  "rasters": {
+    "slope": {
+      "dtype": "uint8",
+      "unit": "deg"
+    },
+    "roughness": {
+      "dtype": "uint8",
+      "unit": "cm",
+      "window_m": 3
+    },
+    "hazard": {
+      "dtype": "uint8"
+    }
+  },
+  "version": 1,
+  "layers": [
+    {
+      "id": "ortho",
+      "file": "ortho.r8"
+    },
+    {
+      "id": "thermal",
+      "file": "thermal.r8"
+    },
+    {
+      "id": "thermal_ir",
+      "file": "thermal_ir.r8"
+    }
+  ],
+  "source_ids": [],
+  "sha256": {
+    "height.r16": "9db7d4b1c7c859bf3b10d21ebcece252204256ab74d5ef7cf98741cfa4ee54d9",
+    "slope.r8": "4f8fd640726e55e9437c0f3e7a87b8aca1733cbc2a3e13ea36668addcfdddea9",
+    "roughness.r8": "3434048d64829572c06c997e40a20a8494f453e1c84888269a8fb86581f434e6",
+    "hazard.r8": "966a39a8da05a55d113ba6e1fd8c82509b51fd0381083bceffc3b4e3e1f11b10",
+    "ortho.r8": "ec721081fc7c9483b6ebb03c008ea3b2ccb3eb121046c5b3efeb61375a8755d2",
+    "thermal.r8": "c1293593dda664cb0a392490344c05a6042a25b78371cdbb91dec24ee291cb80",
+    "thermal_ir.r8": "9d8428aa0cc00fe17a49cd954d7a2ccda9dfe356f7610b4fbc7289069849073b"
+  }
+}
