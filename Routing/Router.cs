@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace MartianMap.Routing
 {
@@ -52,7 +53,7 @@ namespace MartianMap.Routing
         /// One route per value of <see cref="Alternative"/>, in that order: always all of them, even
         /// when two coincide.
         /// </summary>
-        public static Route[] Alternatives(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
+        public static IReadOnlyList<Route> Alternatives(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
         {
             RequirePointIn(grid, start, nameof(start));
             RequirePointIn(grid, goal, nameof(goal));
@@ -139,7 +140,7 @@ namespace MartianMap.Routing
             }
 
             Conditions.RequireUtc(tUtc, nameof(tUtc));
-            var cuts = new System.Collections.Generic.SortedSet<long>();
+            var cuts = new SortedSet<long>();
             foreach (ConditionModifier m in conditions.Modifiers)
             {
                 if (m.ValidFrom > tUtc)
@@ -173,7 +174,7 @@ namespace MartianMap.Routing
         /// <paramref name="homeField"/> is the <see cref="ReturnField"/> already computed for the
         /// heatmap, used again for <c>return_ok</c>; it throws if it was computed on another grid.
         /// </summary>
-        public static Plan[] OrderStops(
+        public static IReadOnlyList<Plan> OrderStops(
             CostGrid grid,
             EnuPoint start,
             Stop[] stops,
