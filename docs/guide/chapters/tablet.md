@@ -260,7 +260,8 @@ llama, en la sección "Orquestación".
 **Todos los tipos de C4 son inmutables** *(propuesta)*: el constructor copia lo que recibe, y
 nada de lo que exponen es un array. Los arrays por nodo o por muestra (los de `CostGrid` y
 `TileRasters`, y `Field.time_s`) se leen como `ReadOnlySpan<T>`; las listas (`cells`,
-`polyline_enu_m`, `order`, `dropped`, `legs` y `modifiers`) como `IReadOnlyList<T>`. Un
+`polyline_enu_m`, `order`, `dropped`, `legs` y `modifiers`), y lo que devuelven `Alternatives`,
+`OrderStops` y `LiveEntities`, como `IReadOnlyList<T>`. Un
 `ReadOnlySpan` no se guarda en una lambda ni cruza un `await`: se guarda el objeto y se lee el span
 dentro de un método síncrono.
 
@@ -268,10 +269,10 @@ dentro de un método síncrono.
 |---|---|
 | `TileRasters` | un tile de `z = 0`: `origin_enu_m` (su esquina suroeste, de `tile.json`), `height` (`ushort[]`), `scale`, `offset`, y `slope`, `roughness` y `hazard` (`byte[]`), tal como vienen en C1 |
 | `CostGrid` | la grilla de planificación: `width` y `height` en nodos, `cell_m` (2), `origin_enu_m` (el nodo `(0, 0)`, la esquina suroeste) y cuatro arrays planos de `width × height`: `height_m` (`float32`), `slope_deg`, `roughness_cm` y `hazard` (`uint8`). El nodo `(i, j)` está en el índice `j · width + i`; `i` crece al este y `j` al norte |
-| punto: `start`, `goal`, `home`, `enu_m` de una parada | `(e, n)` en metros ENU de la zona, `float64`. `Routing` lo lleva al nodo más cercano; si ese nodo está bloqueado, el resultado es "no hay ruta" |
+| punto: `start`, `goal`, `home`, `enu_m` de una parada | `(e, n)` en metros ENU de la zona, `float64`. Tiene que ser finito y caer en la caja de los nodos de la `CostGrid`, bordes incluidos; si no, la llamada lanza *(propuesta de P3)*. `Routing` lo lleva al nodo más cercano; si ese nodo está bloqueado, el resultado es "no hay ruta" |
 | `Route` | `{found (bool), cells[] (índices de nodo), polyline_enu_m[] ([e, n, u]), length_m, ascent_m, amber_m, eta_s{p10,p50,p90}, max_hazard (uint8)}` |
 | `Field` | `{grid, home, time_s[]}`: un `float32` por nodo, el tiempo de regreso a `home` con v₀ P90; `+∞` donde no hay regreso. Solo lo crea `ReturnField`, y lleva la `CostGrid` y el `home` con que se calculó *(propuesta)* |
-| `Alternative` | un enum: `Fastest`, `Safest`, `Gentlest`, con los valores 0, 1 y 2 *(propuesta)*. Todo `Route[]` o `Plan[]` de alternativas trae siempre las tres, en ese orden, aunque dos coincidan |
+| `Alternative` | un enum: `Fastest`, `Safest`, `Gentlest`, con los valores 0, 1 y 2 *(propuesta)*. Toda lista de `Route` o de `Plan` de alternativas trae siempre las tres, en ese orden, aunque dos coincidan |
 | `CostParams` | los campos de `cost_params.json`, uno a uno: es el `params` de todas las llamadas *(propuesta)* |
 | `Stop` | `{id, enu_m, science_value, dwell_s}`; `science_value` es un entero de 0 a 10 |
 | `Budget` | `{t_s, dose_uGy}` |
@@ -304,9 +305,9 @@ dentro de un método síncrono.
 | `BuildGrid(tiles, origin_height_m, params)` *(equipo)* | la `CostGrid`, armada desde los `TileRasters`, ya con las ediciones aplicadas |
 | `PlanRoute(grid, start, goal, params)` | `Route` |
 | `ReturnField(grid, home, params)` | `Field` (usa P90) |
-| `Alternatives(grid, start, goal, params)` | `Route[]`, una por alternativa, en el orden de `Alternative` |
+| `Alternatives(grid, start, goal, params)` | `IReadOnlyList<Route>`, una por alternativa, en el orden de `Alternative` |
 | `DurationLimit(conditions, t_utc, dose_uGy)` *(equipo)* | `limit_s`: el límite de duración por radiación |
-| `OrderStops(grid, start, stops, home_field, budget, conditions, t_utc, mode, params)` | `Plan[]`, una por alternativa, en el orden de `Alternative`; `mode` es TSP u OP. `home_field` es el `Field` de `ReturnField`, el mismo del heatmap; lanza si se calculó sobre otra `CostGrid`. La ruta sale de `start` y termina en `home_field.home` *(propuesta)* |
+| `OrderStops(grid, start, stops, home_field, budget, conditions, t_utc, mode, params)` | `IReadOnlyList<Plan>`, una por alternativa, en el orden de `Alternative`; `mode` es TSP u OP. `home_field` es el `Field` de `ReturnField`, el mismo del heatmap; lanza si se calculó sobre otra `CostGrid`. La ruta sale de `start` y termina en `home_field.home` *(propuesta)* |
 | `Benchmark.Run(log)` *(equipo)* | el texto de `Routing/BENCHMARK.md`: genera las grillas con semilla de E5, corre sus casos y devuelve la tabla de resultados. `log` recibe cada línea según sale |
 
 - Las llamadas son thread-safe y reentrantes.
@@ -344,11 +345,35 @@ dentro de un método síncrono.
   `limit_s = DurationLimit(conditions, t_utc, budget.dose_uGy)`: la tasa y el límite salen del
   mismo `t_utc`. En TSP visita todas las paradas; en OP maximiza la suma de `science_value` y deja
   el resto en `dropped`. El orden se decide con la alternativa más rápida y es el mismo en las tres
-  `Plan`.
+  `Plan`. En TSP, una parada a la que no se llega sigue en `order`: su tramo es un `Route` con
+  `found` falso, `total_s` es +∞ y `return_ok` es falso *(propuesta de P3)*.
 - `Plan.dose_uGy` es la integral de esa misma tasa de `t_utc` a `t_utc + total_s.p50` *(propuesta)*. `return_ok` es falso si,
   al salir de alguna parada, lo transcurrido a P90 (la caminata P90 acumulada más los `dwell_s`)
   más el regreso a `home` con P90 del `home_field` supera `min(budget.t_s, limit_s)`; la igualdad
   cabe *(propuesta)*. Es el punto de no-retorno: si todo va a P90, ¿se vuelve?
+
+Lo que lanza `ArgumentException` en `Routing` (un argumento inválido,
+[Convenciones](./convenciones.md), sección "Logs y errores") *(propuesta de P3)*:
+
+- **Cualquier número que no es finito** (NaN o ±∞): en los puntos, en `TileRasters`, `CostGrid`
+  (`cell_m`, `origin_enu_m` y cada `height_m`), `Conditions`, `Stop`, `Budget` y
+  `DurationLimit`. `nodata` es `height_m` = 0, nunca NaN. Así no entra ningún NaN en el cálculo,
+  y el único +∞ que sale significa "no hay camino": `Field.time_s` donde no hay regreso y el
+  `total_s` de un plan con una parada inalcanzable.
+- **Un punto fuera de la grilla** (`ArgumentOutOfRangeException`), también una parada en modo OP.
+- **Una fecha que no es UTC**: `ConditionModifier`, `DurationLimit` y `OrderStops`.
+  `DateTime.Parse` devuelve hora local; se lee con `DateTimeStyles.AdjustToUniversal`.
+- `ConditionModifier`: `factor` ≤ 0, o `valid_from` ≥ `valid_to`. `Conditions`: `value` ≤ 0, o un
+  `default(ConditionModifier)`, que se saltó su constructor.
+- `Budget`: `t_s` o `dose_uGy` < 0. `Stop`: un `id` vacío, `science_value` fuera de 0…10, o
+  `dwell_s` < 0. `DurationLimit`: `dose_uGy` < 0.
+- `TileRasters` y `CostGrid`: arrays nulos o de otra longitud, y `scale` o `cell_m` ≤ 0.
+  `Route`: `found` falso con algo que no está vacío o a 0. `Plan`: una lista nula o con un elemento nulo.
+- `CostParams`: los rangos de `cost_params.schema.json` (`b` > 0, 0 ≤ `max_slope_deg` ≤ 90,
+  `f_terreno` y `f_rug_min` en (0, 1]…), más lo que el esquema no puede comparar:
+  `v0.p90` ≤ `p50` ≤ `p10` ≤ `walk_ceiling_mps`, `relief_penalty_from_cm` < `relief_block_cm` y
+  `hazard_amber_min` < `hazard_red_min`.
+- `OrderStops`: un `home_field` de otra `CostGrid`, unas `conditions` nulas, o un `stops` nulo o con una parada nula.
 
 Las tres alternativas *(equipo)*:
 
@@ -392,9 +417,9 @@ Son inmutables con la misma regla que los de C4: el `polygon` se copia y se lee 
 | `Edit` | el de arriba; su `payload` es un `EditPayload` |
 | `EditPayload` | los campos de los tres `payload` del catálogo de `op` ([Convenciones](./convenciones.md), sección "Ediciones"): `polygon` y `point` como enteros en punto fijo, `level` (`byte`), `confirmed` (bool) y `text`, más el `op` para el que se construyó. Solo se construye con sus tres fábricas, que dejan sin valor los campos de los otros `op`: `EditPayload.Hazard(polygon, level, confirmed)`, `EditPayload.Obstacle(polygon, confirmed)` y `EditPayload.Note(point, text)`, con `confirmed` opcional |
 | `LiveEntity` | `{entity_id, op, creator, level, payload}`: lo que devuelve `LiveEntities` |
-| `EditOpText` | la única tabla entre `EditOp` y el texto del `op` que viaja: `ToWire(op)` da `"hazard.set"`, `"obstacle.set"` o `"note.set"`, y lanza con un `op` no definido; `TryParse(texto, out op)` da falso con un texto nulo o desconocido, sin lanzar. Compara exacto, sensible a mayúsculas. Solo cadenas: no lee JSON *(propuesta)* |
+| `EditOpText` | la única tabla entre `EditOp` y el texto del `op` que viaja: `ToWire(op)` da `"hazard.set"`, `"obstacle.set"` o `"note.set"`, y lanza con un `op` no definido; `TryParse(texto, out op)` da falso con un texto nulo o desconocido, sin lanzar, y deja `EditOp.None`. `EditOp` reserva el 0 para `None`, que ninguna edición lleva; `HazardSet`, `ObstacleSet` y `NoteSet` valen 1, 2 y 3 *(propuesta de P3)*. Compara exacto, sensible a mayúsculas. Solo cadenas: no lee JSON *(propuesta)* |
 
-`EditRequested` lleva un `EditPayload` y `EntitiesChanged` un `LiveEntity[]`. El `HUD` construye
+`EditRequested` lleva un `EditPayload` y `EntitiesChanged` la lista de `LiveEntities`, de solo lectura. El `HUD` construye
 el `EditPayload` al crear una edición, con su fábrica; `FX` solo lee el `polygon` y el `level` de
 cada entidad.
 
@@ -419,7 +444,7 @@ sí dependen entran después *(equipo)*:
 | Entregable | En H2 | Con código |
 |---|---|---|
 | `cost_params.json` y su esquema | completos | |
-| La firma pública: los tipos y las llamadas de esta sección, en `Routing/` y `Edits/` | compila contra netstandard2.1; cada cuerpo lanza `NotImplementedException` | se rellena según el orden de [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones" |
+| La firma pública: los tipos y las llamadas de esta sección, en `Routing/` y `Edits/` | compila contra netstandard2.1; cada cuerpo de cálculo lanza `NotImplementedException`, pero los constructores, la comprobación de los argumentos, `DurationLimit` y `EditOpText` ya funcionan | se rellena según el orden de [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones" |
 | `routing/costgrid_synth.bin` | completo: lo genera un script | |
 | `routing/expected_route.json` | una `Route` que genera el script de `costgrid_synth.bin`, sin A\* *(equipo)*: una recta sobre la rampa de la grilla sintética, con `eta_s` = longitud_3D / (v₀ · exp(−b · |s + c|) · `f_terreno`), `c` = 0 y s = ±20/256 (+ hacia el este, − hacia el oeste): la función es simétrica, así que la ida y la vuelta sobre la misma recta tardan lo mismo. Su `u` sigue la rampa, así que se dibuja sobre el tile sintético. Fija la forma y es el mock de `Terrain`, `FX` y `HUD` | P3 la regenera con el A\* suavizado, por un PR en `contracts/` |
 | `routing/expected_plan.json` | `{schema_version, plans[]}`: las tres `Plan`, en el orden de `Alternative`, que genera el mismo script con las dos paradas de la misión sintética. Sobre la rampa las tres son iguales. Es el mock de `RouteSelected` | P3 la regenera con `OrderStops` |
