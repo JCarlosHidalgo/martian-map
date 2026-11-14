@@ -38,8 +38,9 @@ namespace MartianMap.Routing
         /// <summary>
         /// The fastest route from <paramref name="start"/> to <paramref name="goal"/>: A*
         /// 16-connected over the segment rule, choosing with the amber penalty, at v₀ P50. Each point
-        /// goes to its nearest node; <see cref="Route.NotFound"/> if either node is blocked or there
-        /// is no path.
+        /// goes to its nearest node (a point midway goes to the east or north one);
+        /// <see cref="Route.NotFound"/> if either node is blocked or there is no path. With both points
+        /// on the same free node, the route is found and stays there: one cell, one point, all 0.
         /// </summary>
         public static Route PlanRoute(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
         {
@@ -70,7 +71,10 @@ namespace MartianMap.Routing
             return (j * g.Width) + i;
         }
 
-        /// <summary>The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90.</summary>
+        /// <summary>
+        /// The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90: each node's way back is
+        /// chosen with the amber penalty, and its value is that way's time without it.
+        /// </summary>
         public static Field ReturnField(CostGrid grid, EnuPoint home, CostParams p)
         {
             RequirePointIn(grid, home, nameof(home));
