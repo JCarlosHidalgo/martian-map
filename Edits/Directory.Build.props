@@ -1,0 +1,11 @@
+<Project>
+  <!--
+    Build output goes to .build/, which Unity does not import (it starts with a dot).
+    Without this, Unity compiles obj/ too and fails with CS0579.
+    See docs/guide/chapters/convenciones.md, "Forja y carpetas".
+  -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>$(MSBuildThisFileDirectory).build/obj/$(MSBuildProjectName)/</BaseIntermediateOutputPath>
+    <BaseOutputPath>$(MSBuildThisFileDirectory).build/bin/$(MSBuildProjectName)/</BaseOutputPath>
+  </PropertyGroup>
+</Project>
