@@ -52,6 +52,14 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
+        public void ConditionsRejectADefaultModifier()
+        {
+            // default(ConditionModifier) skips its constructor: factor 0 and no DateTimeKind.
+            var mods = new[] { new ConditionModifier(2, T, T.AddHours(1)), default };
+            Assert.Throws<ArgumentException>(() => new Conditions(1, mods));
+        }
+
+        [Test]
         public void TileRastersCopyTheirArrays()
         {
             const int n = TileRasters.SizePx * TileRasters.SizePx;

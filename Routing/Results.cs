@@ -164,7 +164,10 @@ namespace MartianMap.Routing
         public DateTime ValidTo { get; }
     }
 
-    /// <summary>The fields of <c>conditions.json</c> that Routing needs. Every date is UTC. The constructor copies the array.</summary>
+    /// <summary>
+    /// The fields of <c>conditions.json</c> that Routing needs. Every date is UTC. The constructor
+    /// copies the array, and throws on a <c>default(ConditionModifier)</c>, which skipped its checks.
+    /// </summary>
     public sealed class Conditions
     {
         public Conditions(double valueUGyH, ConditionModifier[] modifiers)
@@ -176,6 +179,14 @@ namespace MartianMap.Routing
 
             ValueUGyH = valueUGyH;
             Modifiers = ReadOnly.List(modifiers, nameof(modifiers));
+            foreach (ConditionModifier m in Modifiers)
+            {
+                // Only default(ConditionModifier) has a factor that is not > 0: it skipped the constructor.
+                if (!(m.Factor > 0))
+                {
+                    throw new ArgumentException("A modifier must be built with its constructor.", nameof(modifiers));
+                }
+            }
         }
 
         public double ValueUGyH { get; }
