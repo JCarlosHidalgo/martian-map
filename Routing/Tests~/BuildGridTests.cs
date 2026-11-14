@@ -1,4 +1,6 @@
 using System;
+using System.IO;
+using System.Text.Json;
 using NUnit.Framework;
 
 namespace MartianMap.Routing.Tests
@@ -182,6 +184,72 @@ namespace MartianMap.Routing.Tests
         {
             const double Far = 256.0 * (1 << 20);
             Assert.Throws<ArgumentException>(() => Router.BuildGrid(new[] { Flat(0, 0, 0), Flat(Far, Far, 0) }, 0, P));
+        }
+
+        [Test]
+        public void TheSynthTileOfP1GivesCostgridSynth()
+        {
+            // convenciones.md, "Cómo se fija un contrato": BuildGrid on P1's synthetic tile gives,
+            // byte for byte, costgrid_synth.bin. Runs once P1's tile is in contracts/fixtures/.
+            string dir = Path.Combine(Path.GetDirectoryName(Fixtures.Dir), "tile_synth_0_0_0");
+            if (!Directory.Exists(dir))
+            {
+                Assert.Ignore("Pending P1: contracts/fixtures/tile_synth_0_0_0/ is not here yet.");
+            }
+
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(dir, "tile.json")));
+            JsonElement t = doc.RootElement;
+            JsonElement h = t.GetProperty("height");
+            byte[] raw = File.ReadAllBytes(Path.Combine(dir, h.GetProperty("file").GetString()));
+            var height = new ushort[raw.Length / 2];
+            Buffer.BlockCopy(raw, 0, height, 0, raw.Length);
+            var tile = new TileRasters(
+                new EnuPoint(t.GetProperty("origin_enu_m")[0].GetDouble(), t.GetProperty("origin_enu_m")[1].GetDouble()),
+                height,
+                h.GetProperty("scale").GetDouble(),
+                h.GetProperty("offset").GetDouble(),
+                File.ReadAllBytes(Path.Combine(dir, "slope.r8")),
+                File.ReadAllBytes(Path.Combine(dir, "roughness.r8")),
+                File.ReadAllBytes(Path.Combine(dir, "hazard.r8")));
+
+            CostGrid g = Router.BuildGrid(new[] { tile }, 12.5, P);
+            byte[] expected = File.ReadAllBytes(Path.Combine(Fixtures.Dir, "costgrid_synth.bin"));
+            byte[] got = Tiles.Serialize(g);
+            Assert.That(got.Length, Is.EqualTo(expected.Length));
+            var differing = new System.Collections.Generic.List<string>();
+            for (int k = 0; k < g.Width * g.Height; k++)
+            {
+                if (!SameNode(got, expected, k, g.Width * g.Height))
+                {
+                    differing.Add($"({k % g.Width}, {k / g.Width})");
+                }
+            }
+
+            Assert.That(differing, Is.Empty, $"{differing.Count} nodes differ from costgrid_synth.bin");
+            Assert.That(got, Is.EqualTo(expected));
+        }
+
+        private static bool SameNode(byte[] a, byte[] b, int k, int count)
+        {
+            const int Header = 28;
+            for (int o = 0; o < 4; o++)
+            {
+                if (a[Header + 4 * k + o] != b[Header + 4 * k + o])
+                {
+                    return false;
+                }
+            }
+
+            for (int array = 0; array < 3; array++)
+            {
+                int at = Header + 4 * count + array * count + k;
+                if (a[at] != b[at])
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         [Test]

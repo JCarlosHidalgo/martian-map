@@ -18,9 +18,7 @@ namespace MartianMap.Routing.FixtureGen
         private const double OriginHeightM = 12.5;
         private const int Samples = TileRasters.SizePx;
 
-        // costgrid_synth.bin: 129 × 129 nodes of 2 m, node (0, 0) at [-128, -128].
-        private const int Nodes = 129;
-        private const float CellM = 2f;
+        // costgrid_synth.bin: 129 × 129 nodes of 2 m, node (0, 0) at [-128, -128]: BuildGrid's grid of the one tile.
 
         // mission.json: base [-100, -20]; s1 [0, -20] and s2 [100, -20], value 5 and 8, dwell 600 s.
         private static readonly EnuPoint Base = new EnuPoint(-100, -20);
@@ -62,7 +60,7 @@ namespace MartianMap.Routing.FixtureGen
 
         public static Output Generate(CostParams p)
         {
-            CostGrid grid = BuildSynthGrid();
+            CostGrid grid = BuildSynthGrid(p);
 
             // expected_route.json: the straight line from [-100, -20] to [100, -20].
             Route route = StraightRoute(grid, p, Base, Stops[1].EnuM);
@@ -80,8 +78,8 @@ namespace MartianMap.Routing.FixtureGen
             return new Output(SerializeGrid(grid), JsonText.Write(routeJson), JsonText.Write(planJson));
         }
 
-        /// <summary>The grid that BuildGrid gives for the synthetic tile, with BuildGrid's rule.</summary>
-        internal static CostGrid BuildSynthGrid()
+        /// <summary>The synthetic tile's rasters, from the formulas, reduced by <see cref="Router.BuildGrid"/>.</summary>
+        internal static CostGrid BuildSynthGrid(CostParams p)
         {
             int n = Samples * Samples;
             var height = new ushort[n];
@@ -118,48 +116,7 @@ namespace MartianMap.Routing.FixtureGen
             var tile = new TileRasters(
                 new EnuPoint(TileOriginE, TileOriginN), height, 1.0 / 1024, 0, slope, new byte[n], hazard);
 
-            int count = Nodes * Nodes;
-            var heightM = new float[count];
-            var slopeDeg = new byte[count];
-            var roughnessCm = new byte[count];
-            var nodeHazard = new byte[count];
-            for (int j = 0; j < Nodes; j++)
-            {
-                for (int i = 0; i < Nodes; i++)
-                {
-                    int c = 2 * i;
-                    int r = 256 - 2 * j;
-                    int node = j * Nodes + i;
-                    ushort h = tile.Height[r * Samples + c];
-                    bool nodata = h == TileRasters.HeightNodata;
-                    heightM[node] = nodata ? 0f : (float)(tile.Offset + tile.Scale * h - OriginHeightM);
-                    slopeDeg[node] = Max3x3(tile.Slope, r, c);
-                    roughnessCm[node] = Max3x3(tile.Roughness, r, c);
-                    nodeHazard[node] = nodata ? (byte)255 : Max3x3(tile.Hazard, r, c);
-                }
-            }
-
-            return new CostGrid(Nodes, Nodes, CellM, new EnuPoint(TileOriginE, TileOriginN), heightM, slopeDeg, roughnessCm, nodeHazard);
-        }
-
-        /// <summary>The 3 × 3 maximum; samples outside the tile are skipped (BuildGrid's edge rule).</summary>
-        private static byte Max3x3(ReadOnlySpan<byte> raster, int r, int c)
-        {
-            byte max = 0;
-            for (int dr = -1; dr <= 1; dr++)
-            {
-                for (int dc = -1; dc <= 1; dc++)
-                {
-                    int rr = r + dr;
-                    int cc = c + dc;
-                    if (rr >= 0 && rr < Samples && cc >= 0 && cc < Samples)
-                    {
-                        max = Math.Max(max, raster[rr * Samples + cc]);
-                    }
-                }
-            }
-
-            return max;
+            return Router.BuildGrid(new[] { tile }, OriginHeightM, p);
         }
 
         private static byte[] SerializeGrid(CostGrid g)
