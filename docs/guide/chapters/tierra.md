@@ -304,7 +304,9 @@ waypoints. Los campos de cada pin son *(equipo)*:
 | `derived_from` | opcional, p. ej. "RAD Gale release 42" |
 | `modifiers[]` | `{donki_activity_id (opcional), type, factor, valid_from, valid_to}`; `type` es un string libre: el tipo de actividad de DONKI, o `"SEP"` |
 
-**Tasa efectiva = `value` × producto de los `factor` vigentes.**
+**Tasa efectiva = `value` × producto de los `factor` vigentes**, en cada instante. Un modificador
+vale en `[valid_from, valid_to)`; `Routing` integra la tasa sobre la EVA ([Tablet](./tablet.md),
+sección "API de `Routing`") *(propuesta)*.
 
 | Tipo de actividad DONKI | Factor |
 |---|---|

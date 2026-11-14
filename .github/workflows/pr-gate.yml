@@ -1,0 +1,58 @@
+# The check that the `main` ruleset requires on every pull request ("pr-gate").
+# It runs on every PR (no path filter), so no PR waits for a status that never comes.
+# Cheap repository hygiene only; each area's own checks (contracts, dotnet test, pytest) live in
+# their own workflows.
+name: PR gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-gate:
+    name: pr-gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository without LFS downloads
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: No Unity generated folders committed
+        run: |
+          bad=$(git ls-files | grep -E '^tablet/(Library|Temp|Obj|Build|Builds|Logs|UserSettings|MemoryCaptures)/' || true)
+          if [ -n "$bad" ]; then
+            echo "::error::Unity generated files must not be committed:"
+            echo "$bad" | head -20
+            exit 1
+          fi
+
+      - name: Large files go through Git LFS
+        run: |
+          # Without `lfs: true` an LFS file is a small pointer, so any large file here bypassed LFS.
+          limit=$((5 * 1024 * 1024))
+          status=0
+          while IFS= read -r -d '' file; do
+            size=$(stat -c %s "$file")
+            if [ "$size" -gt "$limit" ]; then
+              echo "::error file=$file::$((size / 1024 / 1024)) MB and not in Git LFS (see .gitattributes)"
+              status=1
+            fi
+          done < <(git ls-files -z)
+          exit $status
+
+      - name: Unity assets have their .meta
+        run: |
+          status=0
+          while IFS= read -r file; do
+            if [ ! -e "$file.meta" ]; then
+              echo "::error file=$file::missing $file.meta"
+              status=1
+            fi
+          done < <(git ls-files 'tablet/Assets/*' | grep -v '\.meta$')
+          exit $status

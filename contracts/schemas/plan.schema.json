@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "plan.schema.json",
+  "title": "plan",
+  "description": "The plans of C4 (expected_plan.json): one Plan per Alternative, in the order fastest, safest, gentlest.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "plans"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "plans": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/plan"}
+    }
+  },
+  "$defs": {
+    "plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["order", "dropped", "legs", "total_s", "dose_uGy", "limit_s", "return_ok"],
+      "properties": {
+        "order": {"description": "Stop ids in visiting order.", "type": "array", "items": {"type": "string"}},
+        "dropped": {"description": "Stop ids that do not fit; only non-empty in OP mode.", "type": "array", "items": {"type": "string"}},
+        "legs": {
+          "description": "One Route per stretch, ending with the return to home.",
+          "type": "array",
+          "items": {"$ref": "route.schema.json#/$defs/route", "unevaluatedProperties": false}
+        },
+        "total_s": {"description": "Walking plus dwell_s.", "$ref": "route.schema.json#/$defs/percentiles"},
+        "dose_uGy": {"type": "number", "minimum": 0},
+        "limit_s": {"description": "The radiation duration limit (DurationLimit).", "type": "number", "minimum": 0},
+        "return_ok": {"type": "boolean"}
+      }
+    }
+  }
+}
