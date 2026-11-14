@@ -95,6 +95,49 @@ namespace MartianMap.Routing.Tests
         /// <summary>The heights of <see cref="Random12x9"/>: <c>0.2 · ((7i + 3j) mod 5)</c>.</summary>
         internal static float RandomHeight(int i, int j) => (float)(0.2 * (((7 * i) + (3 * j)) % 5));
 
+        /// <summary>A free 15 × 9 grid, for <see cref="HillHeight"/> and <see cref="BumpHeight"/>.</summary>
+        internal static readonly string[] Flat15x9 = Rows(15, 9);
+
+        /// <summary>A 3 × 3 block of amber in the middle of 15 × 9 (<c>i</c> 6–8, <c>j</c> 3–5).</summary>
+        internal static readonly string[] AmberBlob15x9 =
+        {
+            "...............",
+            "...............",
+            "...............",
+            "......aaa......",
+            "......aaa......",
+            "......aaa......",
+            "...............",
+            "...............",
+            "...............",
+        };
+
+        /// <summary>One blocked node at <c>(2, 1)</c>: its corner <c>(1.5, 1.5)</c> is on the diagonal from <c>(0, 0)</c>.</summary>
+        internal static readonly string[] Corner4x4 =
+        {
+            "....",
+            "....",
+            "..#.",
+            "....",
+        };
+
+        /// <summary>A random 8 × 6 map (oracle cases_smooth.py, scan) where a shortcut is rejected and the next one would pass.</summary>
+        internal static readonly string[] ScanStop8x6 =
+        {
+            "...#....",
+            "........",
+            "....##..",
+            "#.......",
+            "......#.",
+            "...#....",
+        };
+
+        /// <summary>A hill of 3 m centred on <c>(7, 4)</c>: <c>3 · exp(−((i − 7)² + (j − 4)²) / 4)</c>.</summary>
+        internal static float HillHeight(int i, int j) => (float)(3.0 * Math.Exp(-(((i - 7) * (i - 7)) + ((j - 4) * (j - 4))) / 4.0));
+
+        /// <summary>The same shape as <see cref="HillHeight"/>, 0.3 m high.</summary>
+        internal static float BumpHeight(int i, int j) => (float)(0.3 * Math.Exp(-(((i - 7) * (i - 7)) + ((j - 4) * (j - 4))) / 4.0));
+
         internal static CostGrid FromMap(string[] rows, Func<int, int, float> heightM = null)
         {
             int height = rows.Length;
@@ -158,6 +201,17 @@ namespace MartianMap.Routing.Tests
         {
             int n = width * height;
             return new CostGrid(width, height, 2f, new EnuPoint(0, 0), new float[n], new byte[n], new byte[n], new byte[n]);
+        }
+
+        private static string[] Rows(int width, int height)
+        {
+            var rows = new string[height];
+            for (int r = 0; r < height; r++)
+            {
+                rows[r] = new string('.', width);
+            }
+
+            return rows;
         }
 
         private static string[] Band(int height, int passJ)
