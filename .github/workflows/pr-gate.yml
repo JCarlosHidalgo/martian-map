@@ -1,7 +1,9 @@
 # The check that the `main` ruleset requires on every pull request ("pr-gate").
 # It runs on every PR (no path filter), so no PR waits for a status that never comes.
-# Cheap repository hygiene only; each area's own checks (contracts, dotnet test, pytest) live in
-# their own workflows.
+# Repository hygiene always; the .NET packages (Routing/, Edits/) are built and tested only when a
+# change touches them. Checks that depend on paths stay as steps of this one job, never as separate
+# required checks: a required check that is skipped by a path filter blocks the PR forever.
+# The contracts workflow (P6) stays separate.
 name: PR gate
 
 on:
@@ -22,6 +24,29 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: false
+          # Full history, to compare the change against its base.
+          fetch-depth: 0
+
+      - name: Detect what the change touches
+        id: changes
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then base="$PR_BASE"; else base="$PUSH_BEFORE"; fi
+          # A new branch or an unknown base: run everything.
+          if [ -z "$base" ] || ! git cat-file -e "$base^{commit}" 2>/dev/null; then
+            echo "dotnet=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          changed=$(git diff --name-only "$base" HEAD)
+          if echo "$changed" | grep -qE '^(Routing|Edits)/|^global\.json$|^\.github/workflows/pr-gate\.yml$'; then
+            echo "dotnet=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "dotnet=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Changed files:"; echo "$changed" | head -50
 
       - name: No Unity generated folders committed
         run: |
@@ -56,3 +81,27 @@ jobs:
             fi
           done < <(git ls-files 'tablet/Assets/*' | grep -v '\.meta$')
           exit $status
+
+      - name: Set up .NET from global.json
+        if: steps.changes.outputs.dotnet == 'true'
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Routing and Edits compile against netstandard2.1
+        if: steps.changes.outputs.dotnet == 'true'
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+          DOTNET_NOLOGO: "1"
+        run: |
+          dotnet build Routing/MartianMap.Routing.csproj -c Release
+          dotnet build Edits/MartianMap.Edits.csproj -c Release
+
+      - name: dotnet test (Routing, Edits)
+        if: steps.changes.outputs.dotnet == 'true'
+        env:
+          DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+          DOTNET_NOLOGO: "1"
+        run: |
+          dotnet test "Routing/Tests~/MartianMap.Routing.Tests.csproj" -c Release --logger "console;verbosity=normal"
+          dotnet test "Edits/Tests~/MartianMap.Edits.Tests.csproj" -c Release --logger "console;verbosity=normal"
