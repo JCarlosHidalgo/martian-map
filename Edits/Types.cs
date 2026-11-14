@@ -4,17 +4,23 @@ using System.Collections.ObjectModel;
 
 namespace MartianMap.Edits
 {
-    /// <summary>The edit operations (docs/guide/chapters/convenciones.md, "Catálogo de op").</summary>
+    /// <summary>
+    /// The edit operations (docs/guide/chapters/convenciones.md, "Catálogo de op"). 0 is
+    /// <see cref="None"/>, so a forgotten or failed value never reads as <c>hazard.set</c>.
+    /// </summary>
     public enum EditOp
     {
+        /// <summary>No operation: what <see cref="EditOpText.TryParse"/> leaves when it fails. No edit, payload or entity carries it.</summary>
+        None = 0,
+
         /// <summary><c>hazard.set</c>: a hazard zone, <c>{polygon, level, confirmed}</c>.</summary>
-        HazardSet = 0,
+        HazardSet = 1,
 
         /// <summary><c>obstacle.set</c>: an obstacle, <c>{polygon, confirmed}</c>; worth level 255.</summary>
-        ObstacleSet = 1,
+        ObstacleSet = 2,
 
         /// <summary><c>note.set</c>: a note, <c>{point, text}</c>. It never touches the tile.</summary>
-        NoteSet = 2,
+        NoteSet = 3,
     }
 
     /// <summary>

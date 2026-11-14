@@ -32,7 +32,7 @@ namespace MartianMap.Edits
         }
 
         /// <summary>
-        /// False, with <paramref name="op"/> at its default, if <paramref name="wire"/> is null or
+        /// False, with <paramref name="op"/> = <see cref="EditOp.None"/>, if <paramref name="wire"/> is null or
         /// is not one of the three texts. It never throws: an unknown <c>op</c> is bad data, not a
         /// bad argument.
         /// </summary>
@@ -50,7 +50,7 @@ namespace MartianMap.Edits
                     op = EditOp.NoteSet;
                     return true;
                 default:
-                    op = default;
+                    op = EditOp.None;
                     return false;
             }
         }
