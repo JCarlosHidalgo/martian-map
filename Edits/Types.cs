@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace MartianMap.Edits
 {
@@ -49,18 +51,17 @@ namespace MartianMap.Edits
     }
 
     /// <summary>
-    /// The fields of the three payloads. Each <see cref="EditOp"/> uses its own and leaves the
-    /// others null. A polygon is a simple ring of 3 or more vertices; the first is not repeated.
+    /// The payload of one <see cref="EditOp"/>, built only through <see cref="Hazard"/>,
+    /// <see cref="Obstacle"/> and <see cref="Note"/>: each one fills its own fields and leaves the
+    /// others null. A polygon is a ring of 3 or more vertices whose first vertex is not repeated at
+    /// the end; that it is simple is up to the caller, it is not checked here. It is immutable:
+    /// the factories copy the polygon.
     /// </summary>
     public sealed class EditPayload
     {
-        public EditPayload(FixedPoint[] polygon, FixedPoint? point, byte? level, bool? confirmed, string text)
+        private EditPayload(EditOp op, IReadOnlyList<FixedPoint> polygon, FixedPoint? point, byte? level, bool? confirmed, string text)
         {
-            if (polygon != null && polygon.Length < 3)
-            {
-                throw new ArgumentException("A polygon has at least 3 vertices.", nameof(polygon));
-            }
-
+            Op = op;
             Polygon = polygon;
             Point = point;
             Level = level;
@@ -68,21 +69,64 @@ namespace MartianMap.Edits
             Text = text;
         }
 
-        public FixedPoint[] Polygon { get; }
+        /// <summary>The <see cref="EditOp"/> this payload was built for.</summary>
+        public EditOp Op { get; }
 
+        /// <summary>Set for <c>hazard.set</c> and <c>obstacle.set</c>; null for a note.</summary>
+        public IReadOnlyList<FixedPoint> Polygon { get; }
+
+        /// <summary>Set for <c>note.set</c> only.</summary>
         public FixedPoint? Point { get; }
 
+        /// <summary>Set for <c>hazard.set</c> only; an obstacle is worth 255 without carrying it.</summary>
         public byte? Level { get; }
 
-        /// <summary>Optional. Set by the HUD after the confirmation dialog.</summary>
+        /// <summary>Optional, for <c>hazard.set</c> and <c>obstacle.set</c>. Set by the HUD after the confirmation dialog.</summary>
         public bool? Confirmed { get; }
 
+        /// <summary>Set for <c>note.set</c> only.</summary>
         public string Text { get; }
+
+        /// <summary>The payload of <c>hazard.set</c>: <c>{polygon, level, confirmed}</c>. The polygon is copied.</summary>
+        public static EditPayload Hazard(FixedPoint[] polygon, byte level, bool? confirmed) =>
+            new EditPayload(EditOp.HazardSet, CopyRing(polygon), null, level, confirmed, null);
+
+        /// <summary>The payload of <c>obstacle.set</c>: <c>{polygon, confirmed}</c>. The polygon is copied.</summary>
+        public static EditPayload Obstacle(FixedPoint[] polygon, bool? confirmed) =>
+            new EditPayload(EditOp.ObstacleSet, CopyRing(polygon), null, null, confirmed, null);
+
+        /// <summary>The payload of <c>note.set</c>: <c>{point, text}</c>.</summary>
+        public static EditPayload Note(FixedPoint point, string text) =>
+            new EditPayload(EditOp.NoteSet, null, point, null, null, text ?? throw new ArgumentNullException(nameof(text)));
+
+        private static IReadOnlyList<FixedPoint> CopyRing(FixedPoint[] polygon)
+        {
+            if (polygon == null)
+            {
+                throw new ArgumentNullException(nameof(polygon));
+            }
+
+            if (polygon.Length < 3)
+            {
+                throw new ArgumentException("A polygon has at least 3 vertices.", nameof(polygon));
+            }
+
+            FixedPoint first = polygon[0];
+            FixedPoint last = polygon[polygon.Length - 1];
+            if (first.E == last.E && first.N == last.N)
+            {
+                throw new ArgumentException("The first vertex is not repeated at the end.", nameof(polygon));
+            }
+
+            return new ReadOnlyCollection<FixedPoint>((FixedPoint[])polygon.Clone());
+        }
     }
 
     /// <summary>
     /// One edit of the log: the fields of the <c>Edit</c> schema, plus <see cref="FromHabitat"/>,
-    /// which does not travel.
+    /// which does not travel. The constructor checks the formats of
+    /// docs/guide/chapters/convenciones.md, "Identificadores", and that the payload was built for
+    /// <c>op</c>.
     /// </summary>
     public sealed class Edit
     {
@@ -98,14 +142,29 @@ namespace MartianMap.Edits
             bool tombstone,
             bool fromHabitat)
         {
-            Uuid = Require(uuid, nameof(uuid));
+            Uuid = RequireUuidV4(uuid, nameof(uuid));
+            if (lamport < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(lamport), "The Lamport clock starts at 1.");
+            }
+
             Lamport = lamport;
-            Author = Require(author, nameof(author));
-            Creator = Require(creator, nameof(creator));
-            ZoneId = Require(zoneId, nameof(zoneId));
-            EntityId = Require(entityId, nameof(entityId));
+            Author = RequireAuthor(author, nameof(author));
+            Creator = RequireAuthor(creator, nameof(creator));
+            ZoneId = RequireZoneId(zoneId, nameof(zoneId));
+            EntityId = RequireUuidV4(entityId, nameof(entityId));
+            if (op != EditOp.HazardSet && op != EditOp.ObstacleSet && op != EditOp.NoteSet)
+            {
+                throw new ArgumentOutOfRangeException(nameof(op));
+            }
+
             Op = op;
             Payload = payload ?? throw new ArgumentNullException(nameof(payload));
+            if (payload.Op != op)
+            {
+                throw new ArgumentException($"The payload was built for {payload.Op}, not {op}.", nameof(payload));
+            }
+
             Tombstone = tombstone;
             FromHabitat = fromHabitat;
         }
@@ -136,8 +195,60 @@ namespace MartianMap.Edits
         /// </summary>
         public bool FromHabitat { get; }
 
-        private static string Require(string value, string name) =>
-            string.IsNullOrEmpty(value) ? throw new ArgumentException("Required.", name) : value;
+        private static bool IsLowerAlnumOrDash(char c) => (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-';
+
+        private static bool IsLowerHex(char c) => (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f');
+
+        /// <summary>A lowercase UUIDv4 with dashes: <c>xxxxxxxx-xxxx-4xxx-[89ab]xxx-xxxxxxxxxxxx</c>.</summary>
+        private static string RequireUuidV4(string value, string name)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(name);
+            }
+
+            bool ok = value.Length == 36 && value[14] == '4' && "89ab".IndexOf(value[19]) >= 0;
+            for (int k = 0; ok && k < value.Length; k++)
+            {
+                ok = k == 8 || k == 13 || k == 18 || k == 23 ? value[k] == '-' : IsLowerHex(value[k]);
+            }
+
+            return ok ? value : throw new ArgumentException("Expected a lowercase UUIDv4 with dashes.", name);
+        }
+
+        /// <summary><c>^[a-z0-9-]{2,16}$</c>.</summary>
+        private static string RequireAuthor(string value, string name)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(name);
+            }
+
+            bool ok = value.Length >= 2 && value.Length <= 16;
+            for (int k = 0; ok && k < value.Length; k++)
+            {
+                ok = IsLowerAlnumOrDash(value[k]);
+            }
+
+            return ok ? value : throw new ArgumentException("Expected ^[a-z0-9-]{2,16}$.", name);
+        }
+
+        /// <summary><c>^[a-z][a-z0-9-]{1,31}$</c>.</summary>
+        private static string RequireZoneId(string value, string name)
+        {
+            if (value == null)
+            {
+                throw new ArgumentNullException(name);
+            }
+
+            bool ok = value.Length >= 2 && value.Length <= 32 && value[0] >= 'a' && value[0] <= 'z';
+            for (int k = 1; ok && k < value.Length; k++)
+            {
+                ok = IsLowerAlnumOrDash(value[k]);
+            }
+
+            return ok ? value : throw new ArgumentException("Expected ^[a-z][a-z0-9-]{1,31}$.", name);
+        }
     }
 
     /// <summary>
