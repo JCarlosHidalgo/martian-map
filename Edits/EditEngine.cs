@@ -18,7 +18,11 @@ namespace MartianMap.Edits
         /// Returns the <c>hazard</c> of a <c>z = 0</c> tile with the edits applied:
         /// <c>max(base, live entities)</c>. <paramref name="originEnuM"/> is the tile's south-west
         /// corner in whole metres. A sample is inside a polygon if it falls inside or on its edge,
-        /// with the even-odd rule. The input arrays are not modified.
+        /// with the even-odd rule; sample <c>(r, c)</c> is at <c>(256·(origin.E + c), 256·(origin.N + 256 − r))</c>
+        /// in fixed point. The winners are those of <see cref="LiveEntities"/>. The input arrays are not
+        /// modified. Throws <see cref="ArgumentNullException"/> for a null <paramref name="baseHazard"/>,
+        /// <paramref name="edits"/> or edit, and <see cref="ArgumentException"/> for a hazard that is not
+        /// 257 × 257 or two edits with the same <c>uuid</c>; an edit the rule ignores does not throw.
         /// </summary>
         public static byte[] Apply(byte[] baseHazard, EnuMetres originEnuM, Edit[] edits)
         {
@@ -47,7 +51,12 @@ namespace MartianMap.Edits
 
         /// <summary>
         /// The live entities of a log, one per <c>entity_id</c>, with the same rules and the same
-        /// walk as <see cref="Apply"/>. A tombstoned entity is not live.
+        /// walk as <see cref="Apply"/>. A tombstoned entity is not live. An edit replaces its entity's
+        /// winner unless it has another <c>op</c>, or it lowers a live entity (a tombstone or a lower
+        /// level) and its author is not its creator, it is not <c>confirmed</c> and not
+        /// <see cref="Edit.FromHabitat"/>. The list is in the winners' <c>(lamport, author, uuid)</c>
+        /// order, that of <c>log_merged.json</c>. Throws <see cref="ArgumentNullException"/> for a null
+        /// array or edit and <see cref="ArgumentException"/> for a repeated <c>uuid</c>.
         /// </summary>
         public static IReadOnlyList<LiveEntity> LiveEntities(Edit[] edits)
         {
