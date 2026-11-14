@@ -35,7 +35,7 @@
       }
     },
     "c": {"description": "Tobler grade offset; 0 is the symmetric function.", "type": "number"},
-    "walk_ceiling_mps": {"type": "number", "exclusiveMinimum": 0},
+    "walk_ceiling_mps": {"description": "Bound on v0, from the walk-to-run transition: v0_mps.p10 must not exceed it (checked by Routing's CostParams; JSON Schema cannot compare two fields). It is not a cap in the formula.", "type": "number", "exclusiveMinimum": 0},
     "max_slope_deg": {"description": "Nodes with slope above this are blocked.", "type": "number", "minimum": 0, "maximum": 90},
     "relief_block_cm": {"description": "Nodes with local relief above this are blocked.", "type": "number", "minimum": 0},
     "relief_penalty_from_cm": {"description": "f_rug drops below 1 from this relief on.", "type": "number", "minimum": 0},
