@@ -23,9 +23,14 @@ namespace MartianMap.Routing
             byte[] roughness,
             byte[] hazard)
         {
-            if (!(scale > 0))
+            if (!(scale > 0 && double.IsFinite(scale)))
             {
                 throw new ArgumentOutOfRangeException(nameof(scale));
+            }
+
+            if (!double.IsFinite(offset))
+            {
+                throw new ArgumentOutOfRangeException(nameof(offset));
             }
 
             OriginEnuM = originEnuM;

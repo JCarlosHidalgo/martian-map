@@ -35,9 +35,29 @@ namespace MartianMap.Routing
                 throw new ArgumentException("Expected 0 < v0 p90 <= p50 <= p10.", nameof(v0Mps));
             }
 
+            if (!(b.Low > 0 && double.IsFinite(b.High)))
+            {
+                throw new ArgumentOutOfRangeException(nameof(b), "Expected 0 < b low <= p50 <= high, finite.");
+            }
+
+            if (!double.IsFinite(c))
+            {
+                throw new ArgumentOutOfRangeException(nameof(c));
+            }
+
+            if (!(maxSlopeDeg >= 0 && maxSlopeDeg <= 90))
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxSlopeDeg), "Expected 0 <= max_slope_deg <= 90.");
+            }
+
+            if (!(reliefPenaltyFromCm >= 0) || !double.IsFinite(reliefBlockCm))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reliefBlockCm), "Expected 0 <= relief_penalty_from_cm < relief_block_cm, finite.");
+            }
+
             // The walking ceiling bounds v0: nobody walks faster than the walk-to-run transition.
             // The formula never exceeds v0, so it is a check on the parameters, not a cap.
-            if (!(walkCeilingMps > 0 && v0Mps.P10 <= walkCeilingMps))
+            if (!(walkCeilingMps > 0 && double.IsFinite(walkCeilingMps) && v0Mps.P10 <= walkCeilingMps))
             {
                 throw new ArgumentOutOfRangeException(nameof(walkCeilingMps), "Expected 0 < v0 p10 <= walk_ceiling_mps.");
             }
@@ -62,9 +82,10 @@ namespace MartianMap.Routing
                 throw new ArgumentOutOfRangeException(nameof(fRugMin));
             }
 
-            if (!(amberPenaltySPerM >= 0 && altSafestAmberMult >= 0 && altGentlestSPerM >= 0))
+            if (!(amberPenaltySPerM >= 0 && altSafestAmberMult >= 0 && altGentlestSPerM >= 0
+                && double.IsFinite(amberPenaltySPerM) && double.IsFinite(altSafestAmberMult) && double.IsFinite(altGentlestSPerM)))
             {
-                throw new ArgumentException("Penalties and alternative weights must be >= 0.");
+                throw new ArgumentException("Penalties and alternative weights must be finite and >= 0.");
             }
 
             SchemaVersion = schemaVersion;

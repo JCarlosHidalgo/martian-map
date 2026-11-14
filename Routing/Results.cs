@@ -99,7 +99,7 @@ namespace MartianMap.Routing
                 throw new ArgumentOutOfRangeException(nameof(scienceValue));
             }
 
-            if (!(dwellS >= 0))
+            if (!(dwellS >= 0 && double.IsFinite(dwellS)))
             {
                 throw new ArgumentOutOfRangeException(nameof(dwellS));
             }
@@ -124,9 +124,14 @@ namespace MartianMap.Routing
     {
         public Budget(double tS, double doseUGy)
         {
-            if (!(tS >= 0) || !(doseUGy >= 0))
+            if (!(tS >= 0 && double.IsFinite(tS)))
             {
-                throw new ArgumentOutOfRangeException(nameof(tS), "The budget must be >= 0.");
+                throw new ArgumentOutOfRangeException(nameof(tS), "The budget must be finite and >= 0.");
+            }
+
+            if (!(doseUGy >= 0 && double.IsFinite(doseUGy)))
+            {
+                throw new ArgumentOutOfRangeException(nameof(doseUGy), "The budget must be finite and >= 0.");
             }
 
             TS = tS;
@@ -143,7 +148,7 @@ namespace MartianMap.Routing
     {
         public ConditionModifier(double factor, DateTime validFrom, DateTime validTo)
         {
-            if (!(factor > 0))
+            if (!(factor > 0 && double.IsFinite(factor)))
             {
                 throw new ArgumentOutOfRangeException(nameof(factor));
             }
@@ -175,7 +180,7 @@ namespace MartianMap.Routing
     {
         public Conditions(double valueUGyH, ConditionModifier[] modifiers)
         {
-            if (!(valueUGyH > 0))
+            if (!(valueUGyH > 0 && double.IsFinite(valueUGyH)))
             {
                 throw new ArgumentOutOfRangeException(nameof(valueUGyH));
             }

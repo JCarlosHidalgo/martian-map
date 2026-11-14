@@ -24,9 +24,14 @@ namespace MartianMap.Routing
                 throw new ArgumentOutOfRangeException(nameof(width), "The grid needs at least one node.");
             }
 
-            if (!(cellM > 0))
+            if (!(cellM > 0 && float.IsFinite(cellM)))
             {
                 throw new ArgumentOutOfRangeException(nameof(cellM));
+            }
+
+            if (!double.IsFinite(originEnuM.E) || !double.IsFinite(originEnuM.N))
+            {
+                throw new ArgumentOutOfRangeException(nameof(originEnuM));
             }
 
             int count = checked(width * height);
@@ -35,6 +40,13 @@ namespace MartianMap.Routing
             CellM = cellM;
             OriginEnuM = originEnuM;
             HeightMArray = ReadOnly.Array(heightM, count, nameof(heightM));
+            foreach (float h in HeightMArray)
+            {
+                if (!float.IsFinite(h))
+                {
+                    throw new ArgumentException("Every height must be finite; nodata is 0.", nameof(heightM));
+                }
+            }
             SlopeDegArray = ReadOnly.Array(slopeDeg, count, nameof(slopeDeg));
             RoughnessCmArray = ReadOnly.Array(roughnessCm, count, nameof(roughnessCm));
             HazardArray = ReadOnly.Array(hazard, count, nameof(hazard));

@@ -68,7 +68,7 @@ namespace MartianMap.Routing
         /// </summary>
         public static double DurationLimit(Conditions conditions, DateTime tUtc, double doseUGy)
         {
-            if (!(doseUGy >= 0))
+            if (!(doseUGy >= 0 && double.IsFinite(doseUGy)))
             {
                 throw new ArgumentOutOfRangeException(nameof(doseUGy));
             }
