@@ -1,0 +1,13 @@
+* -filter
+*.py text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.lock text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.sha256 text eol=lf
+.gitattributes text eol=lf
+*.r8 binary -filter
+*.r16 binary -filter
+*.bin binary -filter
+*.jpg binary -filter
