@@ -19,8 +19,10 @@
     <ProjectReference Include="FixtureGen/MartianMap.Routing.FixtureGen.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <!-- FixtureGen is its own project. -->
+    <!-- FixtureGen and BenchmarkRunner are their own projects. -->
     <Compile Remove="FixtureGen/**" />
     <None Remove="FixtureGen/**" />
+    <Compile Remove="BenchmarkRunner/**" />
+    <None Remove="BenchmarkRunner/**" />
   </ItemGroup>
 </Project>

@@ -67,7 +67,8 @@ namespace MartianMap.Routing
     /// <summary>
     /// The return field: one value per node, the time back to <c>home</c> at v₀ P90;
     /// <see cref="float.PositiveInfinity"/> where there is no way back, indexed like
-    /// <see cref="Grid"/>. Only <see cref="Router.ReturnField"/> makes one, and it carries the
+    /// <see cref="Grid"/>. The way back is chosen like a route, with the amber penalty, and the
+    /// value is its P90 time without it, like <c>eta_s</c>. Only <see cref="Router.ReturnField"/> makes one, and it carries the
     /// <see cref="Grid"/> and the <see cref="Home"/> it was computed for, so
     /// <see cref="Router.OrderStops"/> cannot be given a field of another grid or another base.
     /// It is immutable: the constructor copies the array.

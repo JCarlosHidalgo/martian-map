@@ -35,14 +35,49 @@ namespace MartianMap.Routing
         public static CostGrid BuildGrid(TileRasters[] tiles, double originHeightM, CostParams p) =>
             throw new NotImplementedException();
 
+        /// <summary>
+        /// The fastest route from <paramref name="start"/> to <paramref name="goal"/>: A*
+        /// 16-connected over the segment rule, choosing with the amber penalty, at v₀ P50. Each point
+        /// goes to its nearest node (a point midway goes to the east or north one);
+        /// <see cref="Route.NotFound"/> if either node is blocked or there is no path. With both points
+        /// on the same free node, the route is found and stays there: one cell, one point, all 0.
+        /// A goal that cannot be reached is only known after exploring the whole connected part of
+        /// the grid around <paramref name="start"/>, which on a large grid takes as long as a field:
+        /// call it off the main thread.
+        /// </summary>
         public static Route PlanRoute(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
         {
             RequirePointIn(grid, start, nameof(start));
             RequirePointIn(grid, goal, nameof(goal));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            int s = NearestNode(grid, start);
+            int t = NearestNode(grid, goal);
+            int[] nodes = Search.AStar(grid, s, t, p.V0Mps.P50, p, 1.0, out _);
+            return nodes == null ? Route.NotFound : Cost.Trace(grid, nodes, p);
         }
 
-        /// <summary>The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90.</summary>
+        /// <summary>
+        /// The node nearest to <paramref name="point"/>, already checked to be in the grid:
+        /// <c>i = floor((e − origin_e) / cell_m + 0.5)</c>, and the same for <c>j</c>. A point midway
+        /// between two nodes goes to the one with the higher index (east or north).
+        /// </summary>
+        internal static int NearestNode(CostGrid g, EnuPoint point)
+        {
+            int i = (int)Math.Floor(((point.E - g.OriginEnuM.E) / g.CellM) + 0.5);
+            int j = (int)Math.Floor(((point.N - g.OriginEnuM.N) / g.CellM) + 0.5);
+            i = Math.Min(Math.Max(i, 0), g.Width - 1);
+            j = Math.Min(Math.Max(j, 0), g.Height - 1);
+            return (j * g.Width) + i;
+        }
+
+        /// <summary>
+        /// The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90: each node's way back is
+        /// chosen with the amber penalty, and its value is that way's time without it.
+        /// </summary>
         public static Field ReturnField(CostGrid grid, EnuPoint home, CostParams p)
         {
             RequirePointIn(grid, home, nameof(home));
