@@ -170,6 +170,8 @@ with thermal_file.open("wb") as file:
     for row in range(GRID_SIZE):
         for column in range(GRID_SIZE):
             value = min(256 - row, 255)
+            if row >= 241 and column >= 241:
+                value = 0
             file.write(struct.pack("<B", value))
 
 print("Thermal file created:", thermal_file)
@@ -183,6 +185,8 @@ with thermal_ir_file.open("wb") as file:
         for column in range(GRID_SIZE):
             checker = (row // 32 + column // 32) % 2
             value = 64 if checker == 0 else 192
+            if row >= 241 and column >= 241:
+                value = 0
             file.write(struct.pack("<B", value))
 
 print("Thermal IR file created:", thermal_ir_file)
@@ -224,8 +228,8 @@ for filename in [
     file_path = OUTPUT_DIR / filename
     tile_data["sha256"][filename] = calculate_sha256(file_path)
 
-with tile_json_path.open("w", encoding="utf-8") as file:
-    json.dump(tile_data, file, indent=2, ensure_ascii=False)
-    file.write("\n")
+tile_json_path.write_bytes(
+    (json.dumps(tile_data, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
+)
 
 print("tile.json updated with SHA-256 hashes!")
