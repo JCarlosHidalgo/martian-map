@@ -35,11 +35,39 @@ namespace MartianMap.Routing
         public static CostGrid BuildGrid(TileRasters[] tiles, double originHeightM, CostParams p) =>
             throw new NotImplementedException();
 
+        /// <summary>
+        /// The fastest route from <paramref name="start"/> to <paramref name="goal"/>: A*
+        /// 16-connected over the segment rule, choosing with the amber penalty, at v₀ P50. Each point
+        /// goes to its nearest node; <see cref="Route.NotFound"/> if either node is blocked or there
+        /// is no path.
+        /// </summary>
         public static Route PlanRoute(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
         {
             RequirePointIn(grid, start, nameof(start));
             RequirePointIn(grid, goal, nameof(goal));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            int s = NearestNode(grid, start);
+            int t = NearestNode(grid, goal);
+            int[] nodes = Search.AStar(grid, s, t, p.V0Mps.P50, p, 1.0, out _);
+            return nodes == null ? Route.NotFound : Cost.Trace(grid, nodes, p);
+        }
+
+        /// <summary>
+        /// The node nearest to <paramref name="point"/>, already checked to be in the grid:
+        /// <c>i = floor((e − origin_e) / cell_m + 0.5)</c>, and the same for <c>j</c>. A point midway
+        /// between two nodes goes to the one with the higher index (east or north).
+        /// </summary>
+        internal static int NearestNode(CostGrid g, EnuPoint point)
+        {
+            int i = (int)Math.Floor(((point.E - g.OriginEnuM.E) / g.CellM) + 0.5);
+            int j = (int)Math.Floor(((point.N - g.OriginEnuM.N) / g.CellM) + 0.5);
+            i = Math.Min(Math.Max(i, 0), g.Width - 1);
+            j = Math.Min(Math.Max(j, 0), g.Height - 1);
+            return (j * g.Width) + i;
         }
 
         /// <summary>The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90.</summary>

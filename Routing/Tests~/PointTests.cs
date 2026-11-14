@@ -41,7 +41,7 @@ namespace MartianMap.Routing.Tests
         [Test]
         public void APointOnTheEdgeOfTheGridIsValid()
         {
-            Assert.Throws<NotImplementedException>(() => Router.PlanRoute(G, new EnuPoint(10, 20), new EnuPoint(14, 22), P));
+            Assert.DoesNotThrow(() => Router.PlanRoute(G, new EnuPoint(10, 20), new EnuPoint(14, 22), P));
             Assert.Throws<NotImplementedException>(() => Router.ReturnField(G, new EnuPoint(14, 20), P));
             Assert.Throws<NotImplementedException>(() => Router.Alternatives(G, new EnuPoint(10, 22), In, P));
         }
