@@ -32,8 +32,38 @@ namespace MartianMap.Routing
         /// <c>e</c>). The result does not depend on the order of <paramref name="tiles"/>.</item>
         /// </list>
         /// </summary>
-        public static CostGrid BuildGrid(TileRasters[] tiles, double originHeightM, CostParams p) =>
-            throw new NotImplementedException();
+        public static CostGrid BuildGrid(TileRasters[] tiles, double originHeightM, CostParams p)
+        {
+            if (tiles == null)
+            {
+                throw new ArgumentNullException(nameof(tiles));
+            }
+
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            if (tiles.Length == 0)
+            {
+                throw new ArgumentException("BuildGrid needs at least one tile.", nameof(tiles));
+            }
+
+            foreach (TileRasters t in tiles)
+            {
+                if (t == null)
+                {
+                    throw new ArgumentNullException(nameof(tiles), "A tile is null.");
+                }
+            }
+
+            if (!double.IsFinite(originHeightM))
+            {
+                throw new ArgumentException("origin_height_m must be finite.", nameof(originHeightM));
+            }
+
+            return GridBuilder.Build(tiles, originHeightM);
+        }
 
         /// <summary>
         /// The fastest route from <paramref name="start"/> to <paramref name="goal"/>: A*
