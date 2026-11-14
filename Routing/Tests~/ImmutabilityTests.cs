@@ -27,6 +27,19 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
+        public void ARouteThatIsNotFoundCarriesNothing()
+        {
+            var none = Array.Empty<int>();
+            var noLine = Array.Empty<EnuPoint3>();
+            Assert.DoesNotThrow(() => new Route(false, none, noLine, 0, 0, 0, default, 0));
+            Assert.Throws<ArgumentException>(() => new Route(false, new[] { 1 }, noLine, 0, 0, 0, default, 0));
+            Assert.Throws<ArgumentException>(() => new Route(false, none, new[] { new EnuPoint3(0, 0, 0) }, 0, 0, 0, default, 0));
+            Assert.Throws<ArgumentException>(() => new Route(false, none, noLine, 1, 0, 0, default, 0));
+            Assert.Throws<ArgumentException>(() => new Route(false, none, noLine, 0, 0, 0, new Percentiles(1, 1, 1), 0));
+            Assert.Throws<ArgumentException>(() => new Route(false, none, noLine, 0, 0, 0, default, 255));
+        }
+
+        [Test]
         public void APlanCopiesItsArraysAndRejectsNulls()
         {
             var order = new[] { "s1", "s2" };

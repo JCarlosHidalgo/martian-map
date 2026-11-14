@@ -4,8 +4,9 @@ using System.Collections.Generic;
 namespace MartianMap.Routing
 {
     /// <summary>
-    /// A route. When <see cref="Found"/> is false the other fields are empty: "no route" is a
-    /// result, not an exception. It is immutable: the constructor copies the arrays.
+    /// A route. When <see cref="Found"/> is false the other fields are empty or 0, and the
+    /// constructor throws otherwise: "no route" is a result, not an exception. It is immutable:
+    /// the constructor copies the arrays.
     /// </summary>
     public sealed class Route
     {
@@ -25,6 +26,13 @@ namespace MartianMap.Routing
             Found = found;
             Cells = ReadOnly.List(cells, nameof(cells));
             PolylineEnuM = ReadOnly.List(polylineEnuM, nameof(polylineEnuM));
+            bool empty = Cells.Count == 0 && PolylineEnuM.Count == 0 && lengthM == 0 && ascentM == 0 && amberM == 0
+                && etaS.P10 == 0 && etaS.P50 == 0 && etaS.P90 == 0 && maxHazard == 0;
+            if (!found && !empty)
+            {
+                throw new ArgumentException("A route that is not found carries no cells, points or values.", nameof(found));
+            }
+
             LengthM = lengthM;
             AscentM = ascentM;
             AmberM = amberM;
