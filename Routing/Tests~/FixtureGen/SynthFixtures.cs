@@ -62,8 +62,8 @@ namespace MartianMap.Routing.FixtureGen
         {
             CostGrid grid = BuildSynthGrid(p);
 
-            // expected_route.json: the straight line from [-100, -20] to [100, -20].
-            Route route = StraightRoute(grid, p, Base, Stops[1].EnuM);
+            // expected_route.json: PlanRoute from [-100, -20] to [100, -20]; on the ramp it is the straight row.
+            Route route = PlannedRoute(grid, p, Base, Stops[1].EnuM);
             var routeJson = new JsonText.Obj { { "schema_version", 1 } };
             routeJson.AddRange(RouteJson(route));
 
@@ -79,7 +79,7 @@ namespace MartianMap.Routing.FixtureGen
         }
 
         /// <summary>The synthetic tile's rasters, from the formulas, reduced by <see cref="Router.BuildGrid"/>.</summary>
-        internal static CostGrid BuildSynthGrid(CostParams p)
+        public static CostGrid BuildSynthGrid(CostParams p)
         {
             int n = Samples * Samples;
             var height = new ushort[n];
@@ -147,30 +147,22 @@ namespace MartianMap.Routing.FixtureGen
             return ms.ToArray();
         }
 
-        /// <summary>A route along one grid row; both ends must sit exactly on nodes of that row.</summary>
-        private static Route StraightRoute(CostGrid g, CostParams p, EnuPoint from, EnuPoint to)
+        /// <summary>
+        /// The route of <see cref="Router.PlanRoute"/> (A* + smoothing), which must be found: the
+        /// synthetic points are free nodes of the ramp.
+        /// </summary>
+        private static Route PlannedRoute(CostGrid g, CostParams p, EnuPoint from, EnuPoint to)
         {
-            (int i0, int j) = NodeAt(g, from);
-            (int i1, int j1) = NodeAt(g, to);
-            if (j != j1 || i0 == i1)
-            {
-                throw new ArgumentException("The synthetic route runs along one grid row.");
-            }
-
-            int step = Math.Sign(i1 - i0);
-            int[] cells = Enumerable.Range(0, Math.Abs(i1 - i0) + 1).Select(k => g.Index(i0 + step * k, j)).ToArray();
-
-            // Every node is a waypoint: the route of A* before smoothing, measured by Routing.
-            Route route = Cost.Trace(g, cells, p);
+            Route route = Router.PlanRoute(g, from, to, p);
             if (!route.Found)
             {
-                throw new InvalidOperationException("The synthetic route crosses a blocked node.");
+                throw new InvalidOperationException("The synthetic route was not found.");
             }
 
             return route;
         }
 
-        /// <summary>The TSP plan of the synthetic mission, in the given stop order: base → s1 → s2 → base.</summary>
+        /// <summary>The TSP plan of the synthetic mission, in the given stop order: base → s1 → s2 → base, every leg from PlanRoute. Until OrderStops exists the order, totals and return_ok are computed here.</summary>
         private static Plan BuildPlan(CostGrid g, CostParams p)
         {
             double limitS = Router.DurationLimit(SynthConditions, PlanTimeUtc, MissionBudget.DoseUGy);
@@ -182,18 +174,18 @@ namespace MartianMap.Routing.FixtureGen
             bool returnOk = true;
             for (int k = 0; k < Stops.Length; k++)
             {
-                legs[k] = StraightRoute(g, p, at, Stops[k].EnuM);
+                legs[k] = PlannedRoute(g, p, at, Stops[k].EnuM);
                 t10 += legs[k].EtaS.P10 + Stops[k].DwellS;
                 t50 += legs[k].EtaS.P50 + Stops[k].DwellS;
                 t90 += legs[k].EtaS.P90 + Stops[k].DwellS;
                 at = Stops[k].EnuM;
 
                 // On leaving this stop, the elapsed time at P90 plus the return at P90 must fit.
-                double backP90 = StraightRoute(g, p, at, Base).EtaS.P90;
+                double backP90 = PlannedRoute(g, p, at, Base).EtaS.P90;
                 returnOk &= Router.ReturnFits(t90, backP90, availableS);
             }
 
-            legs[Stops.Length] = StraightRoute(g, p, at, Base);
+            legs[Stops.Length] = PlannedRoute(g, p, at, Base);
             t10 += legs[Stops.Length].EtaS.P10;
             t50 += legs[Stops.Length].EtaS.P50;
             t90 += legs[Stops.Length].EtaS.P90;
@@ -237,21 +229,6 @@ namespace MartianMap.Routing.FixtureGen
             { "p50", x.P50 },
             { "p90", x.P90 },
         };
-
-        private static (int I, int J) NodeAt(CostGrid g, EnuPoint pt)
-        {
-            double fi = (pt.E - g.OriginEnuM.E) / g.CellM;
-            double fj = (pt.N - g.OriginEnuM.N) / g.CellM;
-            int i = (int)Math.Round(fi);
-            int j = (int)Math.Round(fj);
-            if (fi != i || fj != j)
-            {
-                throw new ArgumentException("The synthetic points sit exactly on nodes.");
-            }
-
-            g.Index(i, j);
-            return (i, j);
-        }
 
         private static bool In(int x, int lo, int hi) => x >= lo && x <= hi;
     }
