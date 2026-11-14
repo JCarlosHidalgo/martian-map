@@ -44,3 +44,6 @@ ingest/tests/data/** !filter !diff !merge
 *.r16 binary
 *.bin binary
 *.jpg binary
+*.shp binary
+*.shx binary
+*.dbf binary

@@ -53,6 +53,20 @@ Open `tablet/` with Unity 6000.3.28f1. The menu `MartianMap` has:
 - **Sync fixtures**: copies `contracts/fixtures/` into `Assets/StreamingAssets/fixtures/` (also
   runs on project open and before every build; that folder is not in git).
 - **Build Android APK**: writes `tablet/Builds/martian-map.apk`.
+- **Run 2D map setup**: the terrain material, the `Terrain` prefab, the map cameras of `Main.unity`
+  and `Assets/Terrain/Scenes/TerrainSandbox.unity`, and a 16:10 PC window. Idempotent.
+
+The map is 2D: a top-down orthographic camera over the plane Y = 0 (X = east, Z = north). To test
+on a PC, open `TerrainSandbox`, set the Game view to 2304 × 1440 (Samsung Galaxy Tab S9 FE) and
+press Play. Mouse: drag pans, wheel zooms. Tablet: one finger pans, two fingers zoom. Sandbox keys:
+`1`–`6` layers (topo, hazard, heat, ortho, thermal, thermal_ir), `H` fake heat field, `Z` demo
+zone, `X` fixture-like tile.
+
+Hazard areas from P5 go in `tablet/Assets/StreamingAssets/hazard_shapes/{zone_id}.shp` (+ `.dbf`,
+optional `.prj`): polygons in zone ENU metres, or lon/lat with a geographic `.prj`; value from the
+`HAZARD` field (0–255) or `LEVEL` = `amber` / `red`. Example: `hazard_shapes/demo.shp`.
+
+P6 works in `tablet/Assets/HUD/` (assembly `MartianMap.HUD`, prefab `HUD.prefab`).
 
 `Assets/StreamingAssets/config.default.json` holds the habitat URLs (Prism on port 4010, file stub
 on 4011). Replace the placeholder IP with the habitat laptop's IP on the team router.
