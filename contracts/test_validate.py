@@ -137,6 +137,15 @@ class ContractValidatorTests(unittest.TestCase):
         self.fixtures.mkdir()
         ContractValidator(self.root).run()
 
+    def test_only_empty_gitkeep_placeholders_are_ignored(self) -> None:
+        placeholder = self.fixtures / "bundle_synth" / "data" / ".gitkeep"
+        placeholder.parent.mkdir(parents=True)
+        placeholder.write_bytes(b"")
+        ContractValidator(self.root).run()
+        placeholder.write_bytes(b"unexpected payload")
+        with self.assertRaisesRegex(ValueError, "No original fixture mapping"):
+            ContractValidator(self.root).run()
+
     def test_cli_exit_codes_and_english_errors(self) -> None:
         script = self.root / "validate.py"
         shutil.copyfile(Path(__file__).parent / "validate.py", script)

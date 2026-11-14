@@ -36,7 +36,8 @@ the complete agreed assignment table. Each existing JSON fixture must match exac
 Every schema is checked as Draft 2020-12. Relative schema references are resolved from the local
 schema registry, with format validation enabled and no automatic network retrieval.
 
-Missing fixture directories and a missing `openapi.yaml` are allowed before H0. A schema named
+Missing fixture directories and a missing `openapi.yaml` are allowed before H0. Empty `.gitkeep`
+directory placeholders are ignored; nonempty placeholders are treated as fixture files. A schema named
 in the map may be absent until its first fixture exists. Existing malformed schemas always fail.
 
 Non-JSON payloads are not JSON Schema documents. Tile rasters and POV images must be referenced

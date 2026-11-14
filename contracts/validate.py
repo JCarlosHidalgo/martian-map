@@ -51,6 +51,14 @@ def _reject_constant(value: str) -> None:
     raise ValueError(f"Non-finite JSON number: {value}")
 
 
+def _fixture_files(directory: Path) -> list[Path]:
+    return sorted(
+        path.resolve()
+        for path in directory.rglob("*")
+        if path.is_file() and not (path.name == ".gitkeep" and path.stat().st_size == 0)
+    )
+
+
 def _read_json(path: Path) -> Any:
     raw = path.read_bytes()
     _require(not raw.startswith(b"\xef\xbb\xbf"), f"UTF-8 BOM is forbidden: {path}")
@@ -155,7 +163,7 @@ class ContractValidator:
         return mapping
 
     def _load_fixtures(self, mapping: dict[str, str]) -> list[Path]:
-        files = sorted(path.resolve() for path in self.fixtures.rglob("*") if path.is_file())
+        files = _fixture_files(self.fixtures)
         for path in files:
             _require(path.is_relative_to(self.fixtures), f"Fixture escapes directory: {path}")
             with path.open("rb") as stream:
@@ -260,7 +268,7 @@ class ContractValidator:
             size = target.stat().st_size
             _require(size == entry["size"], f"Bundle file size mismatch: {target}")
             total += size
-        actual = {item.resolve() for item in (path.parent / "data").rglob("*") if item.is_file()}
+        actual = set(_fixture_files(path.parent / "data"))
         _require(
             actual == listed, f"Bundle file inventory mismatch in {path}: {sorted(actual ^ listed)}"
         )
@@ -279,7 +287,7 @@ class ContractValidator:
                     f"API embedded {member} bytes differ from original: {api} vs {original}",
                 )
         data = self.fixtures / "bundle_synth" / "data"
-        for copy in sorted(path.resolve() for path in data.rglob("*") if path.is_file()):
+        for copy in _fixture_files(data):
             parts = copy.relative_to(data).parts
             if len(parts) == 1 and parts[0] in {"zone.json", "conditions.json"}:
                 original = self.fixtures / copy.stem / copy.name
