@@ -5,16 +5,15 @@
 ## Fuente y estado de verificación
 
 La referencia oficial es la [página del reto](https://www.spaceappschallenge.org/2026/challenges/interplanetary-survival-guide-martian-map/),
-con sus pestañas *Details* y *Resources*. El enunciado y los cuatro enlaces de este capítulo
-fueron aportados por P6 el **2026-11-14**. El enunciado se presenta íntegramente traducido del
-inglés al español; no es una traducción oficial. Se conserva el carácter opcional de las
-sugerencias del original.
+con sus pestañas *Details* y *Resources*. Este capítulo se cotejó con las transcripciones de
+ambas pestañas aportadas por P6 el **2026-11-14**. La copia de *Resources* procede de la consulta
+de P6 en su navegador e incluye el aviso sobre sitios externos y cinco recursos con sus
+descripciones y enlaces.
 
-**NO VERIFICADO:** el cotejo directo con la versión oficial vigente y la exhaustividad de
-*Resources*. Los enlaces aportados no incluyen las descripciones originales de esa pestaña.
-El procedimiento para cerrar el cotejo está en "Cómo completar la verificación". Las consultas
-independientes a los destinos, documentadas en "Recursos (Resources)", no confirman que la lista
-oficial esté completa.
+El enunciado, el aviso y las descripciones se presentan íntegramente traducidos del inglés al
+español; no es una traducción oficial. Se conserva el carácter opcional de las sugerencias del
+original. El cotejo documental se basa en el contenido aportado por P6; no acredita una consulta
+automática independiente de la página ni el funcionamiento de las aplicaciones enlazadas.
 
 ## Resumen
 
@@ -109,38 +108,33 @@ hackathon.
 
 ## Recursos (Resources)
 
-Estos son los cuatro enlaces aportados por P6. Los nombres sirven para identificar sus destinos;
-no son una transcripción de las descripciones de la pestaña oficial.
+> NASA no respalda a ninguna entidad ajena al Gobierno de Estados Unidos ni se responsabiliza
+> de la información contenida en sitios web que no pertenezcan a dicho Gobierno. Al utilizar
+> esos sitios, los participantes deben cumplir las condiciones de uso de datos de cada sitio.
 
-Consulta documental de los destinos: **2026-11-14**. La extracción de texto no comprueba el
-funcionamiento completo de una aplicación interactiva. Una respuesta sin texto extraíble tampoco
-demuestra que el recurso esté caído.
+### Datos y recursos de NASA
 
-| Recurso | Evidencia obtenida en su destino | Qué queda por comprobar |
-|---|---|---|
-| [Mars Trek](https://trek.nasa.gov/mars/) | La herramienta de consulta extrae el título "Mars Trek". | Inspección de la interfaz y descripción original en *Resources*. |
-| [Mapas interactivos de Marte de USGS](https://astrogeology-usgs.hub.arcgis.com/pages/interactive-maps-mars) | La herramienta recibe una página sin texto extraíble. | Inspección en navegador y descripción original en *Resources*. |
-| [Ruta propuesta de Curiosity por Mount Sharp](https://science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/) | El texto de NASA describe una animación de una ruta propuesta y regiones científicas de Mount Sharp; combina datos de instrumentos de MRO y Mars Express. | Correspondencia con la descripción original de *Resources*. |
-| [NASA Worldview](https://worldview.earthdata.nasa.gov/) | La herramienta recibe una página sin contenido textual suficiente para revisar la aplicación. | Inspección de la interfaz y descripción original en *Resources*. |
+1. **[Mars Trek del Laboratorio de Propulsión a Chorro (JPL)](https://trek.nasa.gov/mars/):**
+   portal web de NASA para la exploración de Marte que presenta datos recopilados por NASA en
+   distintos lugares de aterrizaje.
 
-### Cómo completar la verificación
+2. **[Programa de Cartografía Geológica Planetaria de USGS-NASA](https://astrogeology-usgs.hub.arcgis.com/pages/interactive-maps-mars):**
+   mapa geológico de Marte estandarizado y de alta calidad.
 
-P6 realiza este cotejo sobre la página oficial del reto:
+3. **[Ejemplo visual de un mapa de ruta para el caso de Curiosity mencionado en el enunciado](https://science.nasa.gov/resource/curiositys-proposed-path-up-mount-sharp/):**
+   esta animación muestra una ruta propuesta para el rover Curiosity de NASA, que asciende por
+   la parte baja de Mount Sharp en Marte. La versión anotada del mapa identifica distintas
+   regiones que el equipo científico del rover desea explorar en los próximos años. Un video de
+   sobrevuelo las explica con más detalle.
 
-1. Abrir las pestañas *Details* y *Resources* en un navegador. Si el acceso falla, comprobarlo
-   desde otra conexión o pedir a una persona del equipo que copie el contenido visible.
-2. Obtener el texto completo de *Resources*, incluidos títulos, descripciones y destinos de los
-   enlaces. Los cuatro enlaces aportados por sí solos no permiten confirmar la exhaustividad.
-3. Comparar ese contenido con este capítulo; incorporar los recursos que falten y corregir
-   cualquier diferencia. Una descripción editorial debe identificarse como tal.
-4. Registrar aquí la fecha del cotejo y la procedencia del contenido. Si se conserva una copia
-   local adicional, identificarla como captura de la fuente y registrarla en `guide.json` si es
-   una página de la guía.
-5. Retirar únicamente las marcas **NO VERIFICADO** que el cotejo permita cerrar y volver a
-   generar la guía antes de publicar.
+4. **[NASA Worldview](https://worldview.earthdata.nasa.gov/):** explora visualmente el pasado y el
+   presente de nuestro dinámico planeta desde la perspectiva de un satélite. Selecciona una de
+   las historias disponibles para conocer mejor Worldview, que forma parte de NASA Earthdata,
+   las imágenes satelitales que ofrece y los acontecimientos que ocurren en todo el mundo.
 
-Una reproducción de una sede o una copia archivada puede ayudar a detectar diferencias, pero
-debe conservar su procedencia y fecha. No confirma por sí sola la versión oficial vigente.
+5. **[Galería de imágenes sin procesar de Mars Perseverance](https://mars.nasa.gov/mars2020/multimedia/raw-images/):**
+   más de un millón de imágenes captadas por el rover durante su recorrido por la superficie de
+   Marte.
 
 ## Relación con el diseño del equipo
 
