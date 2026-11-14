@@ -1,3 +1,9 @@
 # Python
 __pycache__/
 *.pyc
+
+# Local working notes (spec and plan), never committed
+docs/superpowers/
+
+# .NET build output of Routing/ and Edits/ (Directory.Build.props)
+.build/
