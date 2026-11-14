@@ -328,6 +328,10 @@ dentro de un método síncrono.
   - Una muestra compartida que dos tiles traen distinta: `slope`, `roughness` y `hazard` toman
     el máximo; `height` es `nodata` si lo es en alguno y, si no, la del tile más al suroeste
     (menor `n`, luego menor `e`). El resultado no depende del orden de `tiles`.
+  - `BuildGrid` lanza *(propuesta de P3)*: `ArgumentNullException` con `tiles`, un tile o `params`
+    nulos; `ArgumentException` con `tiles` vacío, `origin_height_m` o el origen de un tile no
+    finitos, un tile repetido, un origen fuera de la retícula de 256 m, o una caja con más nodos de
+    los que cuenta un `int`. `params` no cambia la grilla: guarda los rasters sin aplicar el costo.
 - **`Benchmark.Run`** *(equipo)* es C# puro, dentro del paquete `Routing` y no en `Tests~/`, para
   que lo llamen igual `dotnet` en el portátil y la escena de benchmark de la tablet. Entra en la
   firma de H0:45, con el cuerpo vacío, y P3 lo rellena en H2–4, con el núcleo. Se corre solo en

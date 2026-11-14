@@ -40,6 +40,15 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
+        public void CostgridSynthMatchesTheOracle()
+        {
+            // ~/scratch/c4-verify/oracle/buildgrid_oracle.py (not committed) builds the synthetic tile
+            // from convenciones.md and reduces it with tablet.md's BuildGrid rule, without Routing.
+            Assert.That(Tiles.Sha256(File.ReadAllBytes(Path.Combine(Fixtures.Dir, "costgrid_synth.bin"))),
+                Is.EqualTo("2880dde353476f5f860d9fc5bc5c934d987a02ebb2e29301db3f284b0cd7303d"));
+        }
+
+        [Test]
         public void CostgridSynthHasTheSizeOfA129By129Grid()
         {
             // int32 width, int32 height, float32 cell_m, float64 origin_e, float64 origin_n,
