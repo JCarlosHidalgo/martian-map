@@ -146,6 +146,21 @@ Orden de trabajo *(equipo)*. Las horas de cada pieza están en [Tablet](./tablet
 | H12–24 | las 3 alternativas y `OrderStops` con Held-Karp |
 | H24–36 | greedy + 2-opt y orienteering: lo primero que se recorta |
 
+**Decisiones de P3 que tocan a otros dueños** *(propuesta de P3)*. El trabajo de P3 es
+independiente y completo: P3 no espera a nadie para cerrar C4. Donde C4 necesita algo de otro
+dueño, P3 lo decide, lo escribe en la sección de la guía que le toca, marcado *(propuesta de
+P3)*, y lo lista aquí. Cada dueño lo revisa después, y una corrección entra por un PR normal; si
+cambia la firma de C4, por "Cómo se cambia después de H2" ([Convenciones](./convenciones.md)):
+
+| Decisión | Dueño que la revisa | Dónde está |
+|---|---|---|
+| `Terrain` traduce el `op` con `EditOpText`; un `op` desconocido se descarta con una línea de log | P4 | [Tablet](./tablet.md), sección "Orquestación" |
+| `Terrain` guarda el último `Field` y se lo pasa a `OrderStops`; llama a `ReturnField` cuando cambian la grilla o la base | P4 | [Tablet](./tablet.md), sección "Orquestación" |
+| `t_utc` de `DurationLimit` y `OrderStops` es la hora UTC a la que `Terrain` procesa `RouteRequested` | P4 | [Tablet](./tablet.md), sección "API de `Routing`" |
+| Los asmdef de `Terrain`, `FX` y `HUD` referencian `Routing` y `Edits` por nombre | P4 | [Convenciones](./convenciones.md), sección "Archivos" |
+| `.gitignore` (con `.build/`), `global.json` (SDK 10.0.404) y `.gitattributes` entran en el PR de C4 como copias exactas de los de `p4/skeleton` | P4 | [Convenciones](./convenciones.md), sección "Forja y carpetas" |
+| `validate.py` ignora un `.gitkeep` vacío en `contracts/fixtures/`, que `p4/skeleton` deja para conservar la carpeta | P6 | [Convenciones](./convenciones.md), sección "Cómo se fija un contrato" |
+
 La optimización con OR-Tools queda fuera del MVP. Si se hace, P3 la escribe en `server/optim/` y
 P2 aprueba el PR, como dueño de `server/` *(equipo)*.
 

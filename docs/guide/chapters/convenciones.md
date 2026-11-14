@@ -47,6 +47,10 @@ flowchart LR
 - **Qué esquema valida a cada fixture** *(equipo)*: lo dice `contracts/schemas/map.json`, un
   objeto `{patrón de ruta: nombre de esquema}`, que es lo único que lee el job de contratos. P6 lo
   escribe entero antes de H0, con los fixtures de la tabla de abajo, así que nadie lo toca en H0–2.
+  Un fixture que no es JSON no tiene fila: `validate.py` lo acepta solo si lo reconoce, y su
+  contenido lo prueba el test de su dueño. `routing/costgrid_synth.bin` lo reconoce por su nombre
+  y exige que no esté vacío; que está al día lo prueba `CostgridSynthIsUpToDate`, en
+  `dotnet test`. Un `.gitkeep` vacío no es un fixture y se ignora.
   `edit_log` es `{schema_version, edits[]}`: vale para `log_in.json`, `log_merged.json` y
   `edits_NN.json`.
 - **Cualquiera valida en local antes de abrir su PR** con `uv run contracts/validate.py`, el mismo
@@ -62,7 +66,7 @@ flowchart LR
 | Peligro ámbar del tile | 128 en e −100…−60, n −100…−60 |
 | `nodata` del tile | las 16 × 16 muestras de e 113…128, n −128…−113 |
 | Capas del tile | con `c` la columna y `r` la fila de la muestra (C0): `ortho` = `min(c, 255)`; `thermal` = `min(256 − r, 255)`, con `scale` = `2`, `offset` = `100` y `unit` = `"J m-2 K-1 s-1/2"` en `zone.json`; `thermal_ir` = un damero de cuadros de 32 muestras, con 64 y 192, y `qualitative: true`. Las tres valen 0 en el `nodata` |
-| `costgrid_synth.bin` | 129 × 129 nodos de 2 m, con el nodo `(0, 0)` en `[-128, -128]`. Es la `Grid` que `BuildGrid` da para ese tile: su rampa, su peligro, su `slope` y su `nodata` |
+| `costgrid_synth.bin` | 129 × 129 nodos de 2 m, con el nodo `(0, 0)` en `[-128, -128]`. Es la `CostGrid` que `BuildGrid` da para ese tile: su rampa, su peligro, su `slope` y su `nodata`. Es un solo tile, así que el perímetro no es `nodata`: las muestras de la ventana 3 × 3 que caen fuera se ignoran |
 | `expected_route.json` | la recta de `[-100, -20]` a `[100, -20]`, sobre la rampa: sube 15,625 m y no pisa peligro |
 | `mission.json` y `expected_plan.json` | base `[-100, -20]`; paradas `s1` en `[0, -20]` y `s2` en `[100, -20]`, con `science_value` 5 y 8 y `dwell_s` 600 las dos; `budget` = `{t_s: 14400, dose_uGy: 50}`; `mode` = `"TSP"` *(propuesta)* |
 | `conditions.json` | `value` = `6.0`, `uncertainty` = `0.2`, `basis` = `"measured"`, y un modificador `WSAEnlilSimulations` de `factor` `0.95` *(propuesta)* |
@@ -201,7 +205,7 @@ contratos como interfaces". Quién es cada persona: [Reparto del trabajo](./repa
 | Node | ≥ 24.18 | lo exige Prism 5.16.0 (registro npm, S10) |
 | C# de `Routing` y `Edits` | netstandard2.1, sin `UnityEngine` | [Tablet](./tablet.md), sección "Rutas (D7)" |
 | Python | 3.12, con `uv` y lockfile commiteado | *(equipo)* |
-| SDK de .NET | 10, fijado en `global.json` | *(equipo)*; lo que falta comprobar con el 10, en la sección "Forja y carpetas" |
+| SDK de .NET | 10.0.404, fijado en `global.json` | *(equipo)*; comprobado con `Routing` y `Edits`: sección "Forja y carpetas" |
 
 ## Datos (C0)
 
@@ -413,6 +417,10 @@ merge (D5)". Cómo se aplican: [Tablet](./tablet.md), sección "`apply()` (D5)".
 | `obstacle.set` | obstáculo | `{polygon, confirmed}`; equivale a nivel 255 |
 | `note.set` | nota | `{point, text}`: punto `[e, n]`, en el mismo punto fijo que un vértice, y texto |
 
+En C#, la tabla entre `EditOp` y el texto del `op` es `EditOpText`, en `Edits`; nadie más la
+escribe. `Terrain` descarta una edición cuyo `op` no reconoce `TryParse`, con una línea de log, y
+sigue *(propuesta)*: [Tablet](./tablet.md), sección "Orquestación".
+
 - **Ninguna edición cambia la altura.** El MVP no tiene op de parche de altura: una edición solo
   cambia el peligro o deja una nota.
 - **Cada edición lleva el estado completo de su entidad**: LWW es reemplazar.
@@ -468,7 +476,7 @@ cuándo: [Reparto del trabajo](./reparto.md), sección "Antes de H0".
 | `server/` | P2 | el hábitat |
 | `Routing/`, `Edits/` | P3 | cada una con su `.csproj` netstandard2.1, un `package.json` + `.asmdef` sin referencias al motor, sus tests en `Tests~/` y un `Directory.Build.props` |
 | `tablet/` | P4 | el proyecto Unity: `tablet/Assets/Terrain/` (P4), `tablet/Assets/FX/` (P5), `tablet/Assets/HUD/` (P6) y `Main.unity` (P4) |
-| la raíz | P4 | `README.md`, `global.json`, `.gitignore`, `.gitattributes`, `.editorconfig` y `.github/workflows/` *(propuesta)*. El workflow de contratos lo escribe y lo mantiene P6 (sección "CI") |
+| la raíz | P4 | `README.md`, `global.json`, `.gitignore`, `.gitattributes`, `.editorconfig` y `.github/workflows/` *(propuesta)*. El workflow de contratos lo escribe y lo mantiene P6 (sección "CI"). C4 necesita tres cosas de la raíz: `.gitignore` con `.build/`, `global.json` con el SDK 10 y `.gitattributes` con `* text=auto eol=lf` y los `binary` de la sección "Archivos". P3 las incluye en su PR, como copias exactas de las de `p4/skeleton`, para que P4 las apruebe y las dos ramas se fusionen sin conflicto *(propuesta de P3)* |
 | `docs/` | P4 | esta guía. Se lee en GitHub desde el primer commit, que se hace antes de H0 ([Reparto del trabajo](./reparto.md), sección "Antes de H0"); quien quiera los diagramas dibujados levanta su Docmost local con `docs/guide/` |
 
 Unity toma `Routing/` y `Edits/` como paquetes locales (`com.martianmap.routing` y
@@ -481,11 +489,14 @@ Unity compila también `obj/` y los tests, y da 14 errores CS0579:
 | Qué | Dónde va | Por qué |
 |---|---|---|
 | El proyecto de tests | `Tests~/` | Unity no importa una carpeta que termina en `~` |
-| La salida de build (`obj/`, `bin/`) | `.build/`, fuera de git | Unity no importa una carpeta que empieza por `.`. Un `Directory.Build.props` fija `BaseIntermediateOutputPath` y `BaseOutputPath` |
+| La salida de build (`obj/`, `bin/`) | `.build/`, ignorada en el `.gitignore` raíz *(propuesta de P3)* | Unity no importa una carpeta que empieza por `.`. Un `Directory.Build.props` fija `BaseIntermediateOutputPath` y `BaseOutputPath` |
 
 Con las dos, Unity compila limpio y `dotnet test` pasa (comprobado el 2026-11-12 con Unity
-6000.3.28f1 y el SDK de .NET 9). Con el SDK 10, que es el fijado, es **NO VERIFICADO**: P3 lo
-repite antes de H0, al instalarlo. Si falla, `global.json` fija el SDK 9 *(propuesta)*.
+6000.3.28f1 y el SDK de .NET 9). Con el SDK 10, que es el fijado, también: comprobado el
+2026-11-14 con el SDK 10.0.404 (runtime 10.0.15), con build sin avisos, `dotnet test` de los dos
+paquetes y FixtureGen sin diff; los tests, que apuntan a `net9.0` con `RollForward=Major`, corren
+en el runtime 10. `global.json`, en la raíz, fija
+`{"sdk": {"version": "10.0.404", "rollForward": "latestFeature"}}` *(propuesta de P3)*.
 
 **Los dos paquetes vacíos quedan en `main` antes de H0** *(equipo)*: P3 los sube en cuanto el
 repositorio existe, cada uno con su `.csproj`, `package.json`, `.asmdef`, `Directory.Build.props`
@@ -534,7 +545,8 @@ netstandard2.1.
 - Texto en UTF-8 sin BOM, fin de línea LF (`* text=auto eol=lf`), con salto final. `.gitattributes`
   marca como `binary` los `*.r8`, `*.r16`, `*.bin` y `*.jpg`, para que ningún `sha256` cambie
   *(propuesta)*. Un
-  `.editorconfig` en la raíz.
+  `.editorconfig` en la raíz. La excepción son los `.cs.meta` de Unity, que no llevan salto final:
+  se commitean tal como los escribe Unity, y nadie los guarda desde un editor.
 - **A Git LFS:** texturas, modelos, audio, video, APK, los GeoTIFF y `.cub` cacheados, y los
   binarios de `tablet/Assets/StreamingAssets/`.
 - **Fuera de LFS: todo `contracts/`**, para que el CI y los mocks lean los fixtures sin
@@ -546,7 +558,13 @@ netstandard2.1.
   fuente y la fecha en el nombre (`donki_wsaenlil_20261114.json`) *(propuesta)*. Lo sube P5 con
   un PR que aprueba P1, dueño de `ingest/`. Las URL: [Fuentes](./fuentes.md), sección "URL de
   sondeo de H0".
-- Los `.meta` de Unity se commitean.
+- Los `.meta` de Unity se commitean. Los de `Routing/` y `Edits/` los genera P3 con cada archivo
+  nuevo, abriendo una copia del paquete en Unity y trayendo solo los `.meta` que faltan; un `.meta`
+  commiteado no se regenera nunca. `PackageMetaTests`, en el `dotnet test` de cada paquete, falla
+  si falta uno o si sobra *(propuesta)*.
+- Los asmdef de `Terrain`, `FX` y `HUD` referencian `MartianMap.Routing` y `MartianMap.Edits` **por
+  nombre**, con "Use GUIDs" desmarcado *(propuesta de P3)*: un GUID distinto entre máquinas no
+  rompe nada.
 - Nombres: snake_case en `contracts/`, `ingest/` y `server/`; PascalCase en C# y en los assets de
   Unity.
 
@@ -561,6 +579,7 @@ netstandard2.1.
 | **C#** | convenciones de Microsoft, vía `.editorconfig` |
 | **Formato** | se corre en local; no bloquea el CI |
 | **Namespaces** | `MartianMap.<Componente>`: `Routing`, `Edits`, `Terrain`, `FX`, `HUD`. Un ensamblado (asmdef) por carpeta de dueño |
+| **Nombres públicos** | ningún tipo público de `Routing` ni de `Edits` se llama como un tipo público de `UnityEngine` o `UnityEditor`: un script con los dos `using` daría CS0104. P3 lo comprueba en Unity antes de cada cambio de firma |
 | **Referencias** | `Routing` y `Edits` no referencian a ningún otro ensamblado; `Terrain`, `FX` y `HUD` solo lo que su contrato permite (C4, C5): [Tablet](./tablet.md), sección "Contrato de escena (C5)". Una referencia fuera de contrato no compila |
 
 ### Pruebas mínimas
@@ -572,8 +591,14 @@ esquema; el consumidor lee el fixture golden. Sin umbral de cobertura.
 |---|---|
 | `ingest/` | un tile desde el GeoTIFF commiteado, que valida contra `tile.schema.json` |
 | `server/` | los endpoints JSON bajo `prism proxy`, los de archivos por `sha256`, y el golden de merge |
-| `Routing/`, `Edits/` | los goldens de [Tablet](./tablet.md), sección "Contrato de rutas (C4)", y el golden de merge |
+| `Routing/` | los goldens de [Tablet](./tablet.md), sección "Contrato de rutas (C4)": que están al día con el código y que sus valores coinciden con los calculados a mano *(propuesta)* |
+| `Edits/` | los constructores de `Edit` y `EditPayload` y `EditOpText` *(propuesta)*, y el golden de merge |
 | `tablet/` | sin pruebas automatizadas: su prueba es el APK cada 4 h en la tablet |
+
+**Los valores esperados de un test son literales** calculados fuera del código que prueba, a mano
+o con un script que no se commitea, con su origen en un comentario. Un test no reescribe una
+parte de la fórmula: sería una segunda implementación ([Tablet](./tablet.md), sección "Costo de caminata (D6)")
+*(propuesta)*.
 
 ### Logs y errores
 
