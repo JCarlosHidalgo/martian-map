@@ -31,6 +31,10 @@ namespace MartianMap.Routing
         /// is, and otherwise comes from the south-westmost tile (lowest <c>n</c>, then lowest
         /// <c>e</c>). The result does not depend on the order of <paramref name="tiles"/>.</item>
         /// </list>
+        /// It throws <see cref="ArgumentNullException"/> for null <paramref name="tiles"/>, a null tile or a
+        /// null <paramref name="p"/>, and <see cref="ArgumentException"/> for no tiles, a non-finite
+        /// <paramref name="originHeightM"/> or tile origin, or a box with more nodes than an <c>int</c> counts.
+        /// <paramref name="p"/> does not change the grid, which keeps the rasters without the cost.
         /// </summary>
         public static CostGrid BuildGrid(TileRasters[] tiles, double originHeightM, CostParams p)
         {
