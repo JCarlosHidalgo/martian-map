@@ -104,6 +104,11 @@ namespace MartianMap.HUD
         public const string Fastest = "Fastest";
         public const string Safest = "Safest";
         public const string Gentlest = "Gentlest";
+        public const string RouteOptionsHeader = "ROUTE OPTIONS · distance · walking time";
+        public const string RouteOptionLine = "<color={0}><size=150%>\u2022</size></color> {1}: {2} · {3}{4}";
+        public const string RouteOptionUnreachable = "<color={0}><size=150%>\u2022</size></color> {1}: unreachable{2}";
+        public const string RouteOptionSelectedMark = "  (selected)";
+        public const string RouteAllUnreachable = "Destination unreachable: no route was found.";
         public const string Available = "available";
         public const string Unavailable = "unavailable";
         public const string RouteSummary = "{0}\n{1}";

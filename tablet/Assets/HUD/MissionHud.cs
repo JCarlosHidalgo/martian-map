@@ -181,8 +181,16 @@ namespace MartianMap.HUD
 
         private void OnRouteSelected(RouteSelected message)
         {
+            // The three options (colour, distance, time) are shown for every route, including the
+            // two-point routes of any zone, even when the mission does not target that zone.
+            string options = RoutePresentation.Options(message);
             if (!_ready)
             {
+                if (options != null)
+                {
+                    _route.text = options;
+                }
+
                 return;
             }
 
@@ -197,7 +205,7 @@ namespace MartianMap.HUD
             Plan plan = message.Plans[(int)message.Selected];
             SelectedAlternative = message.Selected;
             _route.text = HudFormatting.Format(HudStrings.RouteSummary,
-                RoutePresentation.Name(message.Selected), RoutePresentation.Details(plan));
+                RoutePresentation.Name(message.Selected), RoutePresentation.Details(plan)) + "\n" + options;
             SetStatus(HudStrings.RouteReceived);
         }
 
@@ -297,7 +305,8 @@ namespace MartianMap.HUD
             scroll.movementType = ScrollRect.MovementType.Clamped;
 
             _status = FixedLabel("Status", body, Status, 20, 64);
-            _route = FixedLabel("Route", body, HudStrings.NoRoute, 20, 150);
+            _route = FixedLabel("Route", body, HudStrings.NoRoute, 20, 230);
+            _route.richText = true;
             var buttonObject = new GameObject("Plan route", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             buttonObject.transform.SetParent(body, false);
             buttonObject.GetComponent<LayoutElement>().preferredHeight = 62;
