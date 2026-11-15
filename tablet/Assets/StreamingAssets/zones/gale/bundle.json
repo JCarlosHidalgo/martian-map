@@ -1,362 +1,1220 @@
 {
   "schema_version": 1,
-  "bundle_id": "01K2G4MARS0000000000000000",
+  "bundle_id": "01K2G4MARS0000000000000001",
   "source": "earth",
   "zone_id": "gale",
-  "zone_version": 1,
+  "zone_version": 2,
   "kind": "zone_full",
-  "created_utc": "2026-11-15T18:05:31Z",
+  "created_utc": "2026-11-15T18:45:37Z",
   "delay_s": 0,
-  "deliver_at_utc": "2026-11-15T18:05:31Z",
+  "deliver_at_utc": "2026-11-15T18:45:37Z",
   "files": [
     {
       "path": "data/tiles/0/0/0/hazard.r8",
       "size": 66049,
-      "sha256": "3f90dbce8ed859d82700d9bd7ef02f1621aa5834fe087c90b1a4c9e0c56cbcd5",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/0/0/hazard.r8.meta",
-      "size": 155,
-      "sha256": "167bd0dfc0036aef45192f4e85e80a3ae4e73dfc620f2e001d4a1e0449ccf384",
+      "sha256": "9a63bc8f950b6ee7bf7ddc6f3157ca4ddc8757fdaf1f1aed8522bbc3ea31aac6",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/0/height.r16",
       "size": 132098,
-      "sha256": "6a9461db228fc6c043b552eac060637664cdcc9be8603f85ed8f8cda94ec8ab6",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/0/0/height.r16.meta",
-      "size": 155,
-      "sha256": "057141b30b1bd6f337f86a90460f45c637b57099f355f1e2c8c2ab7cb47a685a",
+      "sha256": "2bed2707a85f484c4c99b70e206112b4a6d1ada00d3036d5d678009c4754a021",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/0/ortho.r8",
       "size": 66049,
-      "sha256": "9c042eb0092a4bc25cb58157c5699393a49c9a0292b5cc117881be496badb5ee",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/0/0/ortho.r8.meta",
-      "size": 155,
-      "sha256": "9ff35ff5de774b4c395a8b1bd83503503f485033b8751bf5a27d705a4e613837",
+      "sha256": "16080f6d9cda7fb658f2c7e0c65f5f9f42d94cb243268f38e6cb75d89a893a4d",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/0/roughness.r8",
       "size": 66049,
-      "sha256": "58612dfb1162bab9a342315ee2e0024280be42bfb57bbc74dd71bf76eb5d84cf",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/0/0/roughness.r8.meta",
-      "size": 155,
-      "sha256": "c13bad8f30521f2cb2a2624b88495e544a170b642d443cccf4e9f52d52df3519",
+      "sha256": "df3cac5dec7345c3f7d6a07a674169922c1032c2fe22589de587e0f597d84285",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/0/slope.r8",
       "size": 66049,
-      "sha256": "6f0455be65ed576664019b3dff9eea8a41e46a2ce21aec334a203d72df9f9915",
+      "sha256": "98adb3ceeb3943ab4f30e10e7b7869209840d944f4fef41f289ddb7982100b2e",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles/0/0/0/slope.r8.meta",
-      "size": 155,
-      "sha256": "d3bbd4d56d44cf61a615779440295a47aa87f7ba1daef4a972e40f7412ab93fd",
+      "path": "data/tiles/0/0/0/thermal.r8",
+      "size": 66049,
+      "sha256": "58fffd11dffa502855a24b8a2e2236a5e4a4cab90ba912834c7ae3f7f0c60743",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/0/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "1ec5018379ae3720330c51686bcc221d298b2148403558dc49cc3397594039de",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/0/tile.json",
-      "size": 1223,
-      "sha256": "200a1c33176b28da042e95228906450fffbc0d68bfe8eea9f713fe2fb19fddd3",
+      "size": 1583,
+      "sha256": "731c17a894b19c58c6ddbff7dee43a9396982f318bbf7a71ee672a080a7d99fb",
       "media_type": "application/json"
-    },
-    {
-      "path": "data/tiles/0/0/0/tile.json.meta",
-      "size": 155,
-      "sha256": "86f449e03afd3e2096c9b3e2c6e3e4b82b50e55e1a7a677f4362e37bb7069db3",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/0/0.meta",
-      "size": 172,
-      "sha256": "30253dba377c621f58e912041613b580f807da55070d39400f50ebbc4b040736",
-      "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/1/hazard.r8",
       "size": 66049,
-      "sha256": "a747665f2c8d371fb2f985d3edc3efae3b6b5cb3f1c9c1b797b768c13b58d1cf",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/0/1/hazard.r8.meta",
-      "size": 155,
-      "sha256": "5110133ffcfecabd8faa28e6da43aa0b55708943856615f60faef1cffaaecff1",
+      "sha256": "ce95c54febfbc39d3c40bbf20d99c15b402eec4a52156c666de06debe95cdf97",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/1/height.r16",
       "size": 132098,
-      "sha256": "99184c5fd5dc4d14d74de7f432f76e71b41d7ffa572e7c6b6aa094795a7b2f0c",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/0/1/height.r16.meta",
-      "size": 155,
-      "sha256": "1550eec840cc982457c1cc04515f968ae92607b2af0989d8bf194cebdfd92ae2",
+      "sha256": "fe8fd39652da7dea014908bf4fe291dcb55cee42e67dfed0853ccd7826940d1a",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/1/ortho.r8",
       "size": 66049,
-      "sha256": "7e0288ac25462a0ec6a5a581f1d469a2e8948b0470eeeb5b5be281ffc8af7e5e",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/0/1/ortho.r8.meta",
-      "size": 155,
-      "sha256": "8f2ce576cd39ff9a8c5021e1afc99b2971bc4e9abeb121f070df215387597695",
+      "sha256": "30999cda4a0d0555b644ca1a0c4d378c25a8696916e63ed7e61395ef17879074",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/1/roughness.r8",
       "size": 66049,
-      "sha256": "d301aa460ac281f0acd379f8c5cb8e99b5d1c347b1faf23aca55939daf20073d",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/0/1/roughness.r8.meta",
-      "size": 155,
-      "sha256": "7397dd496d289606808d0bdc45ad5bf2c32dbe47b334c427f0b007071abfcacb",
+      "sha256": "8a0ba1e9d82233b2547793e336903dfc35cf10ca140ada1edb4755afa222b4c2",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/1/slope.r8",
       "size": 66049,
-      "sha256": "76cae1ceb174c0d00e63b9fa050d8a7b745bd2ada1761d6d6800c599e8ecea56",
+      "sha256": "69e4b592ff70c460baeb552d225bef5680c7f05fff6657a470dcb75c9304d0c6",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles/0/0/1/slope.r8.meta",
-      "size": 155,
-      "sha256": "7cfd52eea6e8c7805b812cb356a3ddc865054cb2550c488d2c8aff213abc65cf",
+      "path": "data/tiles/0/0/1/thermal.r8",
+      "size": 66049,
+      "sha256": "80fd901cc44376067af4c3ce09170fafca7e4e9168c0739d3ac31ceb132d59b9",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/1/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "68eedfbf5ed05c41187f892cbcd5d050e4447e4b4a4f0c7e9027e18a2566e40a",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/0/1/tile.json",
-      "size": 1220,
-      "sha256": "cc1f32e63e768d0db0f0a95c3e46a1becf402b54b90e9e3f24384e300b00c61e",
+      "size": 1583,
+      "sha256": "6d20751735396ab7cef58439b1b039a19556fb66bc817e57018edcbb30f6b5ff",
       "media_type": "application/json"
     },
     {
-      "path": "data/tiles/0/0/1/tile.json.meta",
-      "size": 155,
-      "sha256": "4bf5d55c7d46b8785412b19a557995bc70c082626a280bb36952a6484dba143c",
+      "path": "data/tiles/0/0/2/hazard.r8",
+      "size": 66049,
+      "sha256": "ffa0a72b52ad6cd060c05f374cd03d597fcd32ab7aa51898c5c2bc098f332533",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles/0/0/1.meta",
-      "size": 172,
-      "sha256": "0be60e500db9c7ba3fb6fb27d4f7569cc7764f5e150cb3196115bdeb825537e7",
+      "path": "data/tiles/0/0/2/height.r16",
+      "size": 132098,
+      "sha256": "c6d5afabf4dd3265e17625d8209576f0dd55bf74a819c1924702a45f6b4fdde0",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles/0/0.meta",
-      "size": 172,
-      "sha256": "5e945b2cb855e6bc93c52654fd446b4ed16d0ce2d5a77e78925401df1f3be035",
+      "path": "data/tiles/0/0/2/ortho.r8",
+      "size": 66049,
+      "sha256": "17e74c9a5845f3b7f7b6b947fcf1fa0339dbd65f094940b679ee2f531cb9918e",
       "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/2/roughness.r8",
+      "size": 66049,
+      "sha256": "807bb95a587c1ed0375ca494e594dc12b78086e20c7131c91a5357f19a09665e",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/2/slope.r8",
+      "size": 66049,
+      "sha256": "4810a38dd26b064b17bb091a19294b24802862e2b0e76b165230b5642cd4bb48",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/2/thermal.r8",
+      "size": 66049,
+      "sha256": "24d0d135bce9566d83491b5200d0c522da29053a77d42bd2e47ab0e25ca6bcac",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/2/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "8904ab597a6f996c265ed92d4624c739c859e8c17f9a6c12a300967b002a0d90",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/2/tile.json",
+      "size": 1583,
+      "sha256": "24d24294b55b18395a7447a8204015ad86ca9dfa8abc7eea0c463aa2bb474eb3",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/0/3/hazard.r8",
+      "size": 66049,
+      "sha256": "776463798582e1871461a527f46dc7cb3854e322fd1ca2e6ef9206b682c519b4",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/3/height.r16",
+      "size": 132098,
+      "sha256": "7ce9cc702b561ca77b7cc67dc453db8b77850df8f2e84f8bc85c266d797d4382",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/3/ortho.r8",
+      "size": 66049,
+      "sha256": "b779c124280d1b812010968adc6c214365406b1e78f39f925eeb3ac24578b5a7",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/3/roughness.r8",
+      "size": 66049,
+      "sha256": "7756f8e8c01521d3624f05a68a4aa8c9f2ae1d41b7bf48e2dc7ff8c90a689143",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/3/slope.r8",
+      "size": 66049,
+      "sha256": "03d71826f006c1a878c55cb84fc1aa85c04e1ff16bb133038f814354e34d2cfa",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/3/thermal.r8",
+      "size": 66049,
+      "sha256": "758491be4e861e263d17964ec912c6af7a50fbddc9a32ff0ba68dbaff65aea92",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/3/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "d7942def22b30fc507c690250d5b2b963b625bba9fa8a616809d9709a679305a",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/3/tile.json",
+      "size": 1582,
+      "sha256": "1a53ac1ce28efa534f616e5ddfd28335932c837b053e6873d504f940b77a2da5",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/0/4/hazard.r8",
+      "size": 66049,
+      "sha256": "c8a1410384f74a4f7e9a9f43c9ad547b76864222c97da7e9e4b32256848383ec",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/4/height.r16",
+      "size": 132098,
+      "sha256": "9c2899464f8cd17d9146f88afd2fcd1be7ac081dc3081ebfd9d375e96815628d",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/4/ortho.r8",
+      "size": 66049,
+      "sha256": "01f3394f0d3424a383d9f02ff8b6929a411726b415f79534703c8f2685053882",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/4/roughness.r8",
+      "size": 66049,
+      "sha256": "116087f435f39187ddc872d69635a8155732901ba70df07f27194d31c31f26ae",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/4/slope.r8",
+      "size": 66049,
+      "sha256": "5a680743dbbeb24c2bde2bea6aafb172abbf7f0a38ebbda5de34d4f8f8989dcd",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/4/thermal.r8",
+      "size": 66049,
+      "sha256": "135e022bee005748d7598dffebaf0de108a0fdd26293a655408332dc2ec06484",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/4/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "deb7c2e2dd021c07bebc7d7d2555382c4e401ad106cc078dd7084805a1f4bad7",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/4/tile.json",
+      "size": 1582,
+      "sha256": "00daead2d895cf4aa5a9a0ea08d9a1bfbd1ae595d34120e1b62c0a49beac8ca4",
+      "media_type": "application/json"
     },
     {
       "path": "data/tiles/0/1/0/hazard.r8",
       "size": 66049,
-      "sha256": "01110ed349e8d7bae6b2893573c6b4849971d578019c266240dd951a7047a6df",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/1/0/hazard.r8.meta",
-      "size": 155,
-      "sha256": "e49ead69522f1ccc4963ee10cf6ff9c04b73b1ccaaee740fc3626c8e6621a92d",
+      "sha256": "ead80a16c35756d578d3a1e7ac9c92a419d8cd14524a0d0d7151d74b2076a92e",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/0/height.r16",
       "size": 132098,
-      "sha256": "7c9bc7d8b5ffa462bcd185098e8bf81c7542b87e9129a3a7970561297bda3d3a",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/1/0/height.r16.meta",
-      "size": 155,
-      "sha256": "1b2985626194844b1b7e4ccdb39af1996953a478d0ef53f0e190a72fea1144b8",
+      "sha256": "65ef81f6fd98af06966b7cb2b04dc97dca6b19e87532bd1893c381b0b2e4e02c",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/0/ortho.r8",
       "size": 66049,
-      "sha256": "793794cc25e727770e5797bfb5a34dfda6322f73197014dee8b02ad3ba7cd509",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/1/0/ortho.r8.meta",
-      "size": 155,
-      "sha256": "12d253da76ad9e87477e479c6901200428d7ac04cea633f24247b43ecfdab53b",
+      "sha256": "7b21d4ee23c93ceb110b40ad385c807a7d0d1bcbadef3873e39da128d95cb2c9",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/0/roughness.r8",
       "size": 66049,
-      "sha256": "d99b0924a81afa23ffe16bbb4df74961dbec21c909cf7613ec3bb41cb98bdb39",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/1/0/roughness.r8.meta",
-      "size": 155,
-      "sha256": "b39fd4f54d1a4803bc99da8dab4c92b0f612deea9055a647a9ef91359a7f674c",
+      "sha256": "e8e17952d8cbdebc23ea92ee3d9a56a1da51ebc9a242a50ffcfafb3e05d6070b",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/0/slope.r8",
       "size": 66049,
-      "sha256": "8fcd910a226ab95232c2b572d76c191a15679fcd894adee625c95c29d8cc0ec7",
+      "sha256": "353596795bd09818298b2874aa41a405394df50a8fe4feb5580ed82ce967d724",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles/0/1/0/slope.r8.meta",
-      "size": 155,
-      "sha256": "1127189ef622da5ad1ecf98c9a72c42f0e738cda32d79adb335ade286d5eeaf6",
+      "path": "data/tiles/0/1/0/thermal.r8",
+      "size": 66049,
+      "sha256": "002f0ec86551cf67f0fee97f0e9915a0a3c327299b74ad2b6dbcdd1cd28933e8",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/0/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "0f982becca05d7f078143014ed80691c455b57c5895bc286aed2e028e31a9bec",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/0/tile.json",
-      "size": 1220,
-      "sha256": "ba87ff46edf60a9dc4c55615e91817f6632b3c542e579d9fb8b3587da6b1d3bb",
+      "size": 1583,
+      "sha256": "a849bee51dbebd0af6acc9bf2edfd9264a89f1b141d130f04522c9a24ccba64e",
       "media_type": "application/json"
-    },
-    {
-      "path": "data/tiles/0/1/0/tile.json.meta",
-      "size": 155,
-      "sha256": "907c6797b0edc27756ba75c0423cdb673f0343e4a124d0492928cb2a0693b085",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/1/0.meta",
-      "size": 172,
-      "sha256": "dc490ba93c75a2dcad26a7c9b32029d14ad8e55072509acd57cb326edb79200a",
-      "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/1/hazard.r8",
       "size": 66049,
-      "sha256": "94e28589bde9cca3c014baa5ef3a6e37207b8cf8fca8a94bdb75d03e7e01b54d",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/1/1/hazard.r8.meta",
-      "size": 155,
-      "sha256": "f4f04b0be1bb22acaf399554d9517db09d17ec42228ca9eda4bc3e9e26b3b648",
+      "sha256": "3b51295774be3bbcb263e5cb416576eed5f664816f98ec55e3fd9f9e8f6de36d",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/1/height.r16",
       "size": 132098,
-      "sha256": "de349c0dec198103fbeb59ab6e8977c242ed54052433edf1f412378f09c49bc3",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/1/1/height.r16.meta",
-      "size": 155,
-      "sha256": "86f469b8e2602860016632a7cf164530f43a3b2caa5e34bbba1ac33d44096ac0",
+      "sha256": "86cf863adacee0351a09f449714c5f461bff4b909a2d01d5dc827c1c272f57ef",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/1/ortho.r8",
       "size": 66049,
-      "sha256": "29b9d9cfcea2c5f95f04ba5d3b85a763d0c71a34b3d1385efe3841f23913b129",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/1/1/ortho.r8.meta",
-      "size": 155,
-      "sha256": "0821f26f3786d78e6dcf20c29207a289169da99acc6cadd8dcf848d190945be3",
+      "sha256": "586484cf89904e2c71f0799498ce727d582dd9c92e60010ac2a110f64376bcf7",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/1/roughness.r8",
       "size": 66049,
-      "sha256": "f4852efc35fa216e1efee013809501d94266eb6473736a54afd0605462f778aa",
-      "media_type": "application/octet-stream"
-    },
-    {
-      "path": "data/tiles/0/1/1/roughness.r8.meta",
-      "size": 155,
-      "sha256": "a5ff05880ef4c268f951b0640b7773cb0fda4de615e84ebfe696089dcdcdc8b7",
+      "sha256": "b2a4cf73f25115b39863373d7831aaad486523a8ec269ce4256fa0b06400811f",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/1/slope.r8",
       "size": 66049,
-      "sha256": "51d6e904cd30084c2dab36782c767d55d8a52108209733724b062b058b802e0f",
+      "sha256": "9eb18a1de2cfa9254ad69e6e8fce3b6feb6ee4278277eaaf265da92c503ed11a",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles/0/1/1/slope.r8.meta",
-      "size": 155,
-      "sha256": "98fe6aeb6dea1ec34ce84106b41edd1248fea3bf5307efa6ba65fc17f8ee6ed5",
+      "path": "data/tiles/0/1/1/thermal.r8",
+      "size": 66049,
+      "sha256": "56a5ef0a966b440a41ed54e1e8c92926043e15454965172979c8685d4795a40b",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/1/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "9f4bfe3f155319aa66649c7eafd754e388e5fcb38695ef800f4ecd180588fa9b",
       "media_type": "application/octet-stream"
     },
     {
       "path": "data/tiles/0/1/1/tile.json",
-      "size": 1217,
-      "sha256": "9db9345d191e7d302e0c90fda6bd8be02750fedaeab360ae5d8e5ebcef1fdbd0",
+      "size": 1583,
+      "sha256": "5216f74e11ec5bfba11914d15f17e30b32f6d1ee24e9e416e6886efac190071d",
       "media_type": "application/json"
     },
     {
-      "path": "data/tiles/0/1/1/tile.json.meta",
-      "size": 155,
-      "sha256": "bd3a7ae214ea079c50af8b1fedd52845a97d557be80e7f24cd9f0e8cefe76818",
+      "path": "data/tiles/0/1/2/hazard.r8",
+      "size": 66049,
+      "sha256": "f9a93d951939e35a5bc5a422c6dc39def2a2f9cc7cb9fe3b14ab6f26af22ccd5",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles/0/1/1.meta",
-      "size": 172,
-      "sha256": "f951c01db65c074d05c60555f8f35f9008a52b898861a49462c037ca110c9218",
+      "path": "data/tiles/0/1/2/height.r16",
+      "size": 132098,
+      "sha256": "efadc397f39b1e2b940202ad153412f6bb768b597416305d90b8ee38c6042b3a",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles/0/1.meta",
-      "size": 172,
-      "sha256": "a5583b92a2027240a084cd2b200d90eb80d1b590260385c6367ea1a92edfd493",
+      "path": "data/tiles/0/1/2/ortho.r8",
+      "size": 66049,
+      "sha256": "5318667cc4972f9d95eed96c3e2b2314f79fb8ef5e6a6a2ae841e7efd3c56047",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles/0.meta",
-      "size": 172,
-      "sha256": "81d94ce9b4749a04031fd6c3eb52cdbedcf44859b1e2d55dfa4d7c92053d0abc",
+      "path": "data/tiles/0/1/2/roughness.r8",
+      "size": 66049,
+      "sha256": "1281be1a0cb94f0de45228cae81e19596fb947eb32a62fc577825cb09fbd256d",
       "media_type": "application/octet-stream"
     },
     {
-      "path": "data/tiles.meta",
-      "size": 172,
-      "sha256": "4f05099ca623290435ad61375d70baa6a20b47b781a674dc9f7f781be27e4016",
+      "path": "data/tiles/0/1/2/slope.r8",
+      "size": 66049,
+      "sha256": "fe0f7821e5e8fbf2f6cb1c8a35b68fdf8fa342c4d1b6c1f9579351ff87a8f7dc",
       "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/2/thermal.r8",
+      "size": 66049,
+      "sha256": "1bb727ce974f79ebef9369d865bdbc6c547c1f7d507c3c6552605aed7884ce43",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/2/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "28f59a52e687f31bbd0d9ea364608fa10ab832d2f2c9f36e4527a1fc4f77cd2c",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/2/tile.json",
+      "size": 1583,
+      "sha256": "5143d6b61ac0d4e57010e6793411d4fc8c968fabf924fa2d28476e969be68d88",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/1/3/hazard.r8",
+      "size": 66049,
+      "sha256": "2b6366463b6909f3369ce16d91bf4a665649629886f14a4c54b8c1b68f08feee",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/3/height.r16",
+      "size": 132098,
+      "sha256": "1e8dcfffef2ae9c9f3b2d03c587d473c437b246ca76380d37ff901e5de561baa",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/3/ortho.r8",
+      "size": 66049,
+      "sha256": "2f24e6bd042a7bf620f0bfb403e036d320da6b4a79dbff18a4371fd01e3891f1",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/3/roughness.r8",
+      "size": 66049,
+      "sha256": "7149cfef99d1e0b9a49b97bfe5c00456ec8fda869ead3d69f9c7a171f9f0c260",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/3/slope.r8",
+      "size": 66049,
+      "sha256": "4cf1f46d09fdaa03a36114c500a29cb48de3786afc4f9485103f0fca9f285475",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/3/thermal.r8",
+      "size": 66049,
+      "sha256": "8d318067f4659fad9188e6274776a100a1203811b08365028c0155504fe77171",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/3/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "c698923977622ce78089cf35eae4b49feaf74d7f8de202ca755c978aa6526788",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/3/tile.json",
+      "size": 1582,
+      "sha256": "22c4db849ada88a83030a4f7f6bb125da7da12e2ab3183f036d4861f02357033",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/1/4/hazard.r8",
+      "size": 66049,
+      "sha256": "9824babff6622c8ef0a877ebcbbd7d31906907fcd23d022c07e4b14144120317",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/4/height.r16",
+      "size": 132098,
+      "sha256": "390b30e95a125fd597730118f30598121ba0a0aabd5e8c0f036b43966b3cf159",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/4/ortho.r8",
+      "size": 66049,
+      "sha256": "7638137e9fadd54cbdf49bede1ca691fb5d9f7e5bf38f69aef25410602de9684",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/4/roughness.r8",
+      "size": 66049,
+      "sha256": "cb72a49c451591403ca3eec91d6108519669e3e5e6ac2a6b27d5a5ce5b146fca",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/4/slope.r8",
+      "size": 66049,
+      "sha256": "0dd7eefafe2d55b265703872f5f85ade4018e746e93a17433553e184f48152a2",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/4/thermal.r8",
+      "size": 66049,
+      "sha256": "aae1d00da1b93bf43895fda6a3e6db590f17400bb02a9a5eabc68189bfb4d8ab",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/4/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "2d8e7625260471e573c1df76eef9a7b2b9d0bd74d23e1c6f26f2a67fbeca3989",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/1/4/tile.json",
+      "size": 1582,
+      "sha256": "b3001d82e0c1ea2255362b3e93ea62d342371b9ce9631010e4ccb81e9856ac7f",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/2/0/hazard.r8",
+      "size": 66049,
+      "sha256": "364ca5159e644f1da84c53600ce24e2265bc5fdb3f4400f03588daf4635b91cd",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/0/height.r16",
+      "size": 132098,
+      "sha256": "11a23490162f69a8c46f7eaebd00a9298ffdba3ceac835b6b1f432b21d85fc2d",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/0/ortho.r8",
+      "size": 66049,
+      "sha256": "93df3c541d0ebbbe370f55aa4c28f7f8fb3dd8cdc0045bea8ce894950acd8602",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/0/roughness.r8",
+      "size": 66049,
+      "sha256": "303cab54b21d7a4ed7f79b9f955b7d444726d708ba4bee9038ff93f745f8e03f",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/0/slope.r8",
+      "size": 66049,
+      "sha256": "4697fc4e476e526c4e273ded7403b1de603f2104d34c179ae04703b2fb1b5578",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/0/thermal.r8",
+      "size": 66049,
+      "sha256": "bf09b4ed1662a116321e63f476becf81042d6b149a6c0a09952dca89babe303d",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/0/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "241406a8c2ffe1fa4a5f08ad63e559f80da8474b3e5b37f9f25310c12b7d7253",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/0/tile.json",
+      "size": 1583,
+      "sha256": "63d05c4dd713b4082b1a630c581800fa5ad5161be9f444a659a449deacc775de",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/2/1/hazard.r8",
+      "size": 66049,
+      "sha256": "693c46d011938dd02a339a009d544e57c33ee9548d69d84aa964c71cb7028dcf",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/1/height.r16",
+      "size": 132098,
+      "sha256": "e27ca6aeb30b054406db70f2515ab4af5aa1e437582d57efec183c72aaea5262",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/1/ortho.r8",
+      "size": 66049,
+      "sha256": "3c998d93a550f9d222dba5fa8d714f39abd54fe18df19780bf5660dedfad25b5",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/1/roughness.r8",
+      "size": 66049,
+      "sha256": "f09a7c0b4340a2895a26ddcd46f7116dc4fdf2a54cb8ffdba0a3f3889fdffc18",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/1/slope.r8",
+      "size": 66049,
+      "sha256": "c5e1356a1330c452e83f2806b25229b39ef0652df00ca7f4be600b35734afb40",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/1/thermal.r8",
+      "size": 66049,
+      "sha256": "682b2db06b9731d36d076c67df4f882cbeff95077a3e76dbc6fd34475921887d",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/1/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "079939327e781713ac4984ac461bf687a811adcda0d8ff4424e1900561b155c1",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/1/tile.json",
+      "size": 1583,
+      "sha256": "95fd8a89a68c8861730b758fd08b947fb733536f72f6b194072f28b75c4aefed",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/2/2/hazard.r8",
+      "size": 66049,
+      "sha256": "e0f2f49cc1e73e6c88e02a1e961181a849fd84f9eb336f4bf8fb6f149a0af660",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/2/height.r16",
+      "size": 132098,
+      "sha256": "9d4d0f0992c1bc521cba8cd1557757176229661be699bc0a04f24122eaec2387",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/2/ortho.r8",
+      "size": 66049,
+      "sha256": "003b57f9d678926e548948ba6b4e9671be357ae84fbc0d8e20736d7640fd57ce",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/2/roughness.r8",
+      "size": 66049,
+      "sha256": "4343f5c6b78e615b43f522aaba1584b193641fa4b09474f441b90cf8ddecfced",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/2/slope.r8",
+      "size": 66049,
+      "sha256": "e8ba24b748e4f6642d574f2cc4803dbdedd63d87fff5772ccb6916269296e48b",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/2/thermal.r8",
+      "size": 66049,
+      "sha256": "c8559efb3ac5a99bcb91d563eeb412c99ef998645ad704f3d3a0c864aef3bf3b",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/2/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "84bc7899eab798e1c39734ded0d6570c77182601fe5034a2b1efd159a839044a",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/2/tile.json",
+      "size": 1583,
+      "sha256": "83c7a84cf658ccdbfe993a3ef5a3e075c18bf95786b89a356269ad313a286596",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/2/3/hazard.r8",
+      "size": 66049,
+      "sha256": "9e6b738ab755df888a74a8daa1de74d70457097730e136cb8dbc56212ec69ec1",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/3/height.r16",
+      "size": 132098,
+      "sha256": "c63094367f74b0c4344935d248cd08be07fca6a9388fee730bb4011ff62aaeb9",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/3/ortho.r8",
+      "size": 66049,
+      "sha256": "ae7954241ec49ab9953f8486e1c7bf6ce57f4d19dce7c4f042abbad58d575153",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/3/roughness.r8",
+      "size": 66049,
+      "sha256": "1bf9e9691b40e8e17ab6ded4d5fa3119dda27dfb5bb645715e2bc7cb0e024be2",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/3/slope.r8",
+      "size": 66049,
+      "sha256": "e6f1a267426a8a4cc4a99d0dc90b445f69214db64dc897a94257d4a5acfe596b",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/3/thermal.r8",
+      "size": 66049,
+      "sha256": "4f44979c71d99eab1ede2e5ae2cbcfcfdf9b29cdd6b4ffe76a5c05c527b8b21f",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/3/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "2d35b910a703dd993e9bf1dbd643c74e6efbe7bb2c8a797f02bfbdc1f94405b8",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/3/tile.json",
+      "size": 1582,
+      "sha256": "13df50bc39e884036482f484c1b18ac4d9f4b00077a3065bdf1df0f470697be2",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/2/4/hazard.r8",
+      "size": 66049,
+      "sha256": "d566468c3aaa0f98e181163d0df276724cb0d8fc4167c33dffd9cbf104a4dda7",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/4/height.r16",
+      "size": 132098,
+      "sha256": "c32b3b83a5376bfd58d7b7ff8bf47ab4b2b9f4041792d458b5a94440a99fef73",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/4/ortho.r8",
+      "size": 66049,
+      "sha256": "0ac706e99bb62d60dfbcaedb97c07c747e2dd14d80d637b4ceaed98dc30a2817",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/4/roughness.r8",
+      "size": 66049,
+      "sha256": "60678dececa590c0bd88bc504965802cf526ea37d58a0123c0f3a9f9d7fb7fe7",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/4/slope.r8",
+      "size": 66049,
+      "sha256": "b5f13494070371e973fe0dfc2ea67b5df4a1cef5ff61d3a3f3a3ea531cf76d1e",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/4/thermal.r8",
+      "size": 66049,
+      "sha256": "263ff470c58fdd71a71e14bb5ae033a74750a224bc0e7f9e51e25067aec768a6",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/4/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "dc453d5754427de39a40301805b6eecdf4fb709588a2dfdf3d310be149b1b99d",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/2/4/tile.json",
+      "size": 1582,
+      "sha256": "c5d66f965ec9adf84056da8ec71cfab35ed4e35fe55d599afa1e35a2ac956fc5",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/3/0/hazard.r8",
+      "size": 66049,
+      "sha256": "60d72495b675df92335da89c9eac27d6e76c6948e6900f430a604b06b2706e23",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/0/height.r16",
+      "size": 132098,
+      "sha256": "943d369a2592a8731192cb08eb549375274d40794b45c43fa7f6ca282c5093de",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/0/ortho.r8",
+      "size": 66049,
+      "sha256": "99971ff82d34fb0323c8a3d87d1ffae127196b3716c463c63c6b6e20d9c3eb0a",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/0/roughness.r8",
+      "size": 66049,
+      "sha256": "35e540a71170f3f1e9d841c9006809382586cc9509271ea5eb6943ec22c776fe",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/0/slope.r8",
+      "size": 66049,
+      "sha256": "655e81f484fb7dba82a77182867f407f56a5e0dc9cdf2dfce03e86376616ac09",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/0/thermal.r8",
+      "size": 66049,
+      "sha256": "d4a856f9284b544ec226991f8b70d3725a84c4d09ba0d27dc76a2b8beac47ddd",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/0/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "92cbeff6511bf7d37b6d44531a9612a73ea375f5445ac9cc425aef4d38218a97",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/0/tile.json",
+      "size": 1582,
+      "sha256": "ce425c58f18527397fc86fd04d8f0c7c59345accd098d66ce95499203945b5bb",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/3/1/hazard.r8",
+      "size": 66049,
+      "sha256": "3eefea8330b1e7b12c18f12c0e02fbe5a8358d2abe765fdd0d4c8a07adf50c44",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/1/height.r16",
+      "size": 132098,
+      "sha256": "d5ebc2016151387b4907957ae41db531a0364109f6e6d5cba7a1fec2dd982dba",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/1/ortho.r8",
+      "size": 66049,
+      "sha256": "499e272fe0e83b99231596caf3eb6dec9b256589bce043dfd81d2c6d01c467de",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/1/roughness.r8",
+      "size": 66049,
+      "sha256": "42887383c049b10cb72f933123245524ce8f9833c4a4df50790160de62a9cef4",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/1/slope.r8",
+      "size": 66049,
+      "sha256": "57f5e8d63c51d33a144e0d81eff4ad4ebd2ae36e3c8e929c103ddfc6b7841369",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/1/thermal.r8",
+      "size": 66049,
+      "sha256": "de0d8322773bac6347c0617ec3fe7708fb64df9648cea794ded9a1d23b1b0e18",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/1/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "e8e3d9503319bdc2c17c886b1c7276dff1abde1168ee6d24cf6485a54b3a28e4",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/1/tile.json",
+      "size": 1582,
+      "sha256": "4fb0ad45b56f9d001e7d3a639ba216e4042c901980911a2f03dacd186a4c65e4",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/3/2/hazard.r8",
+      "size": 66049,
+      "sha256": "0529f4673d67f45d179f5741d64996e75dde9e2c9b5367fa83dd4c2aaf197275",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/2/height.r16",
+      "size": 132098,
+      "sha256": "6ee3e6d5daf77ed6bd839feb18909c4df474d0e0be799e278b8af9226205cf33",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/2/ortho.r8",
+      "size": 66049,
+      "sha256": "0821b0e6a62980f33e1384ba30d281edf236a775a533d7a7cc715769ff9002af",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/2/roughness.r8",
+      "size": 66049,
+      "sha256": "5edeb8beaa2e3bb816f7f47dda2d70a548a9d424991737588ffc454dfb133a3e",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/2/slope.r8",
+      "size": 66049,
+      "sha256": "359cca6fe19c745fafc0adc745a477904307ba7d79fb5953592be63bbc11e1c4",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/2/thermal.r8",
+      "size": 66049,
+      "sha256": "f1edafa21fbdeae27382c8baaf4e2d29c32cfa4738f1b3951ac55c07e1cef512",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/2/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "2efbd43af3132b984d9728983f32afd6d6afc593999437246f6da0507aeecbbc",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/2/tile.json",
+      "size": 1582,
+      "sha256": "fc740d039a01da9039e360c4b6ca07b15fade695a5619b4598a36c025b11049d",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/3/3/hazard.r8",
+      "size": 66049,
+      "sha256": "509e6c3622ac0133250bb8dc3717e9ba1d070feb3374d335470e268ffdbf418a",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/3/height.r16",
+      "size": 132098,
+      "sha256": "5ac4225a4f0d137ff78fbbd2bacacd2a091b044edde187491b7512cc266d6bdd",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/3/ortho.r8",
+      "size": 66049,
+      "sha256": "d03886310c8f72e29aeceabcd8a59cfc2550edc770ae533c5ddace06199f15a4",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/3/roughness.r8",
+      "size": 66049,
+      "sha256": "e9c17edbaa893747688958f8a065466b30288697e8b3b00672785dea241cb842",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/3/slope.r8",
+      "size": 66049,
+      "sha256": "6e15411546310721ceb2cb9b08e31cca7b69d46125a93510b2236a50c2c400c3",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/3/thermal.r8",
+      "size": 66049,
+      "sha256": "df50a2841dfb17cfd4f0438286b82b6135a5aed38217d102944aad34ac270547",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/3/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "1982b125d1fe90f1df2ba5d692823c057f253debba52148273b3897ab0c0fbca",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/3/tile.json",
+      "size": 1581,
+      "sha256": "51bcdd694574792a03f52cd39755f3442891e2a58563000bf85205ff68e4bc6f",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/3/4/hazard.r8",
+      "size": 66049,
+      "sha256": "9928ecf8feb5a2b79472fff311a629a87a5437d4b3f4c58fcf38ac68b38fc2c8",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/4/height.r16",
+      "size": 132098,
+      "sha256": "562425ec21d8973e3b3a419360545930bb1d246b3314b0c1479d532733a42192",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/4/ortho.r8",
+      "size": 66049,
+      "sha256": "815f9daa57fc67cbeca10efcf2765ce550e5e3fbd44f9aad9238d220be12f907",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/4/roughness.r8",
+      "size": 66049,
+      "sha256": "4a8432e9e66922062fa228dbd4bbfca7f86b91d45b463c4b5948fc1e1f1bdf90",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/4/slope.r8",
+      "size": 66049,
+      "sha256": "2f20d206c5593c6e333953f11b31b4c8b252e387149f0d21b8a072a714f979c7",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/4/thermal.r8",
+      "size": 66049,
+      "sha256": "74c26a40511025fb556ae82a8d0b03767da0db3f262e605fda9f5e1a76b1c78c",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/4/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "4d831ad9457a7f70e6dcad48fe2861093cd42c66dac73ff60726287d78d012fc",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/3/4/tile.json",
+      "size": 1581,
+      "sha256": "e85bfeba384183ddf0bac9a4c9851e3d446035e45019458c5dd6f3da1e7a15f0",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/4/0/hazard.r8",
+      "size": 66049,
+      "sha256": "a9d4b3b5f3eca3c42d8ad0a6313410b4e61be479650fe7a7b2f1dc65a4c509d7",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/0/height.r16",
+      "size": 132098,
+      "sha256": "9ea306c714b23ba586040b1191fc34deca8925f9beca32d1d6decc3e53171e74",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/0/ortho.r8",
+      "size": 66049,
+      "sha256": "bb83c9b59c786b8b31b20592ad4d023425b57d636d69f1360605dd4e40d7ac6e",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/0/roughness.r8",
+      "size": 66049,
+      "sha256": "15e19e12d64d31de9c5d24dc6075b4be947b49eecacb7610bffa5417eb94bdc0",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/0/slope.r8",
+      "size": 66049,
+      "sha256": "e1d2a3795f8255dbe886e444544539591327b48fb7325fb4b5d517fbc08b5fa7",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/0/thermal.r8",
+      "size": 66049,
+      "sha256": "ea46ead2705d06f0030ffdfbc41bea30cc7358e64d0dbb1bde235ca9b1c08e8a",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/0/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "78a2b18337ddcd26cd0e54d334a5723b473d8bc6681a8ca82f38393bfc2734ca",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/0/tile.json",
+      "size": 1582,
+      "sha256": "cf2eb7132f23ba07e639afe14119506784e0c603fd71c89b40069fede67092a2",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/4/1/hazard.r8",
+      "size": 66049,
+      "sha256": "15a6afaccf2cf643270cf5bf68d6e435cf7fbb1862b72d74c07854e40c3e5e3e",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/1/height.r16",
+      "size": 132098,
+      "sha256": "be47a58efa4869a16ddf12467fcf22db1b1f199edf40d9a41fb1e66e36e0c13b",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/1/ortho.r8",
+      "size": 66049,
+      "sha256": "7c7846443f270350b601fe2d58b3dd943146b1003a263da306233a1a5e7966ca",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/1/roughness.r8",
+      "size": 66049,
+      "sha256": "e529c30a8a6ce71cc690761e86629adbdba8875bd5be9e1ba92e56e8cd1c9c66",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/1/slope.r8",
+      "size": 66049,
+      "sha256": "22dd3040926e4d7910c38e6b05dd5f5aac88990d81db18893422e68ebc4a326c",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/1/thermal.r8",
+      "size": 66049,
+      "sha256": "a4b9e4d7330142c2de7a007b5983838f34bb5b6658ea1602884fea7737e1cc59",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/1/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "0486fa7d7467e3427993d07af2fb634fd09f9263943deda01656d97fd82f2f70",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/1/tile.json",
+      "size": 1582,
+      "sha256": "801d86fbdd9f25d68967d87a856aacf032e35e3abf4bcb6167cf01cff56596de",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/4/2/hazard.r8",
+      "size": 66049,
+      "sha256": "db7d404755840b6796f65b7cc9a69dd97d0df570739373a2ee68ecbf0e1bcb9d",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/2/height.r16",
+      "size": 132098,
+      "sha256": "a5d85603aece7cd561f66dd7e5fcbb2923e57e67fc17026c3e9b3e8ed6cd0fca",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/2/ortho.r8",
+      "size": 66049,
+      "sha256": "894e482958c94c00a0ddbc59b60ca4289dba2fa769052413868c5fb985378c00",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/2/roughness.r8",
+      "size": 66049,
+      "sha256": "02faef156255574f342b8afedd8bbdf540616a4cfe30f5ec45ec5573864c4ce3",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/2/slope.r8",
+      "size": 66049,
+      "sha256": "e2b12999d33f2fac7e6ce6aba8977023ccc3ed46ace5486fca567a16184b4061",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/2/thermal.r8",
+      "size": 66049,
+      "sha256": "7d0756912460664ea9e6730006499b5727b517c174ce98d980ef2ae10ea9fad1",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/2/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "5635683571839228b909ac5d6f544475a50df9120d6b6cead01806f3be1d2c96",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/2/tile.json",
+      "size": 1582,
+      "sha256": "5394820a5a4a591937e48dfa054e02bf4cd28c842ce6b23ab94b3e27777dc407",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/4/3/hazard.r8",
+      "size": 66049,
+      "sha256": "3bd5f8c0e0fb04daf4bea767dce0d5c59ac9a95d919369d9f191dd0e4ee1dbce",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/3/height.r16",
+      "size": 132098,
+      "sha256": "dab70f86d80ee9c69bec316e97ff73908a4cf39c61dc69d8d03b71603111b3d6",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/3/ortho.r8",
+      "size": 66049,
+      "sha256": "e34fa703ab9ef60893fbf233f9b1d28d41292bb3f8e5789caa9873002e42f59e",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/3/roughness.r8",
+      "size": 66049,
+      "sha256": "5df688a8a89dfa027453f1c98eb31734630a4ddcf31cb68408626f0bb71073a2",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/3/slope.r8",
+      "size": 66049,
+      "sha256": "9c56ea0bab1a1ca87e52d7bae2a4e553df0bc6eb629c31c4db8f5f33a8528c76",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/3/thermal.r8",
+      "size": 66049,
+      "sha256": "b74aa3c21944d450fda298cbee4567385064320df4468f84cfb5d164055b300f",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/3/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "99ebc17afd02a7303901d16862ab9ed9b481a99ce7cedce64a33f607cddadeaa",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/3/tile.json",
+      "size": 1581,
+      "sha256": "2a03d8ae943ffbc27e8ebae179a3256beb6fc074c0311bb71ced9b52ef611161",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/tiles/0/4/4/hazard.r8",
+      "size": 66049,
+      "sha256": "b40e7d297cf6c6265447c9dae77a1366a8e2330b4d367d7b82a22dbda066eb94",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/4/height.r16",
+      "size": 132098,
+      "sha256": "73aa0274da8fd27332c96303918fc0ca85c176d2c5092a585478e7de0b625ac5",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/4/ortho.r8",
+      "size": 66049,
+      "sha256": "12105d867c46423e686d1ff89a51eb899c013e8f45551ed381cbfa98e772c0a6",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/4/roughness.r8",
+      "size": 66049,
+      "sha256": "acf43366c64fe2201b368a877d895611b48b23b874b8707d96aadb0d25d4cf8d",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/4/slope.r8",
+      "size": 66049,
+      "sha256": "372c8b3812ba01309904caa83d17c6073346d9e545f6448ae55a35d137aab05d",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/4/thermal.r8",
+      "size": 66049,
+      "sha256": "74d5bcf80916f2d0d81488928288aecfa4cbf18ec12f0c953bf6b685fc32042f",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/4/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "cc57eec2c57adcfb128184dfc28c6255dd2ada99ed8f0d413224fafd1592fa7e",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/4/4/tile.json",
+      "size": 1581,
+      "sha256": "cb6b8aba33edb007e1d8cc464d276cf6b25fa03804883a930b3abb90e46598e7",
+      "media_type": "application/json"
     },
     {
       "path": "data/zone.json",
-      "size": 2193,
-      "sha256": "5742f79ecc6f8b133533a6fd5a5a2cdd0328e486bb2bfa43b05fbd0084b23bf4",
+      "size": 6751,
+      "sha256": "43f7d43e28684adf5742256f3eb4240155cbd0a6bf1d0f6d6d674816eab3d4a7",
       "media_type": "application/json"
-    },
-    {
-      "path": "data/zone.json.meta",
-      "size": 155,
-      "sha256": "5c3e93cd433521bcd89676278e840fc74f7437cb6857b8626ec38c68e0ffe5d8",
-      "media_type": "application/octet-stream"
     }
   ],
-  "payload_oxum": "1597500.58"
+  "payload_oxum": "13256106.201"
 }

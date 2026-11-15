@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "zone_id": "gale",
-  "name": "Gale · HiRISE (512 m)",
+  "name": "Gale · HiRISE (1,28 km)",
   "crs": "IAU_2015:49900",
   "origin_lat_deg": -4.81,
   "origin_lon_deg": 137.385,
@@ -13,10 +13,10 @@
     0
   ],
   "extent_enu_m": [
-    -256,
-    -256,
-    256,
-    256
+    -640,
+    -640,
+    640,
+    640
   ],
   "base_m_per_px": 1.0,
   "tiles": [
@@ -24,29 +24,176 @@
       "z": 0,
       "x": 0,
       "y": 0,
-      "version": 1,
-      "sha256": "200a1c33176b28da042e95228906450fffbc0d68bfe8eea9f713fe2fb19fddd3"
+      "version": 2,
+      "sha256": "731c17a894b19c58c6ddbff7dee43a9396982f318bbf7a71ee672a080a7d99fb"
     },
     {
       "z": 0,
       "x": 1,
       "y": 0,
-      "version": 1,
-      "sha256": "ba87ff46edf60a9dc4c55615e91817f6632b3c542e579d9fb8b3587da6b1d3bb"
+      "version": 2,
+      "sha256": "a849bee51dbebd0af6acc9bf2edfd9264a89f1b141d130f04522c9a24ccba64e"
+    },
+    {
+      "z": 0,
+      "x": 2,
+      "y": 0,
+      "version": 2,
+      "sha256": "63d05c4dd713b4082b1a630c581800fa5ad5161be9f444a659a449deacc775de"
+    },
+    {
+      "z": 0,
+      "x": 3,
+      "y": 0,
+      "version": 2,
+      "sha256": "ce425c58f18527397fc86fd04d8f0c7c59345accd098d66ce95499203945b5bb"
+    },
+    {
+      "z": 0,
+      "x": 4,
+      "y": 0,
+      "version": 2,
+      "sha256": "cf2eb7132f23ba07e639afe14119506784e0c603fd71c89b40069fede67092a2"
     },
     {
       "z": 0,
       "x": 0,
       "y": 1,
-      "version": 1,
-      "sha256": "cc1f32e63e768d0db0f0a95c3e46a1becf402b54b90e9e3f24384e300b00c61e"
+      "version": 2,
+      "sha256": "6d20751735396ab7cef58439b1b039a19556fb66bc817e57018edcbb30f6b5ff"
     },
     {
       "z": 0,
       "x": 1,
       "y": 1,
-      "version": 1,
-      "sha256": "9db9345d191e7d302e0c90fda6bd8be02750fedaeab360ae5d8e5ebcef1fdbd0"
+      "version": 2,
+      "sha256": "5216f74e11ec5bfba11914d15f17e30b32f6d1ee24e9e416e6886efac190071d"
+    },
+    {
+      "z": 0,
+      "x": 2,
+      "y": 1,
+      "version": 2,
+      "sha256": "95fd8a89a68c8861730b758fd08b947fb733536f72f6b194072f28b75c4aefed"
+    },
+    {
+      "z": 0,
+      "x": 3,
+      "y": 1,
+      "version": 2,
+      "sha256": "4fb0ad45b56f9d001e7d3a639ba216e4042c901980911a2f03dacd186a4c65e4"
+    },
+    {
+      "z": 0,
+      "x": 4,
+      "y": 1,
+      "version": 2,
+      "sha256": "801d86fbdd9f25d68967d87a856aacf032e35e3abf4bcb6167cf01cff56596de"
+    },
+    {
+      "z": 0,
+      "x": 0,
+      "y": 2,
+      "version": 2,
+      "sha256": "24d24294b55b18395a7447a8204015ad86ca9dfa8abc7eea0c463aa2bb474eb3"
+    },
+    {
+      "z": 0,
+      "x": 1,
+      "y": 2,
+      "version": 2,
+      "sha256": "5143d6b61ac0d4e57010e6793411d4fc8c968fabf924fa2d28476e969be68d88"
+    },
+    {
+      "z": 0,
+      "x": 2,
+      "y": 2,
+      "version": 2,
+      "sha256": "83c7a84cf658ccdbfe993a3ef5a3e075c18bf95786b89a356269ad313a286596"
+    },
+    {
+      "z": 0,
+      "x": 3,
+      "y": 2,
+      "version": 2,
+      "sha256": "fc740d039a01da9039e360c4b6ca07b15fade695a5619b4598a36c025b11049d"
+    },
+    {
+      "z": 0,
+      "x": 4,
+      "y": 2,
+      "version": 2,
+      "sha256": "5394820a5a4a591937e48dfa054e02bf4cd28c842ce6b23ab94b3e27777dc407"
+    },
+    {
+      "z": 0,
+      "x": 0,
+      "y": 3,
+      "version": 2,
+      "sha256": "1a53ac1ce28efa534f616e5ddfd28335932c837b053e6873d504f940b77a2da5"
+    },
+    {
+      "z": 0,
+      "x": 1,
+      "y": 3,
+      "version": 2,
+      "sha256": "22c4db849ada88a83030a4f7f6bb125da7da12e2ab3183f036d4861f02357033"
+    },
+    {
+      "z": 0,
+      "x": 2,
+      "y": 3,
+      "version": 2,
+      "sha256": "13df50bc39e884036482f484c1b18ac4d9f4b00077a3065bdf1df0f470697be2"
+    },
+    {
+      "z": 0,
+      "x": 3,
+      "y": 3,
+      "version": 2,
+      "sha256": "51bcdd694574792a03f52cd39755f3442891e2a58563000bf85205ff68e4bc6f"
+    },
+    {
+      "z": 0,
+      "x": 4,
+      "y": 3,
+      "version": 2,
+      "sha256": "2a03d8ae943ffbc27e8ebae179a3256beb6fc074c0311bb71ced9b52ef611161"
+    },
+    {
+      "z": 0,
+      "x": 0,
+      "y": 4,
+      "version": 2,
+      "sha256": "00daead2d895cf4aa5a9a0ea08d9a1bfbd1ae595d34120e1b62c0a49beac8ca4"
+    },
+    {
+      "z": 0,
+      "x": 1,
+      "y": 4,
+      "version": 2,
+      "sha256": "b3001d82e0c1ea2255362b3e93ea62d342371b9ce9631010e4ccb81e9856ac7f"
+    },
+    {
+      "z": 0,
+      "x": 2,
+      "y": 4,
+      "version": 2,
+      "sha256": "c5d66f965ec9adf84056da8ec71cfab35ed4e35fe55d599afa1e35a2ac956fc5"
+    },
+    {
+      "z": 0,
+      "x": 3,
+      "y": 4,
+      "version": 2,
+      "sha256": "e85bfeba384183ddf0bac9a4c9851e3d446035e45019458c5dd6f3da1e7a15f0"
+    },
+    {
+      "z": 0,
+      "x": 4,
+      "y": 4,
+      "version": 2,
+      "sha256": "cb6b8aba33edb007e1d8cc464d276cf6b25fa03804883a930b3abb90e46598e7"
     }
   ],
   "layers": [
@@ -54,6 +201,18 @@
       "id": "ortho",
       "dtype": "uint8",
       "source_id": "mro-hirise-gale-ortho",
+      "qualitative": true
+    },
+    {
+      "id": "thermal",
+      "dtype": "uint8",
+      "source_id": "ody-themis-qual-ti",
+      "qualitative": true
+    },
+    {
+      "id": "thermal_ir",
+      "dtype": "uint8",
+      "source_id": "ody-themis-night-ir",
       "qualitative": true
     }
   ],
@@ -90,6 +249,38 @@
       ],
       "license": "CC0-1.0",
       "url": "https://hirise.lpl.arizona.edu/dtm/PSP_009149_1750",
+      "qualitative": true
+    },
+    {
+      "id": "ody-themis-qual-ti",
+      "kind": "raster",
+      "adapter": "pds-http",
+      "mission": "Mars Odyssey",
+      "instrument": "THEMIS",
+      "product_id": "Gale_crater_THEMIS_qualTI",
+      "resolution_m": 100,
+      "time_range": [
+        "2006-07-14T00:00:00Z",
+        "2006-07-14T00:00:00Z"
+      ],
+      "license": "NASA media guidelines; crédito por ítem",
+      "url": "https://themis.mars.asu.edu/landingsites/mslsite_42",
+      "qualitative": true
+    },
+    {
+      "id": "ody-themis-night-ir",
+      "kind": "raster",
+      "adapter": "pds-http",
+      "mission": "Mars Odyssey",
+      "instrument": "THEMIS",
+      "product_id": "Gale_crater_THEMIS_nightIR",
+      "resolution_m": 100,
+      "time_range": [
+        "2006-07-14T00:00:00Z",
+        "2006-07-14T00:00:00Z"
+      ],
+      "license": "NASA media guidelines; crédito por ítem",
+      "url": "https://themis.mars.asu.edu/landingsites/mslsite_42",
       "qualitative": true
     }
   ],
