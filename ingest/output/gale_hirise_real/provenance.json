@@ -1,0 +1,11 @@
+{
+  "source": "HiRISE DTM",
+  "mission": "Mars Reconnaissance Orbiter",
+  "product_id": "DTEEC_011417_1755_011562_1755_U01",
+  "center_lat_deg": -4.4413602,
+  "center_lon_deg": 137.6109132,
+  "native_resolution_m": 1.0117671069962,
+  "output_resolution_m": 1.0,
+  "status": "preliminary",
+  "notes": "Real elevation data; hazard thresholds provisional. ENU alignment and vertical datum pending verification."
+}

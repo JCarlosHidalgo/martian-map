@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "zone_id": "gale-hirise",
+  "z": 0,
+  "x": 0,
+  "y": 0,
+  "size_px": 257,
+  "m_per_px": 1.0,
+  "origin_enu_m": [
+    -128,
+    -128
+  ],
+  "height": {
+    "file": "height.r16",
+    "dtype": "uint16",
+    "scale": 0.001,
+    "offset": -4474.0,
+    "nodata": 65535,
+    "row_order": "north_up",
+    "endian": "le",
+    "vertical_datum": "areoid"
+  },
+  "rasters": {
+    "slope": {
+      "dtype": "uint8",
+      "unit": "deg"
+    },
+    "roughness": {
+      "dtype": "uint8",
+      "unit": "cm",
+      "window_m": 3
+    },
+    "hazard": {
+      "dtype": "uint8"
+    }
+  },
+  "version": 1,
+  "layers": [],
+  "source_ids": [
+    "mro-hirise-dtm"
+  ],
+  "sha256": {
+    "height.r16": "a66d851bdcb8144e1b462a2f21549e94127676a6f098ec7eb92af276926a171b",
+    "slope.r8": "2f21affe4ec031383ef2aa970f1f0f8e2b395aeb594fe60b5751a16cbaa2a49e",
+    "roughness.r8": "1e969739565b6ac729a1fce50ab3698c488fd446df153a314a40cd6299a79492",
+    "hazard.r8": "2a956ebe77b108b1fd48f640cc7713eb8b3acd916ef8057c0e4555ea8e658fe4"
+  }
+}
