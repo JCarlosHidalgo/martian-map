@@ -372,7 +372,9 @@ dentro de un método síncrono.
   se queda el orden de entrada. Las paradas a las que no se llega desde `start` van al final, en el
   orden de entrada; si `home` no se alcanza, se ordena el camino abierto. Con algún tramo no
   encontrado, `total_s` y `dose_uGy` son +∞ y `return_ok` es falso. Sin paradas, la `Plan` es un
-  solo tramo de `start` a `home`. Cada alternativa tiene sus tramos, totales, dosis y `return_ok`.
+  solo tramo de `start` a `home`, y `return_ok` solo dice si ese tramo se encuentra: la regla de
+  `return_ok` se mira al salir de cada parada, y sin paradas no se compara con el presupuesto
+  *(decisión de P3, 2026-11-15)*. Cada alternativa tiene sus tramos, totales, dosis y `return_ok`.
   En OP, o con más de 12 paradas, lanza `NotImplementedException` hasta que lleguen greedy + 2-opt y
   orienteering (H24–36).
 - `Plan.dose_uGy` es la integral de esa misma tasa de `t_utc` a `t_utc + total_s.p50` *(propuesta)*. `return_ok` es falso si,

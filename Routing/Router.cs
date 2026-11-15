@@ -308,8 +308,9 @@ namespace MartianMap.Routing
         /// found; if home cannot be reached, the open path is ordered. With a leg not found,
         /// <c>total_s</c> and <c>dose_uGy</c> are +∞ and <c>return_ok</c> is false. Otherwise
         /// <c>return_ok</c> says whether, on leaving each stop, the walk at P90 plus every
-        /// <c>dwell_s</c> so far plus the field's time back fits (<see cref="ReturnFits"/>). Each
-        /// alternative has its own legs, totals, dose and <c>return_ok</c>.</para>
+        /// <c>dwell_s</c> so far plus the field's time back fits (<see cref="ReturnFits"/>); with no
+        /// stops there is nothing to leave, so it only says whether the leg home was found, without
+        /// the budget. Each alternative has its own legs, totals, dose and <c>return_ok</c>.</para>
         /// It throws <see cref="ArgumentException"/> for two stops with the same id, and
         /// <see cref="NotImplementedException"/> in <see cref="StopMode.Op"/> or with more than
         /// <see cref="StopOrder.MaxExact"/> stops (greedy + 2-opt and orienteering come later).
