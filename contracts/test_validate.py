@@ -478,6 +478,75 @@ class ContractValidatorTests(unittest.TestCase):
                 sample = int.from_bytes(height[index * 2 : index * 2 + 2], "little")
                 self.assertNotEqual(sample, tile["height"]["nodata"])
 
+    def _edit_identifier_fixture(self) -> dict[str, Any]:
+        source = Path(__file__).parent
+        for name in ("edit.schema.json", "edit_log.schema.json"):
+            shutil.copyfile(source / "schemas" / name, self.root / "schemas" / name)
+        log = json.loads((source / "fixtures/merge/log_in.json").read_text(encoding="utf-8"))
+        return log["edits"][0]
+
+    def test_edit_identifiers_reject_surrounding_whitespace_and_controls(self) -> None:
+        original = self._edit_identifier_fixture()
+        for field in ("uuid", "entity_id", "author", "creator", "zone_id"):
+            for extra in ("\n", "\r", "\r\n", "\t", " ", "\u2028", "\u2029", "\x00"):
+                for position in ("prefix", "suffix"):
+                    with self.subTest(field=field, extra=repr(extra), position=position):
+                        edit = original.copy()
+                        value = original[field]
+                        edit[field] = extra + value if position == "prefix" else value + extra
+                        self._json(
+                            "fixtures/merge/log_in.json", {"schema_version": 1, "edits": [edit]}
+                        )
+                        with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                            ContractValidator(self.root).run()
+
+    def test_edit_identifiers_accept_valid_values_and_boundaries(self) -> None:
+        original = self._edit_identifier_fixture()
+        uuids = (
+            "00000000-0000-4000-8000-000000000000",
+            "aaaaaaaa-aaaa-4aaa-9aaa-aaaaaaaaaaaa",
+            "ffffffff-ffff-4fff-bfff-ffffffffffff",
+        )
+        values = {
+            "uuid": uuids,
+            "entity_id": uuids,
+            "author": ("a-", "ev1", "a" * 16),
+            "creator": ("a-", "ev1", "a" * 16),
+            "zone_id": ("a0", "gale-south", "a" + "0" * 31),
+        }
+        for field, candidates in values.items():
+            for value in candidates:
+                with self.subTest(field=field, value=value):
+                    self._json(
+                        "fixtures/merge/log_in.json",
+                        {"schema_version": 1, "edits": [{**original, field: value}]},
+                    )
+                    ContractValidator(self.root).run()
+
+    def test_edit_identifiers_reject_invalid_formats_and_lengths(self) -> None:
+        original = self._edit_identifier_fixture()
+        invalid_uuids = (
+            "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA",
+            "aaaaaaaa-aaaa-3aaa-8aaa-aaaaaaaaaaaa",
+            "aaaaaaaaaaaa4aaa8aaaaaaaaaaaaaaa",
+        )
+        values = {
+            "uuid": invalid_uuids,
+            "entity_id": invalid_uuids,
+            "author": ("a", "a" * 17, "EV1"),
+            "creator": ("a", "a" * 17, "EV1"),
+            "zone_id": ("a", "a" * 33, "1synth", "SYNTH"),
+        }
+        for field, candidates in values.items():
+            for value in candidates:
+                with self.subTest(field=field, value=value):
+                    self._json(
+                        "fixtures/merge/log_in.json",
+                        {"schema_version": 1, "edits": [{**original, field: value}]},
+                    )
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        ContractValidator(self.root).run()
+
     def _openapi(self, example: dict[str, Any], schema: dict[str, Any]) -> None:
         specification = {
             "openapi": "3.1.0",
