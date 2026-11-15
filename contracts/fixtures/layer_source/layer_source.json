@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "id": "synth-generator-dtm",
+  "kind": "raster",
+  "adapter": "stac",
+  "mission": "Synthetic",
+  "instrument": "Contract fixture generator",
+  "product_id": "SYNTHETIC_C2_EXAMPLE_V1",
+  "resolution_m": 1.0,
+  "coverage_geojson": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [-0.0010000, -0.0010000],
+        [0.0010000, -0.0010000],
+        [0.0010000, 0.0010000],
+        [-0.0010000, 0.0010000],
+        [-0.0010000, -0.0010000]
+      ]
+    ]
+  },
+  "time_range": ["2026-11-14T00:00:00Z", "2026-11-14T00:00:00Z"],
+  "license": "CC0-1.0",
+  "url": "https://example.org/martian-map/synthetic-dtm",
+  "units": "m",
+  "vertical_datum": "areoid",
+  "qualitative": false
+}

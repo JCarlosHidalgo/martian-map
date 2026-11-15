@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edits_ack.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["acks"],
+  "properties": {
+    "acks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["uuid", "status", "code"],
+        "properties": {
+          "uuid": {"$ref": "edit.schema.json#/$defs/uuid"},
+          "status": {"enum": ["accepted", "duplicate", "rejected"]},
+          "code": {"type": ["string", "null"], "enum": [null, "confirmation_required", "unknown_zone"]}
+        },
+        "allOf": [
+          {"if": {"properties": {"status": {"const": "rejected"}}}, "then": {"properties": {"code": {"type": "string"}}}, "else": {"properties": {"code": {"type": "null"}}}}
+        ]
+      }
+    }
+  }
+}

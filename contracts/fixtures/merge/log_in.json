@@ -1,0 +1,218 @@
+{
+  "schema_version": 1,
+  "edits": [
+    {
+      "uuid": "11111111-1111-4111-8111-111111111111",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [
+            -2560,
+            -2560
+          ],
+          [
+            2560,
+            -2560
+          ],
+          [
+            0,
+            2560
+          ]
+        ],
+        "level": 200
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "22222222-2222-4222-8222-222222222222",
+      "lamport": 2,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "op": "obstacle.set",
+      "payload": {
+        "polygon": [
+          [
+            5120,
+            5120
+          ],
+          [
+            7680,
+            5120
+          ],
+          [
+            5120,
+            7680
+          ]
+        ]
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "66666666-6666-4666-8666-666666666666",
+      "lamport": 2,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "op": "note.set",
+      "payload": {
+        "point": [
+          0,
+          -5120
+        ],
+        "text": "Inspect slope"
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "33333333-3333-4333-8333-333333333333",
+      "lamport": 3,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [
+            -2560,
+            -2560
+          ],
+          [
+            2560,
+            -2560
+          ],
+          [
+            0,
+            2560
+          ]
+        ],
+        "level": 80
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "77777777-7777-4777-8777-777777777777",
+      "lamport": 2,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "op": "note.set",
+      "payload": {
+        "point": [
+          0,
+          -5120
+        ],
+        "text": "Inspect ridge"
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "88888888-8888-4888-8888-888888888888",
+      "lamport": 4,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [
+            -2560,
+            -2560
+          ],
+          [
+            2560,
+            -2560
+          ],
+          [
+            0,
+            2560
+          ]
+        ],
+        "level": 90
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "44444444-4444-4444-8444-444444444444",
+      "lamport": 4,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [
+            -2560,
+            -2560
+          ],
+          [
+            2560,
+            -2560
+          ],
+          [
+            0,
+            2560
+          ]
+        ],
+        "level": 80,
+        "confirmed": true
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "99999999-9999-4999-8999-999999999999",
+      "lamport": 2,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "op": "note.set",
+      "payload": {
+        "point": [
+          0,
+          -5120
+        ],
+        "text": "Inspect ridge first"
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "55555555-5555-4555-8555-555555555555",
+      "lamport": 5,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "op": "obstacle.set",
+      "payload": {
+        "polygon": [
+          [
+            5120,
+            5120
+          ],
+          [
+            7680,
+            5120
+          ],
+          [
+            5120,
+            7680
+          ]
+        ],
+        "confirmed": true
+      },
+      "tombstone": true
+    }
+  ]
+}
