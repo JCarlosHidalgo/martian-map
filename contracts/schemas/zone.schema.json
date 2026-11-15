@@ -1,0 +1,105 @@
+
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Martian Zone",
+  "description": "Contrato de uma zona marciana.",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "zone_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "crs": {
+      "type": "string"
+    },
+    "origin_lat_deg": {
+      "type": "number"
+    },
+    "origin_lon_deg": {
+      "type": "number"
+    },
+    "origin_height_m": {
+      "type": "number"
+    },
+    "projection": {
+      "const": "equirectangular_local"
+    },
+    "radius_m": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "habitat_enu_m": {
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "extent_enu_m": {
+      "type": "array",
+      "items": {"type": "number"},
+      "minItems": 4,
+      "maxItems": 4
+    },
+    "base_m_per_px": {
+      "const": 1.0
+    },
+    "tiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "z": {"type": "integer", "minimum": 0},
+          "x": {"type": "integer", "minimum": 0},
+          "y": {"type": "integer", "minimum": 0},
+          "version": {"type": "integer", "minimum": 1},
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-fA-F0-9]{64}$"
+          }
+        },
+        "required": ["z", "x", "y", "version", "sha256"]
+      }
+    },
+    "layers": {
+      "type": "array",
+      "items": {"type": "object"}
+    },
+    "layer_sources": {
+  "type": "array",
+  "items": {
+    "$ref": "layer_source.schema.json#/$defs/layer_source"
+  }
+},
+    "pov": {
+      "type": "array",
+      "items": {"type": "object"}
+    }
+  },
+  "required": [
+    "schema_version",
+    "zone_id",
+    "name",
+    "crs",
+    "origin_lat_deg",
+    "origin_lon_deg",
+    "origin_height_m",
+    "projection",
+    "radius_m",
+    "habitat_enu_m",
+    "extent_enu_m",
+    "base_m_per_px",
+    "tiles",
+    "layers",
+    "layer_sources",
+    "pov"
+  ],
+  "additionalProperties": false
+}
