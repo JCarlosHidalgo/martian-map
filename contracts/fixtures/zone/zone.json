@@ -32,13 +32,13 @@
     {
       "id": "ortho",
       "dtype": "uint8",
-      "source_id": "synthetic",
+      "source_id": "synthetic-test-data",
       "qualitative": true
     },
     {
       "id": "thermal",
       "dtype": "uint8",
-      "source_id": "synthetic",
+      "source_id": "synthetic-test-data",
       "qualitative": false,
       "unit": "J m-2 K-1 s-1/2",
       "scale": 2,
@@ -47,11 +47,28 @@
     {
       "id": "thermal_ir",
       "dtype": "uint8",
-      "source_id": "synthetic",
+      "source_id": "synthetic-test-data",
       "qualitative": true
     }
   ],
-  "layer_sources": [],
+  "layer_sources": [
+    {
+      "id": "synthetic-test-data",
+      "kind": "raster",
+      "adapter": "json-feed",
+      "mission": "Synthetic fixture - Martian Map",
+      "instrument": "Python synthetic terrain generator",
+      "product_id": "synthetic-tile-0-0-0",
+      "resolution_m": 1.0,
+      "time_range": [
+        "2026-11-15T00:00:00Z",
+        "2026-11-15T00:00:00Z"
+      ],
+      "license": "CC0-1.0",
+      "url": "https://github.com/JCarlosHidalgo/martian-map",
+      "qualitative": true
+    }
+  ],
   "pov": [
     {
       "id": "synthetic-pov-01",
@@ -61,7 +78,7 @@
         0
       ],
       "t_utc": "2026-11-14T00:00:00Z",
-      "file": "pov/synthetic_view.jpg",
+      "file": "synthetic_view.jpg",
       "media_type": "image/jpeg",
       "sha256": "ced04a52cc808a6089badc50974fd1eaaf37d2a603d44b5b47af885f37d1a23c",
       "version": 1,
