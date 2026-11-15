@@ -50,9 +50,13 @@ HEIGHT_SCALE = 1 / 1024
 height_file = OUTPUT_DIR / "height.r16"
 
 with height_file.open("wb") as file:
-    for terrain_row in heights:
-        for height in terrain_row:
-            encoded_height = round(height / HEIGHT_SCALE)
+    for row, terrain_row in enumerate(heights):
+        for col, height in enumerate(terrain_row):
+            if row >= 241 and col >= 241:
+                encoded_height = 65535
+            else:
+                encoded_height = round(height / HEIGHT_SCALE)
+
             file.write(struct.pack("<H", encoded_height))
 
 print("Height file created:", height_file)

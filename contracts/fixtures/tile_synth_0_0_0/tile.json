@@ -49,9 +49,11 @@
       "file": "thermal_ir.r8"
     }
   ],
-  "source_ids": [],
+  "source_ids": [
+    "synthetic"
+  ],
   "sha256": {
-    "height.r16": "9db7d4b1c7c859bf3b10d21ebcece252204256ab74d5ef7cf98741cfa4ee54d9",
+    "height.r16": "23e46157b82a07d54cdb94fb46a8185e972c582974a975a098b7d01369046891",
     "slope.r8": "4f8fd640726e55e9437c0f3e7a87b8aca1733cbc2a3e13ea36668addcfdddea9",
     "roughness.r8": "3434048d64829572c06c997e40a20a8494f453e1c84888269a8fb86581f434e6",
     "hazard.r8": "966a39a8da05a55d113ba6e1fd8c82509b51fd0381083bceffc3b4e3e1f11b10",
