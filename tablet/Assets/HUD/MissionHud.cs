@@ -31,6 +31,8 @@ namespace MartianMap.HUD
 
         public MissionDefinition Mission { get; private set; }
         public EnuPoint? AstronautPosition => _ready ? _start : (EnuPoint?)null;
+        public Alternative SelectedAlternative { get; private set; } = Alternative.Fastest;
+        public event Action RouteRequesting;
         public string Status { get; private set; } = HudStrings.WaitingForMission;
 
         private void Awake() => BuildView();
@@ -55,6 +57,7 @@ namespace MartianMap.HUD
             _missionAsset = asset;
             BuildView();
             _ready = false;
+            SelectedAlternative = Alternative.Fastest;
             _planButton.interactable = false;
             _route.text = HudStrings.NoRoute;
             try
@@ -97,8 +100,23 @@ namespace MartianMap.HUD
                 stops[index] = Mission.Stops[index].Value;
             }
 
+            _route.text = HudStrings.RouteOptionsPending;
             SetStatus(HudStrings.RouteRequested);
-            MapEvents.Emit(new RouteRequested(Array.AsReadOnly(stops), _home, Mission.Budget, Mission.Mode, _start, Alternative.Fastest));
+            RouteRequesting?.Invoke();
+            MapEvents.Emit(new RouteRequested(Array.AsReadOnly(stops), _home, Mission.Budget, Mission.Mode, _start, SelectedAlternative));
+        }
+
+        /// <summary>Requests an alternative through Terrain using the current astronaut position.</summary>
+        public bool SelectAlternative(Alternative alternative)
+        {
+            if (!_ready || (int)alternative < 0 || (int)alternative > 2)
+            {
+                return false;
+            }
+
+            SelectedAlternative = alternative;
+            RequestRoute();
+            return true;
         }
 
         /// <summary>Moves the simulated astronaut inside the active zone, retaining the return base.</summary>
@@ -125,6 +143,7 @@ namespace MartianMap.HUD
 
         private void OnZoneLoaded(ZoneLoaded message)
         {
+            SelectedAlternative = Alternative.Fastest;
             _zone = message.Zone;
             BuildView();
             _route.text = HudStrings.NoRoute;
@@ -162,18 +181,23 @@ namespace MartianMap.HUD
 
         private void OnRouteSelected(RouteSelected message)
         {
-            if (!_ready || message.Plans == null || (int)message.Selected < 0 || (int)message.Selected >= message.Plans.Count)
+            if (!_ready)
             {
                 return;
             }
 
+            if (message.Plans == null || message.Plans.Count != 3 ||
+                (int)message.Selected < 0 || (int)message.Selected > 2)
+            {
+                _route.text = HudStrings.RouteOptionsInvalid;
+                SetStatus(HudStrings.RouteOptionsInvalid);
+                return;
+            }
+
             Plan plan = message.Plans[(int)message.Selected];
-            string alternative = message.Selected == Alternative.Fastest ? HudStrings.Fastest
-                : message.Selected == Alternative.Safest ? HudStrings.Safest : HudStrings.Gentlest;
+            SelectedAlternative = message.Selected;
             _route.text = HudFormatting.Format(HudStrings.RouteSummary,
-                alternative, HudFormatting.Duration(plan.TotalS.P50), HudFormatting.Duration(plan.TotalS.P10),
-                HudFormatting.Duration(plan.TotalS.P90), HudFormatting.Dose(plan.DoseUGy),
-                plan.ReturnOk ? HudStrings.Available : HudStrings.Unavailable);
+                RoutePresentation.Name(message.Selected), RoutePresentation.Details(plan));
             SetStatus(HudStrings.RouteReceived);
         }
 
@@ -270,7 +294,7 @@ namespace MartianMap.HUD
             scroll.movementType = ScrollRect.MovementType.Clamped;
 
             _status = FixedLabel("Status", body, Status, 20, 64);
-            _route = FixedLabel("Route", body, HudStrings.NoRoute, 20, 115);
+            _route = FixedLabel("Route", body, HudStrings.NoRoute, 20, 150);
             var buttonObject = new GameObject("Plan route", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             buttonObject.transform.SetParent(body, false);
             buttonObject.GetComponent<LayoutElement>().preferredHeight = 62;
