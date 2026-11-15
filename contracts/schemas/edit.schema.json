@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edit.schema.json",
+  "title": "edit",
+  "description": "One C3 edit. The habitat orders edits by (lamport, author, uuid) and merges entities; fromHabitat is local C# state and is not transmitted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["uuid", "lamport", "author", "creator", "zone_id", "entity_id", "op", "payload", "tombstone"],
+  "properties": {
+    "uuid": {"$ref": "#/$defs/uuid"},
+    "lamport": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
+    "author": {"$ref": "#/$defs/author"},
+    "creator": {"$ref": "#/$defs/author", "description": "Author of this entity's first edit; unchanged by later edits."},
+    "zone_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$(?![\\s\\S])"},
+    "entity_id": {"$ref": "#/$defs/uuid"},
+    "op": {"enum": ["hazard.set", "obstacle.set", "note.set"], "description": "The operation stays the same for every edit of an entity."},
+    "payload": {"type": "object"},
+    "tombstone": {"type": "boolean", "description": "A deletion retains the previous op and complete payload."}
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "op": {"const": "hazard.set"},
+        "payload": {"$ref": "#/$defs/hazard_payload"}
+      }
+    },
+    {
+      "properties": {
+        "op": {"const": "obstacle.set"},
+        "payload": {"$ref": "#/$defs/obstacle_payload"}
+      }
+    },
+    {
+      "properties": {
+        "op": {"const": "note.set"},
+        "payload": {"$ref": "#/$defs/note_payload"}
+      }
+    }
+  ],
+  "$defs": {
+    "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$(?![\\s\\S])"},
+    "author": {"type": "string", "pattern": "^[a-z0-9-]{2,16}$(?![\\s\\S])"},
+    "point": {
+      "description": "[east, north] as signed 1/256-metre integers relative to the zone ENU origin.",
+      "type": "array",
+      "prefixItems": [
+        {"type": "integer", "minimum": -2147483648, "maximum": 2147483647},
+        {"type": "integer", "minimum": -2147483648, "maximum": 2147483647}
+      ],
+      "items": false,
+      "minItems": 2
+    },
+    "polygon": {
+      "description": "A simple ring with at least three distinct vertices; the first vertex is not repeated at the end. Simplicity requires semantic validation.",
+      "type": "array",
+      "minItems": 3,
+      "uniqueItems": true,
+      "items": {"$ref": "#/$defs/point"}
+    },
+    "hazard_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["polygon", "level"],
+      "properties": {
+        "polygon": {"$ref": "#/$defs/polygon"},
+        "level": {"type": "integer", "minimum": 0, "maximum": 255},
+        "confirmed": {"type": "boolean", "description": "Required when a different author lowers or deletes the creator's hazard."}
+      }
+    },
+    "obstacle_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["polygon"],
+      "properties": {
+        "polygon": {"$ref": "#/$defs/polygon"},
+        "confirmed": {"type": "boolean", "description": "Required when a different author deletes the creator's obstacle."}
+      }
+    },
+    "note_payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["point", "text"],
+      "properties": {
+        "point": {"$ref": "#/$defs/point"},
+        "text": {"type": "string"}
+      }
+    }
+  }
+}

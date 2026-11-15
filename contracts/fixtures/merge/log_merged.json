@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "edits": [
+    {
+      "uuid": "99999999-9999-4999-8999-999999999999",
+      "lamport": 2,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "op": "note.set",
+      "payload": {"point": [0, -5120], "text": "Inspect ridge first"},
+      "tombstone": false
+    },
+    {
+      "uuid": "44444444-4444-4444-8444-444444444444",
+      "lamport": 4,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "op": "hazard.set",
+      "payload": {"polygon": [[-2560, -2560], [2560, -2560], [0, 2560]], "level": 80, "confirmed": true},
+      "tombstone": false
+    },
+    {
+      "uuid": "55555555-5555-4555-8555-555555555555",
+      "lamport": 5,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "op": "obstacle.set",
+      "payload": {"polygon": [[5120, 5120], [7680, 5120], [5120, 7680]], "confirmed": true},
+      "tombstone": true
+    }
+  ]
+}
