@@ -175,11 +175,11 @@ Experimentos a su cargo:
 
 Los umbrales de E5 vienen del protocolo de medición de frente A §4.
 
-## P4: terreno 3D, streaming e integración
+## P4: terreno 2D, streaming e integración
 
 | | |
 |---|---|
-| **Construye** | El componente `Terrain` de la [Tablet](./tablet.md): carga de tiles, LOD, skirts y cámara orbital, de "Mundo y tiles (D2)"; el material del terreno, con el tinte de niebla lejana, de "Contrato de escena (C5)"; el cliente C3, la caché local (archivos + SQLite con gilzoide), la copia de Gale desde el APK y la llamada a `apply()`, de "Caché local"; y la orquestación de rutas y ediciones (llamar a `Routing` y a `Edits`, emitir los eventos), de "Orquestación" |
+| **Construye** | El componente `Terrain` de la [Tablet](./tablet.md): carga de tiles, mapa 2D y cámara cenital táctil, de "Mundo y tiles (D2)"; el shader del terreno, con el tinte de niebla lejana, de "Contrato de escena (C5)"; el cliente C3, la caché local (archivos + catálogo JSON, plan C de E8), la copia de Gale desde el APK y la llamada a `apply()`, de "Caché local"; y la orquestación de rutas y ediciones (llamar a `Routing` y a `Edits`, emitir los eventos), de "Orquestación" |
 | **Integrador** | dueño de `Main.unity`, del build Android (cada 4 h), y de la escena y el APK de benchmark (sección "P3: motor de rutas y ediciones"), sobre el motor de "Motor y ficha del dispositivo (D1)". Reparte los `author` de las tablets ([Convenciones](./convenciones.md), sección "Ediciones") y desempata los cambios de contrato |
 | **Antes de H0** | prepara el repositorio: la sección "Antes de H0". El job de contratos y `map.json` no son suyos: son de P6 |
 | **Produce** | C5, con `AppConfig` y el cargador de fixtures: [Tablet](./tablet.md), sección "Contrato de escena (C5)" |
@@ -197,8 +197,8 @@ Experimentos a su cargo (además del APK de E5):
 
 | | |
 |---|---|
-| **Construye** | El componente `FX` de la [Tablet](./tablet.md): los shaders de holograma, niebla cercana (una pasada analítica + pocas partículas), heatmap y resaltado de rutas, y los parámetros del tinte lejano, de "Efectos visuales (D8)". Escribe shaders y los Sub Graphs que el shader del terreno incluye; ese shader y su material son de P4 ("Contrato de escena (C5)"). También el prefab `Routes`, que dibuja la polilínea de `RouteSelected` |
-| **Produce** | los shaders, los Sub Graphs del terreno y los prefabs `FX` y `Routes`. En H0–2 escribe además el esquema y el fixture de C6 `conditions.json`, corre E14 y hace el sondeo de endpoints de NASA ([Convenciones](./convenciones.md), sección "Qué contratos se fijan y en qué orden") |
+| **Construye** | El componente `FX` de la [Tablet](./tablet.md): los shaders de holograma, niebla cercana (una pasada analítica + pocas partículas), heatmap y resaltado de rutas, y los parámetros del tinte lejano, de "Efectos visuales (D8)". Escribe shaders y las funciones HLSL (`FxTerrainHooks.hlsl`) que el shader del terreno incluye; ese shader y su material son de P4 ("Contrato de escena (C5)"). Entrega las zonas de peligro como Shapefile ([Tablet](./tablet.md), sección "Zonas de peligro de `FX` (Shapefile)"). También el prefab `Routes`, que dibuja la polilínea de `RouteSelected` |
+| **Produce** | los shaders, las funciones HLSL del terreno, las zonas de peligro en Shapefile y los prefabs `FX` y `Routes`. En H0–2 escribe además el esquema y el fixture de C6 `conditions.json`, corre E14 y hace el sondeo de endpoints de NASA ([Convenciones](./convenciones.md), sección "Qué contratos se fijan y en qué orden") |
 | **Consume como mock** | una escena mock: un plano con `height.r16` sintético, `_HazardTex` con 2 manchas y una polilínea hardcodeada |
 | **Carpeta** | `tablet/Assets/FX/` |
 
@@ -208,7 +208,7 @@ Experimentos a su cargo:
 |---|---|---|---|---|
 | E1 | **P5 construye su APK**, como los de E3 y E4. Frametime de URP 6.3 en el Mali-G68: APK con escena vacía y con holograma básico; matriz de 6 combinaciones *(equipo)*: Vulkan/GLES3 × render scale 0,6/0,75/1, con `targetFrameRate` 30 y Frame Pacing on. Las de 60 fps y Frame Pacing off solo se miden si ninguna llega al criterio | H5–H6; el APK está construido en H5 | En la mejor combinación, p95 de frametime ≤ 33,3 ms (30 fps estables) con holograma; objetivo ≤ 16,7 ms. La escena muestrea `_HeightTex` (R16_UNORM) y `_HazardTex` (R8) sin artefactos | Render scale 0,6, sin HDR ni bloom, GLES3 y `targetFrameRate = 30`; si aun así no llega, wireframe y scanlines fuera. Si R16_UNORM no se muestrea bien, `_HeightTex` pasa a RFloat por un cambio de C5 *(equipo)* |
 | E3 | Coste de bloom, niebla y holograma: vista Overdraw + Mali System Metrics a la resolución objetivo; bloom on/off | H6–H10 | Con todos los efectos, p95 ≤ 33,3 ms; bloom ≤ 4 ms; ≤ 3 capas blended por píxel en la vista con niebla | Niebla = solo tinte en el terreno (sin partículas); bloom apagado y brillo aditivo en el propio shader |
-| E4 | Native RenderPass y framebuffer fetch en Vulkan (no se usa en shaders propios; comprobar que URP no lo rompe) | H6–H10 | 0 crashes y 0 artefactos en 5 min de cámara orbital, también al rotar la tablet | Native RenderPass off; si persiste, GLES3 |
+| E4 | Native RenderPass y framebuffer fetch en Vulkan (no se usa en shaders propios; comprobar que URP no lo rompe) | H6–H10 | 0 crashes y 0 artefactos en 5 min de desplazamiento y zoom del mapa, también al rotar la tablet | Native RenderPass off; si persiste, GLES3 |
 
 ## P6: misión, ciencia y UX
 
@@ -235,7 +235,7 @@ cuanto antes. Los pasos van en orden; cada uno espera al anterior salvo donde se
 | 1 | P4 | El repositorio: invita a los otros cinco, y cada uno acepta; el primer commit con `docs/`; carpetas por dueño, `.gitattributes`, LFS, `.editorconfig`, `README.md`, `global.json`, `.gitignore` y `main` protegida | todo lo demás |
 | 2 | P3 | Los dos paquetes vacíos de `Routing/` y `Edits/` ([Convenciones](./convenciones.md), sección "Repositorio y flujo de trabajo") | el paso 3 y la firma de H0:45 |
 | 3 | P4 | El esqueleto de `tablet/`: proyecto Unity 6000.3.28f1 con URP, Force Text, las capas, un asmdef por dueño, los prefabs vacíos `Terrain` y `HUD`, `Main.unity`, los paquetes (JSON, Input System, uGUI con TextMeshPro, y `Routing` y `Edits` en `manifest.json`), HTTP sin TLS permitido, el script que copia los fixtures y `config.default.json`. Y los jobs de CI que no son de contratos | los pasos 4 y 7 |
-| 4 | P5 | Sus tres Sub Graphs sin efecto y los prefabs vacíos `FX` y `Routes`, con un PR; P4 los coloca en `Main.unity` y en el shader del terreno | C5 en H0 |
+| 4 | P5 | Sus funciones de `FxTerrainHooks.hlsl` y los prefabs vacíos `FX` y `Routes`, con un PR; P4 los coloca en `Main.unity` y el shader del terreno ya incluye las funciones | C5 en H0 |
 | 5 | P6 | El job de contratos en verde y `map.json`. Solo espera al paso 1 | todo PR de contrato de H0–2 |
 | 6 | P6 | Comprueba en los 6 equipos las instalaciones y UnityYAMLMerge de la checklist. No espera a nadie | H0 sin instalar nada |
 | 7 | P4 | **La prueba final:** un PR de prueba pasa el CI y se fusiona, y un APK vacío del esqueleto queda instalado en la tablet | que H0 empiece por los contratos |
@@ -273,7 +273,7 @@ H44.
 | **Antes de H0** | El repositorio, el CI, el esqueleto de `tablet/` y los paquetes vacíos están en `main`, sin código de producto, y la prueba final pasó: sección "Antes de H0" |
 | **H0–2** | C0–C6 y C1b con fixtures, JSON Schema y OpenAPI; los goldens de C4 que dependen de código entran después ([Tablet](./tablet.md), sección "Contrato de rutas (C4)"). Prism 5.16.0 fijado y los dos mocks de C3 levantados. Sondeo de endpoints NASA y caché en el repo (P5). Experimentos E2, E10 y E14. Abrir la página del proyecto (P1) |
 | **H5** | Benchmark de rutas en la tablet (E5 y E7, en H4–H5): se decide grilla de 2 m o plan B |
-| **H6 walking skeleton** | APK en la tablet real: tile sintético + cámara orbital + A\* trivial dibujado + holograma básico + un indicador de HUD + los mocks de C3 levantados + un tile real generado por P1 + bundle sintético importado. El A\* dibujado es el de `PlanRoute` sobre el tile sintético si `BuildGrid` está en `main` en H5:30; si no, `expected_route.json` *(equipo)*. Antes de H6 P4 prueba su APK en cualquier otro Android. Experimentos E1, E8, E9 y E11 cerrados. E3 y E4 se cierran en H10 |
+| **H6 walking skeleton** | APK en la tablet real: tile sintético + mapa 2D con su cámara + A\* trivial dibujado + estilo holográfico básico + un indicador de HUD + los mocks de C3 levantados + un tile real generado por P1 + bundle sintético importado. El A\* dibujado es el de `PlanRoute` sobre el tile sintético si `BuildGrid` está en `main` en H5:30; si no, `expected_route.json` *(equipo)*. Antes de H6 P4 prueba su APK en cualquier otro Android. Experimentos E1, E8, E9 y E11 cerrados. E3 y E4 se cierran en H10 |
 | **H24** | Zona real (DTM + ≥3 capas) servida por el servidor real; costo real; niebla leyendo el raster real; HUD con condiciones reales; una edición que cambia el costo y re-planifica. P1 entrega Gale para el APK y P4 la empaqueta ([Tablet](./tablet.md), sección "Caché local"). P6 fija las paradas de la misión de Gale sobre los tiles reales, en nodos sin bloqueo *(propuesta)*. Guion del video iniciado |
 | **H30** | Ingesta cerrada; P1 pasa a dueño del video y la página |
 | **H36** | U2 en vivo con Jezero (bundle con `DELAY`) + orden de paradas, con la misión de Jezero que P6 fija al llegar la zona; demo E2E completa; toma de respaldo del video. Se decide si hay build Web |

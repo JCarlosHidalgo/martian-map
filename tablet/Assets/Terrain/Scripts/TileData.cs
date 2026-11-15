@@ -14,13 +14,18 @@ namespace MartianMap.Terrain
         public const int Cells = Size - 1;
         public const ushort HeightNodata = 65535;
 
-        public TileData(TileInfo info, ushort[] height, byte[] hazard, IReadOnlyDictionary<string, byte[]> layers)
+        /// <param name="slope">uint8 degrees (C1 <c>slope.r8</c>); zeros when the tile has none.</param>
+        /// <param name="roughness">uint8 cm (C1 <c>roughness.r8</c>); zeros when the tile has none.</param>
+        public TileData(TileInfo info, ushort[] height, byte[] hazard, IReadOnlyDictionary<string, byte[]> layers,
+            byte[] slope = null, byte[] roughness = null)
         {
             Info = info ?? throw new ArgumentNullException(nameof(info));
             Height = Check(height, nameof(height));
             BaseHazard = Check(hazard, nameof(hazard));
             Hazard = (byte[])BaseHazard.Clone();
             Layers = layers ?? new Dictionary<string, byte[]>();
+            Slope = slope != null ? Check(slope, nameof(slope)) : new byte[Size * Size];
+            Roughness = roughness != null ? Check(roughness, nameof(roughness)) : new byte[Size * Size];
             foreach (var pair in Layers)
             {
                 Check(pair.Value, pair.Key);
@@ -28,6 +33,9 @@ namespace MartianMap.Terrain
 
             ComputeRange();
         }
+
+        private byte[] _shapeHazard;
+        private byte[] _editHazard;
 
         public TileInfo Info { get; }
 
@@ -37,11 +45,17 @@ namespace MartianMap.Terrain
         /// <summary>uint8 hazard 0–255 as Earth wrote it, north-up rows.</summary>
         public byte[] BaseHazard { get; }
 
-        /// <summary>The effective hazard: <see cref="BaseHazard"/> merged with P5's shapes (max), north-up rows.</summary>
+        /// <summary>The effective hazard: <c>max(base, P5 shapes, edits)</c>, north-up rows.</summary>
         public byte[] Hazard { get; }
 
         /// <summary>uint8 layers by <c>layer_id</c>, north-up rows.</summary>
         public IReadOnlyDictionary<string, byte[]> Layers { get; }
+
+        /// <summary>uint8 slope in degrees, north-up rows (Routing input).</summary>
+        public byte[] Slope { get; }
+
+        /// <summary>uint8 relief in cm, north-up rows (Routing input).</summary>
+        public byte[] Roughness { get; }
 
         public float MinHeightM { get; private set; }
         public float MaxHeightM { get; private set; }
@@ -97,26 +111,56 @@ namespace MartianMap.Terrain
         }
 
         /// <summary>
-        /// Sets the effective hazard to <c>max(base, overlay)</c>, or back to the base with a null
-        /// overlay, and re-uploads the hazard texture if it exists. Main thread.
+        /// P5's hazard shapes for this tile (rasterized), or null to remove them. The effective hazard
+        /// is <c>max(base, shapes, edits)</c>: one raster for fog and routing. Main thread.
         /// </summary>
         public void SetHazardOverlay(byte[] overlay)
         {
-            if (overlay != null)
-            {
-                Check(overlay, nameof(overlay));
-            }
+            _shapeHazard = overlay != null ? Check(overlay, nameof(overlay)) : null;
+            RecomputeHazard();
+        }
 
+        /// <summary>
+        /// The hazard of the live edits on this tile, as <c>Edits.EditEngine.Apply</c> returns it
+        /// (already <c>max(base, entities)</c>), or null when there are none. Main thread.
+        /// </summary>
+        /// <returns>True if the effective hazard changed.</returns>
+        public bool SetEditHazard(byte[] editHazard)
+        {
+            _editHazard = editHazard != null ? Check(editHazard, nameof(editHazard)) : null;
+            return RecomputeHazard();
+        }
+
+        private bool RecomputeHazard()
+        {
+            var changed = false;
             for (var i = 0; i < Hazard.Length; i++)
             {
-                Hazard[i] = overlay != null && overlay[i] > BaseHazard[i] ? overlay[i] : BaseHazard[i];
+                var value = BaseHazard[i];
+                if (_shapeHazard != null && _shapeHazard[i] > value)
+                {
+                    value = _shapeHazard[i];
+                }
+
+                if (_editHazard != null && _editHazard[i] > value)
+                {
+                    value = _editHazard[i];
+                }
+
+                if (Hazard[i] != value)
+                {
+                    Hazard[i] = value;
+                    changed = true;
+                }
             }
 
-            if (HazardTex != null)
+            if (changed && HazardTex != null)
             {
                 HazardTex.SetPixelData(FlipRows(Hazard), 0);
                 HazardTex.Apply(false, false);
             }
+
+            return changed;
         }
 
         /// <summary>Builds the textures once; call on the main thread.</summary>

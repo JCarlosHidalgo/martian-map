@@ -45,6 +45,7 @@ namespace MartianMap.Terrain
         private LocalCache _cache;
         private bool _loading;
         private bool _costParamsLoaded;
+        private bool _preloadedImported;
 
         public ZoneSource Source => source;
 
@@ -63,6 +64,18 @@ namespace MartianMap.Terrain
             {
                 map = GetComponentInChildren<TerrainMap2D>();
             }
+
+            // The orchestration lives next to the map (Tablet, "Orquestación"); added here so the
+            // prefab needs no manual wiring.
+            EnsureComponent<RouteOrchestrator>();
+            EnsureComponent<EditOrchestrator>();
+            EnsureComponent<HabitatClient>();
+        }
+
+        private T EnsureComponent<T>() where T : Component
+        {
+            var component = GetComponent<T>();
+            return component != null ? component : gameObject.AddComponent<T>();
         }
 
         private void OnEnable()
@@ -125,13 +138,15 @@ namespace MartianMap.Terrain
         /// <summary>
         /// Opens the cache, imports the preloaded zones, emits ZonesChanged and loads
         /// <paramref name="zoneId"/>, or the last active zone, or the first one. With an empty cache
-        /// it falls back to the generated demo zone.
+        /// it shows the contract zone <c>synth</c>, which the HUD's synthetic mission targets; the
+        /// generated demo zone is the last resort.
         /// </summary>
         private async Task<LoadedZone> LoadFromCacheAsync(string zoneId)
         {
-            if (_cache == null)
+            EnsureCache();
+            if (!_preloadedImported)
             {
-                _cache = LocalCache.OpenDefault();
+                _preloadedImported = true;
                 foreach (var preloaded in preloadedZones)
                 {
                     await ImportPreloadedAsync(preloaded);
@@ -142,8 +157,8 @@ namespace MartianMap.Terrain
             MapEvents.Emit(new ZonesChanged(zones));
             if (zones.Count == 0)
             {
-                Debug.LogWarning("[Terrain] cache is empty and no zone ships in the APK; showing the generated demo zone");
-                return SyntheticZone.CreateDemo();
+                Debug.LogWarning("[Terrain] cache is empty and no zone ships in the APK; showing the contract zone synth");
+                return await LoadContractFixtureAsync();
             }
 
             var target = zoneId ?? _cache.ActiveZone;
@@ -155,6 +170,39 @@ namespace MartianMap.Terrain
             var zone = await _cache.LoadZoneAsync(target);
             _cache.SetActiveZone(target);
             return zone;
+        }
+
+        /// <summary>The local cache, opened on first use (the habitat client needs it whatever the source).</summary>
+        public LocalCache EnsureCache()
+        {
+            _cache ??= LocalCache.OpenDefault();
+            return _cache;
+        }
+
+        /// <summary>True when the zone on screen came from the cache (not a fixture or the demo).</summary>
+        public bool ShowsCachedZone =>
+            map != null && map.Current != null && _cache != null && _cache.ZoneVersion(map.Current.Zone.ZoneId) > 0;
+
+        /// <summary>Loads a cached zone and shows it, with P5's shapes; used when the habitat updates it.</summary>
+        public async Task ShowCachedZoneAsync(string zoneId)
+        {
+            if (_loading)
+            {
+                return;
+            }
+
+            _loading = true;
+            try
+            {
+                source = ZoneSource.Cache;
+                var zone = await LoadFromCacheAsync(zoneId);
+                await ApplyHazardShapesAsync(zone);
+                map.Show(zone);
+            }
+            finally
+            {
+                _loading = false;
+            }
         }
 
         private async Task ImportPreloadedAsync(string zoneId)
@@ -203,8 +251,8 @@ namespace MartianMap.Terrain
             }
             catch (System.IO.FileNotFoundException missing)
             {
-                Debug.LogWarning($"[Terrain] contract tile missing file={missing.FileName}; showing the generated look-alike");
-                return SyntheticZone.CreateFixtureLike();
+                Debug.LogWarning($"[Terrain] contract tile missing file={missing.FileName}; showing the generated demo zone");
+                return SyntheticZone.CreateDemo();
             }
         }
 

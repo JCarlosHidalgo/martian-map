@@ -4,8 +4,8 @@
 > página lo enuncia en presente; lo que falta medir lleva la marca **NO VERIFICADO** y el
 > experimento que lo cierra.
 
-Martian Map es una app de tablet para un astronauta en la superficie de Marte: un mapa 3D que
-crece solo con datos de NASA, se puede editar y calcula la ruta más rápida y segura. Esta página
+Martian Map es una app de tablet para un astronauta en la superficie de Marte: un mapa 2D, visto
+desde arriba con el relieve sombreado, que crece solo con datos de NASA, se puede editar y calcula la ruta más rápida y segura. Esta página
 dice qué pide el reto, qué queda fuera, qué zona se eligió y qué indicadores muestra el mapa.
 
 ## Orden de lectura
