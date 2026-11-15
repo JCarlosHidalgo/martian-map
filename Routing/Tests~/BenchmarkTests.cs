@@ -92,10 +92,12 @@ namespace MartianMap.Routing.Tests
             Assert.That(string.Concat(lines.Select(l => l + "\n")), Is.EqualTo(text));
             string[] rows = lines.Where(l => l.StartsWith("| 32 |", StringComparison.Ordinal)).ToArray();
             Assert.That(rows.Count(r => r.Contains("| A* 20 m |")), Is.EqualTo(5));
+            Assert.That(rows.Count(r => r.Contains("| Alternatives |")), Is.EqualTo(5));
             Assert.That(rows.Count(r => r.Contains("| ReturnField |")), Is.EqualTo(5));
+            Assert.That(rows.Count(r => r.Contains("| OrderStops k=3 |")), Is.EqualTo(5));
             foreach (Terrain t in AllTerrains)
             {
-                Assert.That(rows.Count(r => r.Contains($"| {t} |")), Is.EqualTo(2), t.ToString());
+                Assert.That(rows.Count(r => r.Contains($"| {t} |")), Is.EqualTo(4), t.ToString());
             }
 
             Assert.That(lines.Count(l => l.Contains("stress")), Is.EqualTo(0));
@@ -104,21 +106,25 @@ namespace MartianMap.Routing.Tests
         [Test]
         public void EveryRowSaysWhatTheSmoothingAdds()
         {
-            // S9: an A* row has the p50 of Smoothing.Smooth on its pairs; a field row has none.
+            // S9: an A* row has the p50 of Smoothing.Smooth on its pairs; V17: an OrderStops row has
+            // the time of Held-Karp alone; every other row has neither.
             List<string> lines = SmallRun.Value.Lines;
-            Assert.That(lines, Has.Some.EqualTo("| size | terrain | query | runs | found | p50 ms | p95 ms | max ms | smooth ms | GC | managed MB | E5 |"));
+            Assert.That(lines, Has.Some.EqualTo("| size | terrain | query | runs | found | p50 ms | p95 ms | max ms | smooth ms | order ms | GC | managed MB | E5 |"));
             foreach (string row in lines.Where(l => l.StartsWith("| 32 |", StringComparison.Ordinal)))
             {
                 string[] cells = row.Split('|');
-                string smooth = cells[9].Trim();
-                if (row.Contains("| A* "))
-                {
-                    Assert.That(double.TryParse(smooth, NumberStyles.Float, CultureInfo.InvariantCulture, out double ms) && ms >= 0, Is.True, row);
-                }
-                else
-                {
-                    Assert.That(smooth, Is.EqualTo("-"), row);
-                }
+                AssertMsOrDash(cells[9].Trim(), row.Contains("| A* "), row);
+                AssertMsOrDash(cells[10].Trim(), row.Contains("| OrderStops "), row);
+            }
+        }
+
+        [Test]
+        public void TheNewRowsAreOutsideE5()
+        {
+            // V17: E5 measures the core; the Alternatives and OrderStops rows have no criterion.
+            foreach (string row in SmallRun.Value.Lines.Where(l => l.Contains("| Alternatives |") || l.Contains("| OrderStops ")))
+            {
+                Assert.That(row.TrimEnd().EndsWith("| outside E5 |", StringComparison.Ordinal), Is.True, row);
             }
         }
 
@@ -161,6 +167,8 @@ namespace MartianMap.Routing.Tests
             Assert.That((c.RouteWarmUp, c.RouteRuns, c.RouteM), Is.EqualTo((1, 5, 500.0)));
             Assert.That(c.FieldSizes, Is.EqualTo(new[] { 1000, 2000 }));
             Assert.That((c.FieldWarmUp, c.FieldRuns, c.StressFieldSize), Is.EqualTo((1, 1, 0)));
+            Assert.That(c.OrderStopsSizes, Is.EqualTo(new[] { 2000 }));
+            Assert.That((c.OrderStopsK, c.OrderStopsRadiusM), Is.EqualTo((12, 250.0)));
             Assert.That(c.Label, Does.Contain("laptop"));
         }
 
@@ -182,10 +190,25 @@ namespace MartianMap.Routing.Tests
             FieldSizes = new[] { 32 },
             FieldRuns = 2,
             FieldWarmUp = 1,
+            OrderStopsSizes = new[] { 32 },
+            OrderStopsK = 3,
+            OrderStopsRadiusM = 20,
             StressFieldSize = stress,
             Seed = 1,
             Params = Fixtures.CostParams,
         };
+
+        private static void AssertMsOrDash(string cell, bool hasMs, string row)
+        {
+            if (hasMs)
+            {
+                Assert.That(double.TryParse(cell, NumberStyles.Float, CultureInfo.InvariantCulture, out double ms) && ms >= 0, Is.True, row);
+            }
+            else
+            {
+                Assert.That(cell, Is.EqualTo("-"), row);
+            }
+        }
 
         private static byte[] Bytes(CostGrid g)
         {
