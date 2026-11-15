@@ -104,6 +104,19 @@ namespace MartianMap.Routing
             Count = 0;
         }
 
+        /// <summary>
+        /// Shrinks the entries' storage to <paramref name="capacity"/> if it grew beyond and the
+        /// heap holds no more than that. The per-node index stays: it is one entry per node.
+        /// </summary>
+        internal void Trim(int capacity)
+        {
+            if (nodes.Length > capacity && Count <= capacity)
+            {
+                Array.Resize(ref nodes, capacity);
+                Array.Resize(ref keys, capacity);
+            }
+        }
+
         private bool Less(int a, int b) =>
             keys[a] < keys[b] || (keys[a] == keys[b] && nodes[a] < nodes[b]);
 
