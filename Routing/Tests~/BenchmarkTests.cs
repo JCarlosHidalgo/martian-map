@@ -119,12 +119,17 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
-        public void TheNewRowsAreOutsideE5()
+        public void TheNewRowsAreOutsideE5AndComeAfterIt()
         {
-            // V17: E5 measures the core; the Alternatives and OrderStops rows have no criterion.
-            foreach (string row in SmallRun.Value.Lines.Where(l => l.Contains("| Alternatives |") || l.Contains("| OrderStops ")))
+            // V17: E5 measures the core; the Alternatives and OrderStops rows have no criterion, and
+            // they come after every E5 row of their size (they grow the search's workspace).
+            List<string> rows = SmallRun.Value.Lines.Where(l => l.StartsWith("| 32 |", StringComparison.Ordinal)).ToList();
+            int lastE5 = rows.FindLastIndex(l => l.Contains("| A* ") || l.Contains("| ReturnField |"));
+            for (int k = 0; k < rows.Count; k++)
             {
-                Assert.That(row.TrimEnd().EndsWith("| outside E5 |", StringComparison.Ordinal), Is.True, row);
+                bool outside = rows[k].Contains("| Alternatives |") || rows[k].Contains("| OrderStops ");
+                Assert.That(rows[k].TrimEnd().EndsWith("| outside E5 |", StringComparison.Ordinal), Is.EqualTo(outside), rows[k]);
+                Assert.That(k > lastE5, Is.EqualTo(outside), rows[k]);
             }
         }
 
@@ -167,7 +172,7 @@ namespace MartianMap.Routing.Tests
             Assert.That((c.RouteWarmUp, c.RouteRuns, c.RouteM), Is.EqualTo((1, 5, 500.0)));
             Assert.That(c.FieldSizes, Is.EqualTo(new[] { 1000, 2000 }));
             Assert.That((c.FieldWarmUp, c.FieldRuns, c.StressFieldSize), Is.EqualTo((1, 1, 0)));
-            Assert.That(c.OrderStopsSizes, Is.EqualTo(new[] { 2000 }));
+            Assert.That(c.OrderStopsSizes, Is.EqualTo(new[] { 1000 }));
             Assert.That((c.OrderStopsK, c.OrderStopsRadiusM), Is.EqualTo((12, 250.0)));
             Assert.That(c.Label, Does.Contain("laptop"));
         }

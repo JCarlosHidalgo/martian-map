@@ -27,8 +27,9 @@ namespace MartianMap.Routing
         /// text of <c>Routing/BENCHMARK.md</c>. <paramref name="log"/> receives each line as it comes.
         /// Per size, ascending (1000² and 2000²): an A* row of 500 m routes for each terrain (1 warm-up
         /// + 5 runs) and an <see cref="Router.Alternatives"/> row on the same pairs, then a field row
-        /// (1 + 1) and, on 2000², an <see cref="Router.OrderStops"/> row of 12 stops (1 run) with that
-        /// field; the last two kinds are outside E5's criterion. It runs on the laptop; the tablet is
+        /// (1 + 1); after every terrain's E5 rows, the rows outside E5's criterion: an
+        /// <see cref="Router.Alternatives"/> row on the A* pairs and, on 1000², an
+        /// <see cref="Router.OrderStops"/> row of 12 stops (1 run). It runs on the laptop; the tablet is
         /// not tested. The memory is the managed heap with the grid and the search's workspace alive.
         /// </summary>
         public static string Run(Action<string> log) => Run(log, BenchmarkConfig.E5);
@@ -98,9 +99,11 @@ namespace MartianMap.Routing
                     continue;
                 }
 
+                // The E5 rows of every terrain first: the rows outside E5 search further and grow the
+                // per-thread workspace, which stays, so they must not run before an E5 row.
                 foreach (Terrain t in terrains)
                 {
-                    if (!route && !field && !order && !(stress && t == Terrain.Uniform))
+                    if (!route && !field && !(stress && t == Terrain.Uniform))
                     {
                         continue;
                     }
@@ -109,18 +112,32 @@ namespace MartianMap.Routing
                     if (route)
                     {
                         Line(RouteRow(g, t, c));
-                        Line(AlternativesRow(g, t, c));
                     }
 
-                    Field homeField = null;
                     if (field || (stress && t == Terrain.Uniform))
                     {
-                        Line(FieldRow(g, t, c, stress && !field, out homeField));
+                        Line(FieldRow(g, t, c, stress && !field));
+                    }
+
+                    GC.KeepAlive(g);
+                }
+
+                foreach (Terrain t in terrains)
+                {
+                    if (!route && !order)
+                    {
+                        continue;
+                    }
+
+                    CostGrid g = BenchmarkGrids.Make(t, size, GridSeed(c.Seed, size, t));
+                    if (route)
+                    {
+                        Line(AlternativesRow(g, t, c));
                     }
 
                     if (order)
                     {
-                        Line(OrderStopsRow(g, t, c, homeField));
+                        Line(OrderStopsRow(g, t, c));
                     }
 
                     GC.KeepAlive(g);
@@ -218,12 +235,12 @@ namespace MartianMap.Routing
             return Row(g.Width, t, "Alternatives", ms, "-", "-", found, gcs, mb, double.PositiveInfinity, OutsideE5);
         }
 
-        private static string FieldRow(CostGrid g, Terrain t, BenchmarkConfig c, bool stress, out Field field)
+        private static string FieldRow(CostGrid g, Terrain t, BenchmarkConfig c, bool stress)
         {
             int home = HomeNode(g, c.Params);
             int warmUp = stress ? 1 : c.FieldWarmUp;
             int runs = stress ? 1 : c.FieldRuns;
-            field = null;
+            Field field = null;
             if (home < 0)
             {
                 return $"| {g.Width} | {t} | ReturnField | 0 | 0 | | | | | | | | no home |";
@@ -256,12 +273,12 @@ namespace MartianMap.Routing
         /// <summary>
         /// One <see cref="Router.OrderStops"/> call in TSP mode, after the A* rows warmed the code
         /// up: <c>OrderStopsK</c> free stops drawn uniformly in a disc of <c>OrderStopsRadiusM</c>
-        /// around the field row's home, which is also the start, with that row's field (or one
-        /// computed here, untimed). Found is 1 if every leg of the fastest plan was found. 'order ms'
-        /// times <see cref="StopOrder.Order"/> alone, on the fastest legs' matrix built again
-        /// without the clock.
+        /// around the field row's home, which is also the start, with the field of that home
+        /// (computed here, untimed). Found is 1 if every leg of the fastest plan was found. 'order ms'
+        /// times <see cref="StopOrder.Order"/> alone, on the straight-line distances between the same
+        /// points: its work, <c>2^k · k²</c>, does not depend on the costs.
         /// </summary>
-        private static string OrderStopsRow(CostGrid g, Terrain t, BenchmarkConfig c, Field field)
+        private static string OrderStopsRow(CostGrid g, Terrain t, BenchmarkConfig c)
         {
             string query = $"OrderStops k={c.OrderStopsK}";
             int home = HomeNode(g, c.Params);
@@ -271,7 +288,7 @@ namespace MartianMap.Routing
             }
 
             EnuPoint homePoint = NodePoint(g, home);
-            field = field ?? Router.ReturnField(g, homePoint, c.Params);
+            Field field = Router.ReturnField(g, homePoint, c.Params);
             var rng = new SplitMix64(GridSeed(c.Seed, g.Width, t) ^ 0x53544F5053UL);
             var stops = new Stop[c.OrderStopsK];
             for (int k = 0; k < stops.Length; k++)
@@ -300,44 +317,30 @@ namespace MartianMap.Routing
                 found = leg.Found ? found : 0;
             }
 
-            string order = F(HeldKarpMs(g, c, home, stops));
+            string order = F(HeldKarpMs(homePoint, stops));
             GC.KeepAlive(field);
             GC.KeepAlive(g);
             return Row(g.Width, t, query, ms, "-", order, found, gcs, mb, double.PositiveInfinity, OutsideE5);
         }
 
         /// <summary>
-        /// The time of <see cref="StopOrder.Order"/> alone on the matrix <see cref="Router.OrderStops"/>
-        /// builds (the fastest legs between the start, which is home, and the reachable stops).
+        /// The time of <see cref="StopOrder.Order"/> alone, on the straight-line distances between
+        /// <paramref name="home"/> (start and end) and <paramref name="stops"/>.
         /// </summary>
-        private static double HeldKarpMs(CostGrid g, BenchmarkConfig c, int home, Stop[] stops)
+        private static double HeldKarpMs(EnuPoint home, Stop[] stops)
         {
-            var reachable = new List<int>();
-            var nodes = new int[stops.Length];
-            for (int k = 0; k < stops.Length; k++)
-            {
-                nodes[k] = Router.NearestNode(g, stops[k].EnuM);
-                Router.Leg(g, home, nodes[k], c.Params, Weights.Fastest, out double cost);
-                if (!double.IsPositiveInfinity(cost))
-                {
-                    reachable.Add(nodes[k]);
-                }
-            }
-
-            int m = reachable.Count;
+            int m = stops.Length;
+            double D(EnuPoint a, EnuPoint b) => Math.Sqrt(((a.E - b.E) * (a.E - b.E)) + ((a.N - b.N) * (a.N - b.N)));
             var fromStart = new double[m];
             var between = new double[m, m];
             var toHome = new double[m];
             for (int a = 0; a < m; a++)
             {
-                Router.Leg(g, home, reachable[a], c.Params, Weights.Fastest, out fromStart[a]);
-                Router.Leg(g, reachable[a], home, c.Params, Weights.Fastest, out toHome[a]);
+                fromStart[a] = D(home, stops[a].EnuM);
+                toHome[a] = fromStart[a];
                 for (int b = 0; b < m; b++)
                 {
-                    if (a != b)
-                    {
-                        Router.Leg(g, reachable[a], reachable[b], c.Params, Weights.Fastest, out between[a, b]);
-                    }
+                    between[a, b] = D(stops[a].EnuM, stops[b].EnuM);
                 }
             }
 
@@ -557,7 +560,8 @@ namespace MartianMap.Routing
         /// E5 as it is run (the user's decision, 2026-11-14: only on the laptop, nothing on the
         /// tablet): the five terrains on 1000² and 2000², 500 m routes with 1 warm-up + 5 runs and
         /// fields with 1 + 1; no 4000² and no stress field. Outside E5: Alternatives on the A*
-        /// pairs, and OrderStops with 12 stops within 250 m on 2000². <see cref="Params"/> is
+        /// pairs, and OrderStops with 12 stops within 250 m on 1000² (on 2000² it took the runner
+        /// past 2 minutes: 27 s on WallWithGap alone). <see cref="Params"/> is
         /// <c>contracts/fixtures/routing/cost_params.json</c>, schema 1 (a test compares them).
         /// </summary>
         internal static BenchmarkConfig E5 => new BenchmarkConfig
@@ -570,7 +574,7 @@ namespace MartianMap.Routing
             FieldSizes = new[] { 1000, 2000 },
             FieldRuns = 1,
             FieldWarmUp = 1,
-            OrderStopsSizes = new[] { 2000 },
+            OrderStopsSizes = new[] { 1000 },
             OrderStopsK = 12,
             OrderStopsRadiusM = 250,
             StressFieldSize = 0,
