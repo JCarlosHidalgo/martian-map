@@ -67,6 +67,7 @@ namespace MartianMap.Terrain
             // The orchestration lives next to the map (Tablet, "Orquestación"); added here so the
             // prefab needs no manual wiring.
             EnsureComponent<RouteOrchestrator>();
+            EnsureComponent<EditOrchestrator>();
         }
 
         private T EnsureComponent<T>() where T : Component
