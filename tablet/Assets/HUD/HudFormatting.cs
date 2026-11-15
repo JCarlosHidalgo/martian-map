@@ -24,6 +24,17 @@ namespace MartianMap.HUD
             microgray >= 1000 ? HudStrings.Milligray : HudStrings.Microgray,
             microgray >= 1000 ? microgray / 1000 : microgray);
 
+        public static string Distance(double metres)
+        {
+            if (double.IsNaN(metres) || double.IsInfinity(metres) || metres < 0)
+            {
+                return HudStrings.Unavailable;
+            }
+
+            return metres < 1000 ? Format(HudStrings.Metres, metres)
+                : Format(HudStrings.Kilometres, metres / 1000);
+        }
+
         public static string Format(string template, params object[] values) =>
             string.Format(CultureInfo.InvariantCulture, template, values);
     }
