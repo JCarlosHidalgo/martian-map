@@ -192,7 +192,7 @@ Límites que se declaran:
 | Tramo | **A\* 16-conexo + suavizado**: string-pulling que solo acepta un atajo si no empeora el costo integrado, que es el de la regla de los tramos aplicada al atajo entero *(propuesta)*. El atajo de un ancla a un nodo posterior del camino de A\* se acepta si su costo (tiempo P50 más la penalización ámbar, el mismo que minimiza A\*) no pasa de la suma de las aristas que sustituye, con un margen relativo de 10⁻⁹ para los empates de redondeo de un atajo colineal; desde cada ancla se alarga nodo a nodo y para en el primer rechazo, y el último aceptado es el ancla siguiente. Así la ruta suavizada nunca cuesta más que la de A\* *(propuesta de P3)* |
 | Regreso | **campo Dijkstra inverso al hábitat**: da radio de regreso, punto de no-retorno y heatmap en una corrida |
 | Alternativas | 3, por suma ponderada: cada una es el A\* y el suavizado del tramo con sus propios pesos, que entran en la regla de los tramos; un atajo solo se acepta si no empeora el costo de su alternativa *(propuesta de P3)* |
-| Orden de paradas | **Held-Karp (k ≤ 12) o greedy + 2-opt**, en modos TSP con depósito y orienteering |
+| Orden de paradas | **Held-Karp (k ≤ 12) o greedy + 2-opt**, en modos TSP con depósito y orienteering. El umbral cuenta las paradas a las que se llega desde `start`; por encima, en TSP, vecino más cercano desde `start` y 2-opt, y en OP, inserción greedy por valor/costo y 2-opt *(propuesta de P3)* |
 | Opcionales | HPA\*, D\* Lite y OR-Tools |
 
 - Theta\* básico no garantiza el óptimo y cruza zonas de peligro si se implementa mal (contra R4).
@@ -210,6 +210,10 @@ Cómo:
 - Arrays planos (SoA), sin `class Node`, sin LINQ.
 - Llamadas thread-safe; el campo corre en un hilo de fondo.
 - Planificación a 2 m: hasta 4 M de celdas (zona de 4×4 km; la de 3×3 km son 2,25 M).
+- La memoria de trabajo de la búsqueda, una por hilo, guarda lo que es de un valor por nodo; la
+  lista de nodos tocados no pasa de un octavo de la grilla (más allá, se reinicia la grilla entera)
+  y el heap se recorta al devolverla, así que una búsqueda larga no la deja grande *(propuesta de
+  P3)*.
 - Un CI compila la librería **solo** contra netstandard2.1.
 
 Esfuerzo estimado: ~4–6 h el tramo, ~1–2 h el campo, ~3–4 h las paradas. En qué orden se
@@ -375,8 +379,27 @@ dentro de un método síncrono.
   solo tramo de `start` a `home`, y `return_ok` solo dice si ese tramo se encuentra: la regla de
   `return_ok` se mira al salir de cada parada, y sin paradas no se compara con el presupuesto
   *(decisión de P3, 2026-11-15)*. Cada alternativa tiene sus tramos, totales, dosis y `return_ok`.
-  En OP, o con más de 12 paradas, lanza `NotImplementedException` hasta que lleguen greedy + 2-opt y
-  orienteering (H24–36).
+  Con más de 12 paradas a las que se llega desde `start`, el orden es el vecino más cercano desde
+  `start` (por costo; en un empate, la de menor posición en `stops`) y después 2-opt de mejor
+  mejora sobre los mismos costos en sus dos sentidos: un cambio entra si baja el costo más de
+  10⁻⁹ relativo, y en un empate gana el par de posiciones menor. Es determinista, pero no siempre el
+  óptimo *(decisión de P3, 2026-11-15)*.
+- **OP** *(decisión de P3, 2026-11-15)*: de las paradas a las que se llega desde `start`, se queda el
+  subconjunto de más `science_value` cuya `Plan` más rápida cumple la regla de `return_ok` al salir
+  de cada parada; así la `Plan` de `fastest` tiene `return_ok` verdadero siempre que lleve alguna
+  parada. Cada subconjunto se ordena como en TSP y la regla se mira sobre ese orden. Las demás,
+  también las inalcanzables, van a `dropped`, en el orden de entrada; una parada con
+  `science_value` 0 no se elige. Hasta 12 paradas alcanzables es exacto: la tabla de Held-Karp da el
+  costo óptimo de cada subconjunto, y en un empate de valor gana el de menor costo (tramos más
+  `dwell_s`, con el mismo margen de 10⁻⁹) y después el que incluye la parada de menor posición en
+  `stops` donde difieren. Por encima, inserción greedy: se inserta la parada y la posición de mayor
+  `science_value / (Δcosto + dwell_s)` que sigue cumpliendo la regla, y cuando ninguna cabe, 2-opt
+  que solo acepta órdenes que la cumplen; se repite mientras el 2-opt mejore. `order` y `dropped`
+  son los mismos en las tres `Plan`.
+- **El tiempo de `OrderStops`** crece con el cuadrado de las paradas: un A\* por cada par ordenado
+  de paradas alcanzables y uno desde `start` a cada parada. No hay un máximo de paradas. Lo dominan
+  los tramos largos y las paradas inalcanzables: cada una cuesta una búsqueda de toda la parte
+  conexa de la grilla alrededor de `start` (en TSP, otra en cada alternativa) *(propuesta de P3)*.
 - `Plan.dose_uGy` es la integral de esa misma tasa de `t_utc` a `t_utc + total_s.p50` *(propuesta)*. `return_ok` es falso si,
   al salir de alguna parada, lo transcurrido a P90 (la caminata P90 acumulada más los `dwell_s`)
   más el regreso a `home` con P90 del `home_field` supera `min(budget.t_s, limit_s)`; la igualdad
@@ -403,7 +426,7 @@ Lo que lanza `ArgumentException` en `Routing` (un argumento inválido,
   `f_terreno` y `f_rug_min` en (0, 1]…), más lo que el esquema no puede comparar:
   `v0.p90` ≤ `p50` ≤ `p10` ≤ `walk_ceiling_mps`, `relief_penalty_from_cm` < `relief_block_cm` y
   `hazard_amber_min` < `hazard_red_min`.
-- `OrderStops`: un `home_field` de otra `CostGrid`, unas `conditions` nulas, un `stops` nulo o con una parada nula, o dos paradas con el mismo `id`, porque `order` y `dropped` son listas de `id` *(propuesta de P3)*.
+- `OrderStops`: un `home_field` de otra `CostGrid`, unas `conditions` nulas, un `stops` nulo o con una parada nula, o dos paradas con el mismo `id`, porque `order` y `dropped` son listas de `id` *(propuesta de P3)*; y un `mode` que no es TSP ni OP (`ArgumentOutOfRangeException`) *(propuesta de P3)*.
 
 Las tres alternativas *(equipo)*:
 

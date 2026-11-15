@@ -253,10 +253,14 @@ namespace MartianMap.Routing
         }
 
         /// <summary>
-        /// The working arrays of one search, kept per thread (<c>[ThreadStatic]</c>) and reused: they
-        /// grow to the largest grid seen and stay. A returned workspace is clean: <c>Key</c> is +∞
-        /// and <c>Move</c> is <see cref="Unseen"/> on every node, and the heap is empty. A reentrant
-        /// call that finds it taken makes another.
+        /// The working arrays of one search, kept per thread (<c>[ThreadStatic]</c>) and reused. The
+        /// arrays of one entry per node (<c>Key</c>, <c>Move</c> and the heap's index) grow to the
+        /// largest grid seen and stay. The rest does not stay large: the touched list stops at
+        /// <see cref="TouchedCap"/> and, past it, the return resets every node of the grid instead;
+        /// and the return trims the heap's entries to <see cref="HeapKeep"/>. None of this changes a
+        /// result. A returned workspace is clean: <c>Key</c> is +∞ and <c>Move</c> is
+        /// <see cref="Unseen"/> on every node, and the heap is empty. A reentrant call that finds it
+        /// taken makes another.
         /// </summary>
         private sealed class Workspace
         {
@@ -269,11 +273,26 @@ namespace MartianMap.Routing
             /// <summary>Bit 6: the node is the root, with no parent.</summary>
             internal const byte Root = 0x40;
 
+            /// <summary>The heap entries a returned workspace keeps.</summary>
+            private const int HeapKeep = 4096;
+
             [ThreadStatic]
             private static Workspace cached;
 
             private int[] touched = new int[64];
             private int touchedCount;
+
+            /// <summary>Whether a node was reached past <see cref="TouchedCap"/>, so the reset is of every node.</summary>
+            private bool overflow;
+
+            /// <summary>The number of nodes of the grid of the current search.</summary>
+            private int rentedCount;
+
+            /// <summary>
+            /// The most nodes the touched list holds: an eighth of the grid (and at least 64). A
+            /// search that reaches more resets every node, which costs about the same.
+            /// </summary>
+            private int TouchedCap => Math.Max(64, rentedCount / 8);
 
             /// <summary>The best cost found to each node.</summary>
             internal float[] Key { get; private set; } = Array.Empty<float>();
@@ -288,6 +307,7 @@ namespace MartianMap.Routing
                 Workspace w = cached ?? new Workspace();
                 cached = null;
                 w.Ensure(nodeCount);
+                w.rentedCount = nodeCount;
                 return w;
             }
 
@@ -297,12 +317,27 @@ namespace MartianMap.Routing
                 cached = w;
             }
 
-            /// <summary>Records a node reached for the first time, to reset only those.</summary>
+            /// <summary>
+            /// Records a node reached for the first time, to reset only those; past
+            /// <see cref="TouchedCap"/> it records no more, and the return resets every node.
+            /// </summary>
             internal void Touch(int node)
             {
+                if (overflow)
+                {
+                    return;
+                }
+
                 if (touchedCount == touched.Length)
                 {
-                    int[] grown = new int[touched.Length * 2];
+                    int cap = TouchedCap;
+                    if (touched.Length >= cap)
+                    {
+                        overflow = true;
+                        return;
+                    }
+
+                    int[] grown = new int[Math.Min(touched.Length * 2, cap)];
                     Array.Copy(touched, grown, touchedCount);
                     touched = grown;
                 }
@@ -340,10 +375,16 @@ namespace MartianMap.Routing
                 }
 
                 touchedCount = 0;
+                overflow = false;
             }
 
             private void Reset()
             {
+                if (overflow)
+                {
+                    ResetAll(rentedCount);
+                }
+
                 for (int t = 0; t < touchedCount; t++)
                 {
                     Key[touched[t]] = float.PositiveInfinity;
@@ -352,6 +393,7 @@ namespace MartianMap.Routing
 
                 touchedCount = 0;
                 Heap.Clear();
+                Heap.Trim(HeapKeep);
             }
         }
     }

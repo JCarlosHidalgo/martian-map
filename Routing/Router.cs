@@ -310,11 +310,27 @@ namespace MartianMap.Routing
         /// <c>return_ok</c> says whether, on leaving each stop, the walk at P90 plus every
         /// <c>dwell_s</c> so far plus the field's time back fits (<see cref="ReturnFits"/>); with no
         /// stops there is nothing to leave, so it only says whether the leg home was found, without
-        /// the budget. Each alternative has its own legs, totals, dose and <c>return_ok</c>.</para>
-        /// It throws <see cref="ArgumentException"/> for two stops with the same id, and
-        /// <see cref="NotImplementedException"/> in <see cref="StopMode.Op"/> or with more than
-        /// <see cref="StopOrder.MaxExact"/> stops (greedy + 2-opt and orienteering come later).
-        /// It runs one A* per ordered pair of stops: call it off the main thread.
+        /// the budget. Each alternative has its own legs, totals, dose and <c>return_ok</c>.
+        /// With more than <see cref="StopOrder.MaxExact"/> stops reachable from
+        /// <paramref name="start"/>, the order is nearest neighbour from the start and then 2-opt over
+        /// the same costs, both ways, which is deterministic but not always the optimum.</para>
+        /// <para>OP: of the stops reachable from <paramref name="start"/>, the subset with the most
+        /// <c>science_value</c> whose fastest plan fits the <c>return_ok</c> rule at every stop, so the
+        /// fastest plan's <c>return_ok</c> is true whenever it has a stop; the rest, the unreachable
+        /// ones too, go to <c>dropped</c> in input order, and a stop of value 0 is never taken. Each
+        /// subset is ordered as in TSP and the rule is asked of that order. Up to
+        /// <see cref="StopOrder.MaxExact"/> reachable stops it is exact; on a tie of value, the lower
+        /// cost (legs plus <c>dwell_s</c>, within 1e-9), then the subset that holds the stop of lowest
+        /// input index where the two differ. Beyond, greedy insertion by value per cost and 2-opt
+        /// (<see cref="StopOrder.Choose"/>). <c>order</c> and <c>dropped</c> are the same in the three
+        /// plans.</para>
+        /// It throws <see cref="ArgumentException"/> for two stops with the same id and
+        /// <see cref="ArgumentOutOfRangeException"/> for a <paramref name="mode"/> that is not defined.
+        /// It runs one A* per ordered pair of reachable stops, and one per stop from the start: the
+        /// time grows with the square of the stops, and it is dominated by the long legs and by the
+        /// unreachable stops, each of which costs a search of the whole connected part of the grid
+        /// around <paramref name="start"/> (in TSP, again in each other alternative). Call it off the
+        /// main thread.
         /// </summary>
         public static IReadOnlyList<Plan> OrderStops(
             CostGrid grid,
@@ -364,14 +380,9 @@ namespace MartianMap.Routing
                 }
             }
 
-            if (mode != StopMode.Tsp)
+            if (mode != StopMode.Tsp && mode != StopMode.Op)
             {
-                throw new NotImplementedException("Orienteering (OP) comes with greedy + 2-opt, in H24–36.");
-            }
-
-            if (stops.Length > StopOrder.MaxExact)
-            {
-                throw new NotImplementedException($"More than {StopOrder.MaxExact} stops need greedy + 2-opt, in H24–36.");
+                throw new ArgumentOutOfRangeException(nameof(mode));
             }
 
             int k = stops.Length;
@@ -420,34 +431,102 @@ namespace MartianMap.Routing
                 reachedFromStart[a] = fromStart[reachable[a]];
             }
 
-            int[] best = StopOrder.Order(reachedFromStart, between, homeReached ? toHome : null);
-            var order = new int[k];
-            for (int a = 0; a < m; a++)
+            double limitS = DurationLimit(conditions, tUtc, budget.DoseUGy);
+            double availableS = Math.Min(budget.TS, limitS);
+            double[] back = homeReached ? toHome : null;
+            int[] best;
+            if (mode == StopMode.Tsp)
             {
-                order[a] = reachable[best[a]];
+                best = m <= StopOrder.MaxExact
+                    ? StopOrder.Order(reachedFromStart, between, back)
+                    : StopOrder.Heuristic(reachedFromStart, between, back);
+            }
+            else
+            {
+                var value = new int[m];
+                var dwell = new double[m];
+                for (int a = 0; a < m; a++)
+                {
+                    value[a] = stops[reachable[a]].ScienceValue;
+                    dwell[a] = stops[reachable[a]].DwellS;
+                }
+
+                // Only the greedy insertion needs the leg with no stops; the plan reuses it.
+                double direct = 0;
+                if (m > StopOrder.MaxExact && homeReached)
+                {
+                    fastest[k, k + 1] = Leg(grid, startNode, homeNode, p, Weights.Fastest, out direct);
+                }
+
+                // The return_ok rule of the fastest plan, over the fastest legs of the matrix.
+                bool Fits(int[] chosen)
+                {
+                    double t90 = 0;
+                    int fromKey = k;
+                    foreach (int a in chosen)
+                    {
+                        int i = reachable[a];
+                        Route r = fastest[fromKey, i];
+                        if (r == null || !r.Found)
+                        {
+                            return false;
+                        }
+
+                        t90 += r.EtaS.P90 + stops[i].DwellS;
+                        if (!ReturnFits(t90, homeField.TimeSArray[node[i]], availableS))
+                        {
+                            return false;
+                        }
+
+                        fromKey = i;
+                    }
+
+                    // The leg home must be found too, or the plan has no return.
+                    return chosen.Length == 0 || (fastest[fromKey, k + 1] != null && fastest[fromKey, k + 1].Found);
+                }
+
+                best = StopOrder.Choose(reachedFromStart, between, back, direct, value, dwell, Fits);
             }
 
-            int at = m;
+            // In TSP every stop is in the order, the unreachable ones last; in OP the rest is dropped.
+            var inOrder = new bool[k];
+            var order = new int[mode == StopMode.Tsp ? k : best.Length];
+            for (int a = 0; a < best.Length; a++)
+            {
+                order[a] = reachable[best[a]];
+                inOrder[order[a]] = true;
+            }
+
+            int at = best.Length;
+            var dropped = new List<string>();
             for (int i = 0; i < k; i++)
             {
-                if (!reachable.Contains(i))
+                if (inOrder[i])
+                {
+                    continue;
+                }
+
+                if (mode == StopMode.Tsp)
                 {
                     order[at++] = i;
                 }
+                else
+                {
+                    dropped.Add(stops[i].Id);
+                }
             }
 
-            double limitS = DurationLimit(conditions, tUtc, budget.DoseUGy);
-            double availableS = Math.Min(budget.TS, limitS);
-            var ordered = new string[k];
-            for (int i = 0; i < k; i++)
+            var ordered = new string[order.Length];
+            for (int i = 0; i < order.Length; i++)
             {
                 ordered[i] = stops[order[i]].Id;
             }
 
+            string[] droppedIds = dropped.ToArray();
             var plans = new Plan[3];
             for (int alt = 0; alt < plans.Length; alt++)
             {
-                plans[alt] = PlanOf(grid, stops, order, ordered, node, startNode, homeNode, homeField, fastest, Weights.For((Alternative)alt, p), alt == (int)Alternative.Fastest, availableS, limitS, conditions, tUtc, p);
+                plans[alt] = PlanOf(grid, stops, order, ordered, droppedIds, node, startNode, homeNode, homeField, fastest, Weights.For((Alternative)alt, p), alt == (int)Alternative.Fastest, availableS, limitS, conditions, tUtc, p);
             }
 
             return Array.AsReadOnly(plans);
@@ -463,6 +542,7 @@ namespace MartianMap.Routing
             Stop[] stops,
             int[] order,
             string[] ordered,
+            string[] dropped,
             int[] node,
             int startNode,
             int homeNode,
@@ -476,16 +556,17 @@ namespace MartianMap.Routing
             DateTime tUtc,
             CostParams p)
         {
-            int k = order.Length;
+            // The matrix keys every stop by its index, with the start as n and home as n + 1.
+            int k = order.Length, n = stops.Length;
             var legs = new Route[k + 1];
             double t10 = 0, t50 = 0, t90 = 0;
             bool found = true, fits = true;
-            int from = startNode, fromKey = k;
+            int from = startNode, fromKey = n;
             for (int leg = 0; leg <= k; leg++)
             {
                 bool toHome = leg == k;
                 int to = toHome ? homeNode : node[order[leg]];
-                int toKey = toHome ? k + 1 : order[leg];
+                int toKey = toHome ? n + 1 : order[leg];
                 Route r = isFastest ? fastest[fromKey, toKey] : null;
                 legs[leg] = r ?? Leg(grid, from, to, p, w, out _);
                 found &= legs[leg].Found;
@@ -504,10 +585,10 @@ namespace MartianMap.Routing
 
             if (!found)
             {
-                return new Plan(ordered, Array.Empty<string>(), legs, new Percentiles(double.PositiveInfinity, double.PositiveInfinity, double.PositiveInfinity), double.PositiveInfinity, limitS, false);
+                return new Plan(ordered, dropped, legs, new Percentiles(double.PositiveInfinity, double.PositiveInfinity, double.PositiveInfinity), double.PositiveInfinity, limitS, false);
             }
 
-            return new Plan(ordered, Array.Empty<string>(), legs, new Percentiles(t10, t50, t90), DoseUGy(conditions, tUtc, t50), limitS, fits);
+            return new Plan(ordered, dropped, legs, new Percentiles(t10, t50, t90), DoseUGy(conditions, tUtc, t50), limitS, fits);
         }
 
         /// <summary>
