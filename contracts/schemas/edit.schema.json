@@ -11,7 +11,7 @@
     "lamport": {"type": "integer", "minimum": 1, "maximum": 9223372036854775807},
     "author": {"$ref": "#/$defs/author"},
     "creator": {"$ref": "#/$defs/author", "description": "Author of this entity's first edit; unchanged by later edits."},
-    "zone_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$"},
+    "zone_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$(?![\\s\\S])"},
     "entity_id": {"$ref": "#/$defs/uuid"},
     "op": {"enum": ["hazard.set", "obstacle.set", "note.set"], "description": "The operation stays the same for every edit of an entity."},
     "payload": {"type": "object"},
@@ -38,8 +38,8 @@
     }
   ],
   "$defs": {
-    "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
-    "author": {"type": "string", "pattern": "^[a-z0-9-]{2,16}$"},
+    "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$(?![\\s\\S])"},
+    "author": {"type": "string", "pattern": "^[a-z0-9-]{2,16}$(?![\\s\\S])"},
     "point": {
       "description": "[east, north] as signed 1/256-metre integers relative to the zone ENU origin.",
       "type": "array",
