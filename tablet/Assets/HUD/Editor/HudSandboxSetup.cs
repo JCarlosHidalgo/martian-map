@@ -53,6 +53,10 @@ namespace MartianMap.HUD
                 var editsData = new SerializedObject(edits);
                 editsData.FindProperty("_font").objectReferenceValue = font;
                 editsData.ApplyModifiedPropertiesWithoutUndo();
+                var pov = root.GetComponent<PovHud>() ?? root.AddComponent<PovHud>();
+                var povData = new SerializedObject(pov);
+                povData.FindProperty("_font").objectReferenceValue = font;
+                povData.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             }
             finally

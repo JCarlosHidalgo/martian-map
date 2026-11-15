@@ -4,6 +4,21 @@ namespace MartianMap.HUD
     public static class HudStrings
     {
         public const string Brand = "MARTIAN MAP  /  SCIENCE OPERATIONS";
+        public const string PovGallery = "POV IMAGES / {0}";
+        public const string PovPin = "POV / {0}\nCredit: {1}";
+        public const string PovTitle = "POV IMAGE / {0}";
+        public const string PovProvenance = "Credit: {0}\nItem: {1}\nSource: {2}\nCaptured: {3}{4}\nE {5:0.#} m, N {6:0.#} m / Version {7}";
+        public const string PovNext = "NEXT IMAGE";
+        public const string PovSourcePage = "SOURCE PAGE";
+        public const string PovReady = "Select a POV pin to view its image and credit.";
+        public const string PovEmpty = "No POV images are available in this zone.";
+        public const string PovInvalidMetadata = "POV image metadata are incomplete. Images cannot be displayed.";
+        public const string PovLoading = "Loading the local POV image.";
+        public const string PovLoaded = "Local image verified. Full credit and provenance are shown below.";
+        public const string PovFileUnavailable = "The local image is unavailable. Its credit remains visible.";
+        public const string PovIntegrityFailed = "The image could not be verified. It has not been displayed.";
+        public const string PovImageInvalid = "The image could not be decoded as JPEG.";
+        public const string PovImageSize = "The image exceeds the supported 1024-pixel side length.";
         public const string EditMap = "EDIT MAP";
         public const string EditMapReview = "EDIT MAP / REVIEW";
         public const string EditTitle = "MAP EDITING";

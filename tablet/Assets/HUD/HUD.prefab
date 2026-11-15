@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: 6216426935539730001}
   - component: {fileID: 5728979307120361834}
   - component: {fileID: 66260630272642841}
+  - component: {fileID: 665032525529028515}
   m_Layer: 5
   m_Name: HUD
   m_TagString: Untagged
@@ -117,4 +118,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 458a759353c839a478a6c55144bc1e37, type: 3}
   m_Name:
   m_EditorClassIdentifier: MartianMap.HUD::MartianMap.HUD.EditHud
+  _font: {fileID: 11400000, guid: 54c4aeeefbd0d6f40bc8c19f7569641a, type: 2}
+--- !u!114 &665032525529028515
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6313097805111331202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb0d7a967980e7f47955d2d3db60f31a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: MartianMap.HUD::MartianMap.HUD.PovHud
   _font: {fileID: 11400000, guid: 54c4aeeefbd0d6f40bc8c19f7569641a, type: 2}

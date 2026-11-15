@@ -102,6 +102,35 @@ English message. `ConfigChanged` refreshes saved values in the form.
 `SettingsHud.CanEdit` exposes the registration state for the forthcoming HUD edit tools.
 Those tools must check it before entering edit mode or emitting an edit request.
 
+## POV images and per-item credits
+
+`PovHud` consumes `ZoneLoaded.Zone.Pov` and `ZoneLoaded.PovFolder`. Pins show each item's own
+credit directly on the map. POV IMAGES also opens the gallery when a pin is off screen or
+behind another HUD panel. The viewer preserves image aspect ratio and shows full literal
+credit, item/source ids, capture time, optional source sol, ENU coordinates, and version in a
+scrollable provenance area. PREVIOUS/NEXT browse the active zone; SOURCE PAGE opens only a
+valid HTTP(S) item-page URL when the user explicitly presses it. No agency logos are added.
+
+The immutable item snapshot prevents credits and coordinates from changing during an image
+read. Missing credits, duplicate ids, unsafe filenames, invalid coordinates/dates/hashes, and
+non-JPEG metadata produce no selectable image. Credit strings are never substituted with a
+generic agency credit or interpreted as markup. Long credits remain complete and scrollable.
+
+Images are read through Terrain's `LocalFiles` from the supplied local folder, including
+`jar:file://` StreamingAssets paths on Android. The HUD does not download raw science images
+or use the item's source URL as an image fallback. Verify bytes with Terrain's SHA-256 utility,
+check JPEG framing, decode one non-readable texture, and reject dimensions above C1's 1024 px
+side limit. Missing/corrupt images retain their own visible credit and do not reuse another
+item's texture. Switching, closing, disabling, zone changes, and entering edit mode release
+the texture or invalidate outstanding reads. Pins and the gallery hide during map editing.
+After disabling the component, re-enabling waits for a fresh `ZoneLoaded` instead of reusing
+POV metadata from a potentially changed zone.
+
+The canonical P1 zone/POV fixture is still absent at this increment. Without `pov[]` entries,
+HUDSandbox correctly shows zero images. Tests create synthetic JPEGs in memory or OS temporary
+files and feed the existing C1/C5 types; no NASA image, credit, or contract fixture is invented.
+P1 supplies real imagery/metadata and P4 supplies verified cache files and the local folder.
+
 ## Editing hazards, obstacles, and notes
 
 EDIT MAP opens the editing panel only after a zone is loaded and this tablet has a saved
@@ -165,6 +194,9 @@ Editing tests cover fixed-point boundaries, simple-ring geometry, every payload 
 confirmation/cancellation, tombstones, concurrent entity updates, rejection handling,
 registration, rendering, and actual map taps. In the editor they export C3 examples to a
 unique file in the OS temporary directory, logging its path for independent schema checks.
+POV tests cover exact credit snapshots, local and Android paths, integrity failures, missing
+files, image size/aspect ratio, long literal credits, out-of-order loads, close/zone changes,
+and the actual Terrain local-file reader. The test images are explicitly synthetic.
 
 From PowerShell at the repository root:
 
@@ -182,10 +214,11 @@ Close the editor first when running batch tests against the same project.
 
 P4 can keep the existing HUD prefab instance in `Main.unity`: it retains its original GUID.
 The prefab has `MissionHud`, `ScienceHud`, `SettingsHud`, `AstronautHud`, and
-`RouteAlternativesHud`, `EditHud`, an assigned mission asset, and a font. Its Canvas and
+`RouteAlternativesHud`, `EditHud`, `PovHud`, an assigned mission asset, and a font. Its Canvas and
 controls are created at runtime. There must be only one active EventSystem; the HUD creates
 one only when the scene does not already have one.
 
 This increment covers the mission panel, route handoff, layer controls, and source-rate
 presentation, settings, author registration, simulated astronaut relocation, and route
-comparison controls, and edit tools. POV media remain separate work.
+comparison controls, edit tools, and credited POV viewing. Real POV datasets and Android
+device verification remain producer/integration work.
