@@ -191,7 +191,7 @@ Límites que se declaran:
 |---|---|
 | Tramo | **A\* 16-conexo + suavizado**: string-pulling que solo acepta un atajo si no empeora el costo integrado, que es el de la regla de los tramos aplicada al atajo entero *(propuesta)*. El atajo de un ancla a un nodo posterior del camino de A\* se acepta si su costo (tiempo P50 más la penalización ámbar, el mismo que minimiza A\*) no pasa de la suma de las aristas que sustituye, con un margen relativo de 10⁻⁹ para los empates de redondeo de un atajo colineal; desde cada ancla se alarga nodo a nodo y para en el primer rechazo, y el último aceptado es el ancla siguiente. Así la ruta suavizada nunca cuesta más que la de A\* *(propuesta de P3)* |
 | Regreso | **campo Dijkstra inverso al hábitat**: da radio de regreso, punto de no-retorno y heatmap en una corrida |
-| Alternativas | 3, por suma ponderada |
+| Alternativas | 3, por suma ponderada: cada una es el A\* y el suavizado del tramo con sus propios pesos, que entran en la regla de los tramos; un atajo solo se acepta si no empeora el costo de su alternativa *(propuesta de P3)* |
 | Orden de paradas | **Held-Karp (k ≤ 12) o greedy + 2-opt**, en modos TSP con depósito y orienteering |
 | Opcionales | HPA\*, D\* Lite y OR-Tools |
 
@@ -339,7 +339,11 @@ dentro de un método síncrono.
   se prueba *(decisión de P3, 2026-11-14)*. Corre, de menor a mayor tamaño, los 5 terrenos en 1000²
   y 2000²: tramos de A\* de 500 m con 1 corrida de calentamiento y 5 medidas, y el campo con 1 + 1. La fila de
   A\* cronometra `PlanRoute` entero (A\*, suavizado y trazado) y su columna `smooth ms` da el p50 del
-  suavizado solo; la del campo cronometra `ReturnField` *(propuesta de P3)*.
+  suavizado solo; la del campo cronometra `ReturnField` *(propuesta de P3)*. Fuera del criterio de E5
+  (su veredicto es `outside E5`), cada caso de A\* tiene además una fila `Alternatives` sobre los
+  mismos pares, y en 2000² cada terreno una fila `OrderStops k=12`: 12 paradas libres a ≤ 250 m del
+  `home` de la fila del campo, con ese mismo `Field`, y una columna `order ms` con el tiempo de
+  Held-Karp solo, sobre la matriz ya calculada *(propuesta de P3)*.
   La memoria que da es el heap gestionado, con la grilla y la memoria de trabajo de la búsqueda
   vivas (`GC.GetTotalMemory(true)`) *(propuesta de P3)*. Quién escribe la
   escena y el APK: [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones".
@@ -358,6 +362,18 @@ dentro de un método síncrono.
   el resto en `dropped`. El orden se decide con la alternativa más rápida y es el mismo en las tres
   `Plan`. En TSP, una parada a la que no se llega sigue en `order`: su tramo es un `Route` con
   `found` falso, `total_s` es +∞ y `return_ok` es falso *(propuesta de P3)*.
+- **El orden en TSP** *(propuesta de P3)*: minimiza la suma de los costos de los tramos de la más
+  rápida (tiempo P50 más la penalización ámbar, lo que minimiza A\*), con el regreso a
+  `home_field.home`; `dwell_s` no entra, porque en TSP es constante. Los tramos son los de
+  `PlanRoute` entre cada par de paradas, en los dos sentidos (con `c ≠ 0` no son simétricos), y
+  Held-Karp da el óptimo exacto hasta 12 paradas. De los órdenes que no pasan del óptimo
+  × (1 + 10⁻⁹), gana el lexicográficamente menor por posición en `stops`: en un empate de redondeo
+  se queda el orden de entrada. Las paradas a las que no se llega desde `start` van al final, en el
+  orden de entrada; si `home` no se alcanza, se ordena el camino abierto. Con algún tramo no
+  encontrado, `total_s` y `dose_uGy` son +∞ y `return_ok` es falso. Sin paradas, la `Plan` es un
+  solo tramo de `start` a `home`. Cada alternativa tiene sus tramos, totales, dosis y `return_ok`.
+  En OP, o con más de 12 paradas, lanza `NotImplementedException` hasta que lleguen greedy + 2-opt y
+  orienteering (H24–36).
 - `Plan.dose_uGy` es la integral de esa misma tasa de `t_utc` a `t_utc + total_s.p50` *(propuesta)*. `return_ok` es falso si,
   al salir de alguna parada, lo transcurrido a P90 (la caminata P90 acumulada más los `dwell_s`)
   más el regreso a `home` con P90 del `home_field` supera `min(budget.t_s, limit_s)`; la igualdad
@@ -369,8 +385,8 @@ Lo que lanza `ArgumentException` en `Routing` (un argumento inválido,
 - **Cualquier número que no es finito** (NaN o ±∞): en los puntos, en `TileRasters`, `CostGrid`
   (`cell_m`, `origin_enu_m` y cada `height_m`), `Conditions`, `Stop`, `Budget` y
   `DurationLimit`. `nodata` es `height_m` = 0, nunca NaN. Así no entra ningún NaN en el cálculo,
-  y el único +∞ que sale significa "no hay camino": `Field.time_s` donde no hay regreso y el
-  `total_s` de un plan con una parada inalcanzable.
+  y el único +∞ que sale significa "no hay camino": `Field.time_s` donde no hay regreso, y el
+  `total_s` y la `dose_uGy` de un plan con un tramo no encontrado.
 - **Un punto fuera de la grilla** (`ArgumentOutOfRangeException`), también una parada en modo OP.
 - **Una fecha que no es UTC**: `ConditionModifier`, `DurationLimit` y `OrderStops`.
   `DateTime.Parse` devuelve hora local; se lee con `DateTimeStyles.AdjustToUniversal`.
@@ -384,7 +400,7 @@ Lo que lanza `ArgumentException` en `Routing` (un argumento inválido,
   `f_terreno` y `f_rug_min` en (0, 1]…), más lo que el esquema no puede comparar:
   `v0.p90` ≤ `p50` ≤ `p10` ≤ `walk_ceiling_mps`, `relief_penalty_from_cm` < `relief_block_cm` y
   `hazard_amber_min` < `hazard_red_min`.
-- `OrderStops`: un `home_field` de otra `CostGrid`, unas `conditions` nulas, o un `stops` nulo o con una parada nula.
+- `OrderStops`: un `home_field` de otra `CostGrid`, unas `conditions` nulas, un `stops` nulo o con una parada nula, o dos paradas con el mismo `id`, porque `order` y `dropped` son listas de `id` *(propuesta de P3)*.
 
 Las tres alternativas *(equipo)*:
 
@@ -397,6 +413,12 @@ Las tres alternativas *(equipo)*:
 La tercera mide desnivel y no esfuerzo: el costo metabólico está fuera de alcance
 ([Contexto del reto](./contexto.md), sección "Fuera de alcance"). Dos alternativas pueden dar la
 misma ruta.
+
+Cómo entran los pesos *(propuesta de P3)*: en la regla de los tramos de "Costo de caminata (D6)",
+pieza a pieza, como la penalización ámbar. El desnivel es el de `ascent_m`, subido más bajado: cada
+pieza suma `alt_gentlest_s_per_m` por su `|desnivel|`. Las tres van a v₀ P50, y cada una se suaviza
+con sus pesos. `eta_s` sigue sin penalizaciones, así que `safest` y `gentlest` salen más lentas o
+iguales que `fastest`.
 
 ### `Edits.Apply`
 
@@ -483,7 +505,7 @@ sí dependen entran después *(equipo)*:
 | La firma pública: los tipos y las llamadas de esta sección, en `Routing/` y `Edits/` | compila contra netstandard2.1; cada cuerpo de cálculo lanza `NotImplementedException`, pero los constructores, la comprobación de los argumentos, `DurationLimit` y `EditOpText` ya funcionan | se rellena según el orden de [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones" |
 | `routing/costgrid_synth.bin` | completo: lo genera un script | |
 | `routing/expected_route.json` | una `Route` que genera el script de `costgrid_synth.bin`, sin A\* *(equipo)*: una recta sobre la rampa de la grilla sintética, con `eta_s` = longitud_3D / (v₀ · exp(−b · |s + c|) · `f_terreno`), `c` = 0 y s = ±20/256 (+ hacia el este, − hacia el oeste): la función es simétrica, así que la ida y la vuelta sobre la misma recta tardan lo mismo. Su `u` sigue la rampa, así que se dibuja sobre el tile sintético. Fija la forma y es el mock de `Terrain`, `FX` y `HUD` | P3 la regenera con el A\* suavizado, por un PR en `contracts/`. Desde H6–12 la genera `PlanRoute`, y también los tramos de `expected_plan.json`: sobre la rampa la ruta suavizada es la misma recta, así que ninguno de los dos cambió ni un byte *(P3, 2026-11-14)* |
-| `routing/expected_plan.json` | `{schema_version, plans[]}`: las tres `Plan`, en el orden de `Alternative`, que genera el mismo script con las dos paradas de la misión sintética. Sobre la rampa las tres son iguales. Es el mock de `RouteSelected` | P3 la regenera con `OrderStops` |
+| `routing/expected_plan.json` | `{schema_version, plans[]}`: las tres `Plan`, en el orden de `Alternative`, que genera el mismo script con las dos paradas de la misión sintética. Sobre la rampa las tres son iguales. Es el mock de `RouteSelected` | P3 la regenera con `OrderStops` (desde H12–24 la genera `OrderStops`: sobre la rampa los dos órdenes empatan, gana el de entrada, `s1, s2`, y las tres alternativas son la fila, así que el archivo no cambió ni un byte *(P3, 2026-11-15)*) |
 | `edits/base_tile/` y `edits/edits_NN.json` | completos; `base_tile/` es una copia del tile sintético de C1 | |
 | `edits/expected_NN.sha256` | no existen | entran con `apply()`, antes de H6: los usa E9 |
 
