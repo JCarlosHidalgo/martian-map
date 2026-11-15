@@ -20,8 +20,11 @@ namespace MartianMap.Terrain
             /// <summary>A procedural crater field of several tiles, generated in code.</summary>
             Demo,
 
-            /// <summary>One tile like the C1 synthetic fixture: ramp, asymmetric hazard, nodata corner.</summary>
-            FixtureLike,
+            /// <summary>
+            /// The C1 contract tile <c>tile_synth_0_0_0</c> (P1) as zone <c>synth</c>; falls back to the
+            /// generated look-alike if the fixture is missing.
+            /// </summary>
+            ContractFixture,
 
             /// <summary>A zone folder inside StreamingAssets with zone.json at its root (no bundle.json).</summary>
             StreamingAssetsFolder,
@@ -41,11 +44,15 @@ namespace MartianMap.Terrain
 
         private LocalCache _cache;
         private bool _loading;
+        private bool _costParamsLoaded;
 
         public ZoneSource Source => source;
 
         /// <summary>The local cache, or null before <see cref="ZoneSource.Cache"/> was first used.</summary>
         public LocalCache Cache => _cache;
+
+        /// <summary>The <c>cost_params.json</c> in use (C4), or null if it could not be read.</summary>
+        public MartianMap.Routing.CostParams CostParams { get; private set; }
 
         private void Awake()
         {
@@ -92,14 +99,15 @@ namespace MartianMap.Terrain
         {
             source = from;
             var started = Time.realtimeSinceStartup;
+            await LoadCostParamsOnceAsync();
             LoadedZone zone;
             switch (from)
             {
                 case ZoneSource.Cache:
                     zone = await LoadFromCacheAsync(null);
                     break;
-                case ZoneSource.FixtureLike:
-                    zone = SyntheticZone.CreateFixtureLike();
+                case ZoneSource.ContractFixture:
+                    zone = await LoadContractFixtureAsync();
                     break;
                 case ZoneSource.StreamingAssetsFolder:
                     zone = await ZoneFolderLoader.LoadAsync(LocalFiles.Combine(Application.streamingAssetsPath, streamingAssetsFolder));
@@ -184,6 +192,43 @@ namespace MartianMap.Terrain
             finally
             {
                 _loading = false;
+            }
+        }
+
+        private static async Task<LoadedZone> LoadContractFixtureAsync()
+        {
+            try
+            {
+                return await FixtureLoader.LoadSynthZoneAsync();
+            }
+            catch (System.IO.FileNotFoundException missing)
+            {
+                Debug.LogWarning($"[Terrain] contract tile missing file={missing.FileName}; showing the generated look-alike");
+                return SyntheticZone.CreateFixtureLike();
+            }
+        }
+
+        /// <summary>
+        /// Reads <c>cost_params.json</c> from StreamingAssets/fixtures (C6: at run time it is a copy of
+        /// the fixture) and hands its hazard thresholds to the map. Without it the map keeps 96/192.
+        /// </summary>
+        private async Task LoadCostParamsOnceAsync()
+        {
+            if (_costParamsLoaded)
+            {
+                return;
+            }
+
+            _costParamsLoaded = true;
+            try
+            {
+                CostParams = await FixtureLoader.LoadCostParamsAsync();
+                map.ApplyCostParams(CostParams);
+                Debug.Log($"[Terrain] cost params loaded hazard_amber_min={CostParams.HazardAmberMin} hazard_red_min={CostParams.HazardRedMin}");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[Terrain] cost params unavailable error={exception.Message}; keeping default hazard thresholds");
             }
         }
 

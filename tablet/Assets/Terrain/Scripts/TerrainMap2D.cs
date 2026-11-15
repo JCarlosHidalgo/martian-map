@@ -177,6 +177,15 @@ namespace MartianMap.Terrain
             }
         }
 
+        /// <summary>Takes the hazard thresholds of <c>cost_params.json</c> (C5: _FogFarAmberMin, _FogFarRedMin).</summary>
+        public void ApplyCostParams(MartianMap.Routing.CostParams costParams)
+        {
+            hazardAmberMin = costParams.HazardAmberMin;
+            hazardRedMin = costParams.HazardRedMin;
+            Shader.SetGlobalFloat(ShaderIds.FogFarAmberMin, hazardAmberMin / 255f);
+            Shader.SetGlobalFloat(ShaderIds.FogFarRedMin, hazardRedMin / 255f);
+        }
+
         public void SetLayer(string layerId, bool on)
         {
             if (!_layerOn.ContainsKey(layerId))
