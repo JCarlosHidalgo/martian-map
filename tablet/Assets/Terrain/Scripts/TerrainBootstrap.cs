@@ -36,6 +36,9 @@ namespace MartianMap.Terrain
         [Tooltip("Unpacked zone_full bundles under StreamingAssets/zones/ to import on launch. Missing ones are skipped.")]
         [SerializeField] private string[] preloadedZones = { "gale", "demo" };
 
+        [Tooltip("What to show when the cache is empty and no zone ships in the APK: the generated demo zone (default) or the contract zone synth, which P6's synthetic mission targets.")]
+        [SerializeField] private ZoneSource emptyCacheZone = ZoneSource.Demo;
+
         [Tooltip("Folder under StreamingAssets, used when the source is StreamingAssetsFolder.")]
         [SerializeField] private string streamingAssetsFolder = "zones/gale/data";
 
@@ -146,8 +149,8 @@ namespace MartianMap.Terrain
         /// <summary>
         /// Opens the cache, imports the preloaded zones, emits ZonesChanged and loads
         /// <paramref name="zoneId"/>, or the last active zone, or the first one. With an empty cache
-        /// it shows the contract zone <c>synth</c>, which the HUD's synthetic mission targets; the
-        /// generated demo zone is the last resort.
+        /// it shows <see cref="emptyCacheZone"/>: the generated demo zone by default, or the contract
+        /// zone <c>synth</c> that the HUD's synthetic mission targets.
         /// </summary>
         private async Task<LoadedZone> LoadFromCacheAsync(string zoneId)
         {
@@ -165,8 +168,14 @@ namespace MartianMap.Terrain
             MapEvents.Emit(new ZonesChanged(zones));
             if (zones.Count == 0)
             {
-                Debug.LogWarning("[Terrain] cache is empty and no zone ships in the APK; showing the contract zone synth");
-                return await LoadContractFixtureAsync();
+                if (emptyCacheZone == ZoneSource.ContractFixture)
+                {
+                    Debug.LogWarning("[Terrain] cache is empty and no zone ships in the APK; showing the contract zone synth");
+                    return await LoadContractFixtureAsync();
+                }
+
+                Debug.LogWarning("[Terrain] cache is empty and no zone ships in the APK; showing the generated demo zone");
+                return SyntheticZone.CreateDemo();
             }
 
             var target = zoneId ?? _cache.ActiveZone;

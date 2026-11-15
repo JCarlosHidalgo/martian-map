@@ -814,8 +814,13 @@ Reglas de la orquestación *(equipo)*:
   no hay ruta.
 - **Sin `author` guardado**, `Terrain` no acepta la edición y emite `EditRejected` con
   `code: author_missing`.
-- Con la caché vacía, `Terrain` muestra la zona `synth` del contrato, que es la que usa la misión
-  sintética del `HUD`; si llega una zona del hábitat, la sustituye.
+- Con la caché vacía, `Terrain` muestra la zona demo que genera en código *(equipo)*; un ajuste
+  del arranque la cambia por la zona `synth` del contrato, que es la que usa la misión sintética
+  del `HUD`. Si llega una zona del hábitat, la sustituye.
+- **Ruta entre dos puntos** *(equipo)*: un toque corto en el mapa fija A y otro fija B; `Terrain`
+  pide a `Routing` las tres `Alternatives` y emite `RouteSelected` con una `Plan` de un tramo por
+  alternativa. Mientras `Routing` lance `NotImplementedException`, la ruta es una recta
+  provisional sobre el terreno, que mide el peligro pero no lo evita.
 
 ## HUD e indicadores (D10)
 
