@@ -340,10 +340,11 @@ dentro de un método síncrono.
   y 2000²: tramos de A\* de 500 m con 1 corrida de calentamiento y 5 medidas, y el campo con 1 + 1. La fila de
   A\* cronometra `PlanRoute` entero (A\*, suavizado y trazado) y su columna `smooth ms` da el p50 del
   suavizado solo; la del campo cronometra `ReturnField` *(propuesta de P3)*. Fuera del criterio de E5
-  (su veredicto es `outside E5`), cada caso de A\* tiene además una fila `Alternatives` sobre los
-  mismos pares, y en 2000² cada terreno una fila `OrderStops k=12`: 12 paradas libres a ≤ 250 m del
-  `home` de la fila del campo, con ese mismo `Field`, y una columna `order ms` con el tiempo de
-  Held-Karp solo, sobre la matriz ya calculada *(propuesta de P3)*.
+  (su veredicto es `outside E5`), y después de todas las filas de E5 de su tamaño, porque buscan
+  más lejos y agrandan la memoria de trabajo de la búsqueda, cada caso de A\* tiene una fila
+  `Alternatives` sobre los mismos pares, y en 1000² cada terreno una fila `OrderStops k=12`: 12
+  paradas libres a ≤ 100 m del `home` de la fila del campo, que es también el `start`, con el campo
+  de ese `home`; su columna `order ms` da el tiempo de Held-Karp solo *(propuesta de P3)*.
   La memoria que da es el heap gestionado, con la grilla y la memoria de trabajo de la búsqueda
   vivas (`GC.GetTotalMemory(true)`) *(propuesta de P3)*. Quién escribe la
   escena y el APK: [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones".

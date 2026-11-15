@@ -61,8 +61,8 @@ namespace MartianMap.Routing
                 + $"ReturnField (v0 P90) on {Join(c.FieldSizes)}², {c.FieldWarmUp} + {c.FieldRuns}; "
                 + "the A* rows time PlanRoute (A* + smoothing + trace), and 'smooth ms' is the p50 of the smoothing alone on the same pairs; "
                 + "outside E5, Alternatives on the same pairs, and OrderStops (TSP) on "
-                + $"{Join(c.OrderStopsSizes)}² with {c.OrderStopsK} free stops within {G(c.OrderStopsRadiusM)} m of the field's home and that field, 1 run, "
-                + "where 'order ms' is Held-Karp alone on the leg matrix"
+                + $"{Join(c.OrderStopsSizes)}² with {c.OrderStopsK} free stops within {G(c.OrderStopsRadiusM)} m of the field row's home, which is also the start, "
+                + "and the field of that home (untimed), 1 run, where 'order ms' is Held-Karp alone on the straight-line distances of the same points"
                 + (c.StressFieldSize > 0 ? $"; stress field on Uniform {c.StressFieldSize}², 1 + 1, outside the criterion" : string.Empty));
             Line($"- E5 (docs/guide/chapters/reparto.md): A* p95 <= {F(RouteP95Ms)} ms, field p95 <= {F(FieldP95Ms)} ms, 0 GC during the measured runs, managed heap <= {F(MaxManagedMb)} MB. "
                 + "Measured on the laptop only: the tablet is not tested.");
@@ -560,8 +560,9 @@ namespace MartianMap.Routing
         /// E5 as it is run (the user's decision, 2026-11-14: only on the laptop, nothing on the
         /// tablet): the five terrains on 1000² and 2000², 500 m routes with 1 warm-up + 5 runs and
         /// fields with 1 + 1; no 4000² and no stress field. Outside E5: Alternatives on the A*
-        /// pairs, and OrderStops with 12 stops within 250 m on 1000² (on 2000² it took the runner
-        /// past 2 minutes: 27 s on WallWithGap alone). <see cref="Params"/> is
+        /// pairs, and OrderStops with 12 stops within 100 m on 1000² (the user's decision,
+        /// 2026-11-15: within 250 m the maze alone took 28 s and the runner 150 s; on 2000² the wall
+        /// with a gap took 27 s). <see cref="Params"/> is
         /// <c>contracts/fixtures/routing/cost_params.json</c>, schema 1 (a test compares them).
         /// </summary>
         internal static BenchmarkConfig E5 => new BenchmarkConfig
@@ -576,7 +577,7 @@ namespace MartianMap.Routing
             FieldWarmUp = 1,
             OrderStopsSizes = new[] { 1000 },
             OrderStopsK = 12,
-            OrderStopsRadiusM = 250,
+            OrderStopsRadiusM = 100,
             StressFieldSize = 0,
             Seed = 0x4D41525321UL,
             Params = new CostParams(

@@ -173,7 +173,7 @@ namespace MartianMap.Routing.Tests
             Assert.That(c.FieldSizes, Is.EqualTo(new[] { 1000, 2000 }));
             Assert.That((c.FieldWarmUp, c.FieldRuns, c.StressFieldSize), Is.EqualTo((1, 1, 0)));
             Assert.That(c.OrderStopsSizes, Is.EqualTo(new[] { 1000 }));
-            Assert.That((c.OrderStopsK, c.OrderStopsRadiusM), Is.EqualTo((12, 250.0)));
+            Assert.That((c.OrderStopsK, c.OrderStopsRadiusM), Is.EqualTo((12, 100.0)));
             Assert.That(c.Label, Does.Contain("laptop"));
         }
 
