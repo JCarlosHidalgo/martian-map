@@ -4,8 +4,8 @@ using UnityEngine.InputSystem;
 namespace MartianMap.Terrain
 {
     /// <summary>
-    /// Keyboard shortcuts to test Terrain in <c>TerrainSandbox.unity</c> only, with nothing drawn on
-    /// screen: the HUD and its toggles are P6's. Layers go through <see cref="MapEvents.LayerToggled"/>,
+    /// Keyboard shortcuts to test Terrain in any scene with the Terrain prefab (TerrainBootstrap
+    /// adds them when the scene has none): the HUD and its toggles are P6's. Layers go through <see cref="MapEvents.LayerToggled"/>,
     /// as the HUD will send them.
     /// <list type="bullet">
     /// <item>1 topo · 2 hazard · 3 heat · 4 ortho · 5 thermal · 6 thermal_ir</item>
@@ -60,17 +60,9 @@ namespace MartianMap.Terrain
                 }
             }
 
-            if (keyboard.hKey.wasPressedThisFrame && map.Current != null)
+            if (keyboard.hKey.wasPressedThisFrame)
             {
-                var heatOn = map.LayerStates.TryGetValue(LayerIds.Heat, out var on) && on;
-                if (heatOn)
-                {
-                    MapEvents.Emit(new LayerToggled(LayerIds.Heat, false));
-                }
-                else
-                {
-                    FakeHeatField(map.Current.Zone);
-                }
+                ToggleFakeHeat();
             }
 
             if (bootstrap != null && keyboard.cKey.wasPressedThisFrame)
@@ -91,6 +83,25 @@ namespace MartianMap.Terrain
             if (bootstrap != null && keyboard.xKey.wasPressedThisFrame)
             {
                 _ = bootstrap.LoadAsync(TerrainBootstrap.ZoneSource.ContractFixture);
+            }
+        }
+
+        /// <summary>Turns the fake heat field on (built from the habitat) or off.</summary>
+        public void ToggleFakeHeat()
+        {
+            if (map == null || map.Current == null)
+            {
+                return;
+            }
+
+            var heatOn = map.LayerStates.TryGetValue(LayerIds.Heat, out var on) && on;
+            if (heatOn)
+            {
+                MapEvents.Emit(new LayerToggled(LayerIds.Heat, false));
+            }
+            else
+            {
+                FakeHeatField(map.Current.Zone);
             }
         }
 
