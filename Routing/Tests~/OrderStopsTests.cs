@@ -176,14 +176,21 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
-        public void OpAndMoreThanTwelveStopsAreNotImplementedYet()
+        public void OpAndMoreThanTwelveStopsGiveAPlan()
         {
             CostGrid g = Grids.Flat(20, 5);
             Field home = Router.ReturnField(g, At(0, 0), P);
             Stop[] one = { new Stop("a", At(3, 3), 1, 0) };
             Stop[] thirteen = Enumerable.Range(0, 13).Select(k => new Stop($"s{k}", At(k, 2), 1, 0)).ToArray();
-            Assert.Throws<NotImplementedException>(() => Router.OrderStops(g, At(0, 0), one, home, new Budget(14400, 50), Calm, T, StopMode.Op, P));
-            Assert.Throws<NotImplementedException>(() => Router.OrderStops(g, At(0, 0), thirteen, home, new Budget(14400, 50), Calm, T, StopMode.Tsp, P));
+
+            IReadOnlyList<Plan> op = Router.OrderStops(g, At(0, 0), one, home, new Budget(14400, 50), Calm, T, StopMode.Op, P);
+            Assert.That(op, Is.Not.Empty);
+            Assert.That(op[0].Order, Is.EqualTo(new[] { "a" }));
+            Assert.That(op[0].Dropped, Is.Empty);
+
+            IReadOnlyList<Plan> tsp = Router.OrderStops(g, At(0, 0), thirteen, home, new Budget(14400, 50), Calm, T, StopMode.Tsp, P);
+            Assert.That(tsp, Is.Not.Empty);
+            Assert.That(tsp[0].Order, Is.EquivalentTo(thirteen.Select(s => s.Id)));
         }
 
         [Test]

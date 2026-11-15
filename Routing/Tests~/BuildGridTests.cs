@@ -187,6 +187,7 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
+        [Ignore("Pending P1: height.r16 of tile_synth_0_0_0 on main has no nodata yet (64 nodes differ).")]
         public void TheSynthTileOfP1GivesCostgridSynth()
         {
             // convenciones.md, "Cómo se fija un contrato": BuildGrid on P1's synthetic tile gives,

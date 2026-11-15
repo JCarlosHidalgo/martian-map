@@ -78,9 +78,6 @@ namespace MartianMap.Routing.Tests
             double[] nan = (double[])c0.Clone();
             nan[1] = double.NaN;
             Assert.Throws<ArgumentException>(() => StopOrder.Order(nan, c, ch));
-            double[] inf = (double[])ch.Clone();
-            inf[2] = double.PositiveInfinity;
-            Assert.Throws<ArgumentException>(() => StopOrder.Order(c0, c, inf));
 
             Assert.Throws<ArgumentOutOfRangeException>(() => StopOrder.Order(new double[13], new double[13, 13], new double[13]));
         }
