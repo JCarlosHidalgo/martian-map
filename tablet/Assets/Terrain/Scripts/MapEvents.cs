@@ -20,6 +20,7 @@ namespace MartianMap.Terrain
         public static event Action<EditRequested> EditRequested;
         public static event Action<EditRejected> EditRejected;
         public static event Action<EntitiesChanged> EntitiesChanged;
+        public static event Action<RouteFocused> RouteFocused;
         public static event Action<StopHovered> StopHovered;
         public static event Action<LayerToggled> LayerToggled;
         public static event Action<AstronautMoved> AstronautMoved;
@@ -36,6 +37,7 @@ namespace MartianMap.Terrain
         public static void Emit(EditRequested e) => Raise(EditRequested, e);
         public static void Emit(EditRejected e) => Raise(EditRejected, e);
         public static void Emit(EntitiesChanged e) => Raise(EntitiesChanged, e);
+        public static void Emit(RouteFocused e) => Raise(RouteFocused, e);
         public static void Emit(StopHovered e) => Raise(StopHovered, e);
         public static void Emit(LayerToggled e) => Raise(LayerToggled, e);
         public static void Emit(AstronautMoved e) => Raise(AstronautMoved, e);
@@ -178,6 +180,26 @@ namespace MartianMap.Terrain
 
             return points;
         }
+    }
+
+    /// <summary>
+    /// HUD → FX: which of the selected route's alternatives the map shows: all three, or only one.
+    /// A new <see cref="RouteSelected"/> shows all three again.
+    /// </summary>
+    public readonly struct RouteFocused
+    {
+        public readonly bool All;
+        public readonly Alternative Alternative;
+
+        private RouteFocused(bool all, Alternative alternative)
+        {
+            All = all;
+            Alternative = alternative;
+        }
+
+        public static RouteFocused ShowAll() => new RouteFocused(true, MartianMap.Routing.Alternative.Fastest);
+
+        public static RouteFocused Only(Alternative alternative) => new RouteFocused(false, alternative);
     }
 
     /// <summary>HUD → Terrain: the astronaut created, changed or deleted an entity. Terrain completes the edit.</summary>

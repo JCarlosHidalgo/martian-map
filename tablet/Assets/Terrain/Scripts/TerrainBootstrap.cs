@@ -300,6 +300,8 @@ namespace MartianMap.Terrain
         /// <summary>Merges P5's hazard shapes for this zone, if any; a bad file never blocks the zone.</summary>
         private static async Task ApplyHazardShapesAsync(LoadedZone zone)
         {
+            // The layers count in routing as soft-ground hazard (thermal inertia, or thermal IR).
+            LayerHazard.Apply(zone);
             try
             {
                 var shapes = await HazardShapes.LoadForZoneAsync(zone.Zone);

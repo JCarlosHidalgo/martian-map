@@ -81,7 +81,7 @@ namespace MartianMap.Terrain
             {
                 SchemaVersion = 1,
                 ZoneId = "synth",
-                Name = "Synthetic zone (contract fixture)",
+                Name = "Contract zone",
                 Crs = "IAU_2015:49900",
                 OriginLatDeg = -4.81,
                 OriginLonDeg = 137.385,

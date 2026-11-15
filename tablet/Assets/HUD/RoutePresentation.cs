@@ -46,41 +46,68 @@ namespace MartianMap.HUD
         private const string SelectedColor = "#33FF59";
         private static readonly string[] AlternativeColors = { "#40D9FF", "#B859FF" };
 
+        /// <summary>True for a RouteSelected with three plans and a valid selection.</summary>
+        public static bool ValidOptions(RouteSelected message) =>
+            message.Plans != null && message.Plans.Count == 3 && (int)message.Selected >= 0 && (int)message.Selected <= 2;
+
         /// <summary>
-        /// One line per alternative with its colour on the map, total distance (sum of the legs) and
-        /// walking time (P50), or "unreachable"; preceded by a header. Null for an invalid message.
+        /// The line of one alternative: its colour on the map (selected green, the others cyan then
+        /// purple, as RouteLine), name, total distance (sum of the legs) and walking time (P50), or
+        /// "unreachable". Null for an invalid message.
         /// </summary>
+        public static string OptionLine(RouteSelected message, int index)
+        {
+            if (!ValidOptions(message) || index < 0 || index > 2)
+            {
+                return null;
+            }
+
+            var selectedIndex = (int)message.Selected;
+            var color = index == selectedIndex ? SelectedColor
+                : AlternativeColors[index < selectedIndex ? index : index - 1];
+            var alternative = (Alternative)index;
+            var plan = message.Plans[index];
+            var distance = Distance(plan);
+            return distance < 0
+                ? HudFormatting.Format(HudStrings.RouteOptionUnreachable, color, Name(alternative), string.Empty)
+                : HudFormatting.Format(HudStrings.RouteOptionLine, color, Name(alternative),
+                    HudFormatting.Distance(distance), HudFormatting.Duration(plan.TotalS.P50), string.Empty);
+        }
+
+        /// <summary>True if at least one alternative reaches the destination.</summary>
+        public static bool AnyFound(RouteSelected message)
+        {
+            if (!ValidOptions(message))
+            {
+                return false;
+            }
+
+            for (var index = 0; index < 3; index++)
+            {
+                if (Distance(message.Plans[index]) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>The header and one line per alternative, as one text. Null for an invalid message.</summary>
         public static string Options(RouteSelected message)
         {
-            if (message.Plans == null || message.Plans.Count != 3 || (int)message.Selected < 0 || (int)message.Selected > 2)
+            if (!ValidOptions(message))
             {
                 return null;
             }
 
             var text = new System.Text.StringBuilder(HudStrings.RouteOptionsHeader);
-            var other = 0;
-            var anyFound = false;
             for (var index = 0; index < 3; index++)
             {
-                var alternative = (Alternative)index;
-                var selected = alternative == message.Selected;
-                var color = selected ? SelectedColor : AlternativeColors[other++];
-                var suffix = selected ? HudStrings.RouteOptionSelectedMark : string.Empty;
-                var plan = message.Plans[index];
-                var distance = Distance(plan);
-                text.Append('\n');
-                if (distance < 0)
-                {
-                    text.Append(HudFormatting.Format(HudStrings.RouteOptionUnreachable, color, Name(alternative), suffix));
-                    continue;
-                }
-
-                anyFound = true;
-                text.Append(HudFormatting.Format(HudStrings.RouteOptionLine, color, Name(alternative),
-                    HudFormatting.Distance(distance), HudFormatting.Duration(plan.TotalS.P50), suffix));
+                text.Append('\n').Append(OptionLine(message, index));
             }
 
-            if (!anyFound)
+            if (!AnyFound(message))
             {
                 text.Append('\n').Append(HudStrings.RouteAllUnreachable);
             }

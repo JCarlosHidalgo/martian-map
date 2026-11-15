@@ -109,6 +109,9 @@ namespace MartianMap.HUD
         public const string RouteOptionUnreachable = "<color={0}><size=150%>\u2022</size></color> {1}: unreachable{2}";
         public const string RouteOptionSelectedMark = "  (selected)";
         public const string RouteAllUnreachable = "Destination unreachable: no route was found.";
+        public const string RouteHelp = "Tap A and B on the map, then PLAN ROUTE.";
+        public const string RoutePlanning = "Planning the three routes…";
+        public const string RouteShowAll = "ALL";
         public const string Available = "available";
         public const string Unavailable = "unavailable";
         public const string RouteSummary = "{0}\n{1}";

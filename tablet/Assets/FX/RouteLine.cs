@@ -7,9 +7,10 @@ namespace MartianMap.FX
 {
     /// <summary>
     /// Draws the three route alternatives of <see cref="RouteSelected"/>: the selected one in green,
-    /// the other two in cyan and purple (in Alternative order), each as a bright core and a soft
-    /// halo. With fewer than three plans it draws <c>RouteSelected.Polyline</c> alone. Line widths
-    /// are kept in screen pixels, so the routes stay visible at any zoom.
+    /// the other two in cyan and purple (in Alternative order), each as a single bright line (no
+    /// halo, at the team's request). With fewer than three plans it draws <c>RouteSelected.Polyline</c> alone. Line widths
+    /// are kept in screen pixels, so the routes stay visible at any zoom. <see cref="RouteFocused"/>
+    /// (from the HUD) shows one alternative alone, in its colour, or all three again.
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class RouteLine : MonoBehaviour
@@ -32,6 +33,7 @@ namespace MartianMap.FX
         private readonly Material[] _coreMaterials = new Material[Slots];
         private readonly Material[] _haloMaterials = new Material[Slots];
         private readonly float[] _widthScale = new float[Slots];
+        private RouteSelected? _last;
 
         private void Awake()
         {
@@ -54,12 +56,14 @@ namespace MartianMap.FX
         private void OnEnable()
         {
             MapEvents.RouteSelected += OnRouteSelected;
+            MapEvents.RouteFocused += OnRouteFocused;
             MapEvents.ZoneLoaded += OnZoneLoaded;
         }
 
         private void OnDisable()
         {
             MapEvents.RouteSelected -= OnRouteSelected;
+            MapEvents.RouteFocused -= OnRouteFocused;
             MapEvents.ZoneLoaded -= OnZoneLoaded;
             Clear();
         }
@@ -114,31 +118,54 @@ namespace MartianMap.FX
 
         private void OnRouteSelected(RouteSelected e)
         {
+            _last = e;
+            DrawPlans(e, null);
+        }
+
+        private void OnRouteFocused(RouteFocused e)
+        {
+            if (_last.HasValue)
+            {
+                DrawPlans(_last.Value, e.All ? (int?)null : (int)e.Alternative);
+            }
+        }
+
+        /// <summary>Draws all three plans, or only <paramref name="only"/>, keeping each one's colour.</summary>
+        private void DrawPlans(RouteSelected e, int? only)
+        {
             if (e.Plans == null || e.Plans.Count != Slots)
             {
                 Show(e.Polyline);
                 return;
             }
 
+            Clear();
+
             // Slot 0 is the selected plan (green); the others follow in Alternative order.
             var selected = Mathf.Clamp((int)e.Selected, 0, Slots - 1);
             var slot = 1;
             for (var index = 0; index < Slots; index++)
             {
-                var polyline = RouteSelected.ScenePolyline(e.Plans[index]);
+                var visible = only == null || only.Value == index;
+                var polyline = visible ? RouteSelected.ScenePolyline(e.Plans[index]) : null;
                 if (index == selected)
                 {
                     Draw(0, polyline, selectedColor, 1f, 0.36f);
                 }
                 else
                 {
-                    Draw(slot, polyline, slot == 1 ? firstAlternativeColor : secondAlternativeColor, 0.75f, 0.30f + 0.01f * slot);
+                    Draw(slot, polyline, slot == 1 ? firstAlternativeColor : secondAlternativeColor,
+                        only == null ? 0.75f : 1f, 0.30f + 0.01f * slot);
                     slot++;
                 }
             }
         }
 
-        private void OnZoneLoaded(ZoneLoaded e) => Clear();
+        private void OnZoneLoaded(ZoneLoaded e)
+        {
+            _last = null;
+            Clear();
+        }
 
         /// <summary>Draws one polyline as the selected route and clears the alternatives.</summary>
         public void Show(Vector3[] polyline)
@@ -176,12 +203,12 @@ namespace MartianMap.FX
             _haloMaterials[slot].SetColor("_Color", new Color(color.r, color.g, color.b, color.a * 0.28f));
             _widthScale[slot] = widthScale;
             core.positionCount = polyline.Length;
-            halo.positionCount = polyline.Length;
+            // No halo at the team's request: only the core line, so the route reads clearly.
+            halo.positionCount = 0;
             for (var i = 0; i < polyline.Length; i++)
             {
                 var p = polyline[i];
                 core.SetPosition(i, new Vector3(p.x, p.y + lift, p.z));
-                halo.SetPosition(i, new Vector3(p.x, p.y + lift - 0.02f, p.z));
             }
         }
     }

@@ -56,7 +56,8 @@ namespace MartianMap.HUD
 
         private void UpdateLauncher()
         {
-            _launcher.gameObject.SetActive(!_editing);
+            // Hidden at the team's request (the bottom-centre POV IMAGES button is not shown).
+            _launcher.gameObject.SetActive(false);
             _launcher.interactable = _photos.Count > 0;
             _launcherLabel.text = HudFormatting.Format(HudStrings.PovGallery, _photos.Count);
         }

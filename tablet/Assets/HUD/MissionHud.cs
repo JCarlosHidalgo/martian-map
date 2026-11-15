@@ -24,6 +24,12 @@ namespace MartianMap.HUD
         private TMP_Text _route;
         private RectTransform _stopList;
         private Button _planButton;
+        private readonly Button[] _optionButtons = new Button[3];
+        private readonly TMP_Text[] _optionLabels = new TMP_Text[3];
+        private Button _allButton;
+        private int? _focused;
+        private static readonly Color OptionColor = new Color(0.11f, 0.15f, 0.19f, 1f);
+        private static readonly Color OptionFocusedColor = new Color(0.24f, 0.32f, 0.40f, 1f);
         private ZoneInfo _zone;
         private EnuPoint _home;
         private EnuPoint _start;
@@ -41,12 +47,14 @@ namespace MartianMap.HUD
         {
             MapEvents.ZoneLoaded += OnZoneLoaded;
             MapEvents.RouteSelected += OnRouteSelected;
+            RoutePointsTool.PointsChanged += UpdatePlanButton;
         }
 
         private void OnDisable()
         {
             MapEvents.ZoneLoaded -= OnZoneLoaded;
             MapEvents.RouteSelected -= OnRouteSelected;
+            RoutePointsTool.PointsChanged -= UpdatePlanButton;
         }
 
         private void Start() => LoadMission(_missionAsset);
@@ -58,8 +66,8 @@ namespace MartianMap.HUD
             BuildView();
             _ready = false;
             SelectedAlternative = Alternative.Fastest;
-            _planButton.interactable = false;
-            _route.text = HudStrings.NoRoute;
+            UpdatePlanButton();
+            _route.text = HudStrings.RouteHelp;
             try
             {
                 if (asset == null)
@@ -146,14 +154,15 @@ namespace MartianMap.HUD
             SelectedAlternative = Alternative.Fastest;
             _zone = message.Zone;
             BuildView();
-            _route.text = HudStrings.NoRoute;
+            _route.text = HudStrings.RouteHelp;
+            HideOptions();
             ResolveZone();
         }
 
         private void ResolveZone()
         {
             _ready = false;
-            _planButton.interactable = false;
+            UpdatePlanButton();
             _zoneLabel.text = _zone == null ? HudStrings.NoZone : HudStrings.ZonePrefix + _zone.ZoneId + (_zone.ZoneId == "synth" ? HudStrings.SyntheticSuffix : string.Empty);
             if (Mission == null || _zone == null)
             {
@@ -166,7 +175,7 @@ namespace MartianMap.HUD
                 _home = Mission.ResolveHome(_zone);
                 _start = _home;
                 _ready = true;
-                _planButton.interactable = true;
+                UpdatePlanButton();
                 SetStatus(HudFormatting.Format(HudStrings.Ready, _home.E, _home.N));
                 MapEvents.Emit(new AstronautMoved(new Vector2((float)_start.E, (float)_start.N)));
             }
@@ -181,32 +190,107 @@ namespace MartianMap.HUD
 
         private void OnRouteSelected(RouteSelected message)
         {
-            // The three options (colour, distance, time) are shown for every route, including the
-            // two-point routes of any zone, even when the mission does not target that zone.
-            string options = RoutePresentation.Options(message);
-            if (!_ready)
+            // The panel shows only the three options (colour, distance, time) of every route,
+            // two-point routes included, whatever zone the mission targets.
+            ShowOptions(message);
+            if (!_ready || !RoutePresentation.ValidOptions(message))
             {
-                if (options != null)
-                {
-                    _route.text = options;
-                }
-
                 return;
             }
 
-            if (message.Plans == null || message.Plans.Count != 3 ||
-                (int)message.Selected < 0 || (int)message.Selected > 2)
+            SelectedAlternative = message.Selected;
+            SetStatus(HudStrings.RouteReceived);
+        }
+
+        /// <summary>PLAN ROUTE: the A–B points if both are on the map, otherwise the mission.</summary>
+        private void OnPlanClicked()
+        {
+            if (RoutePointsTool.HasBothPoints)
+            {
+                _route.text = HudStrings.RoutePlanning;
+                RoutePointsTool.PlanPoints();
+                return;
+            }
+
+            RequestRoute();
+        }
+
+        private void UpdatePlanButton()
+        {
+            if (_planButton != null)
+            {
+                _planButton.interactable = _ready || RoutePointsTool.HasBothPoints;
+            }
+        }
+
+        private void ShowOptions(RouteSelected message)
+        {
+            if (!RoutePresentation.ValidOptions(message))
             {
                 _route.text = HudStrings.RouteOptionsInvalid;
-                SetStatus(HudStrings.RouteOptionsInvalid);
+                HideOptions();
                 return;
             }
 
-            Plan plan = message.Plans[(int)message.Selected];
-            SelectedAlternative = message.Selected;
-            _route.text = HudFormatting.Format(HudStrings.RouteSummary,
-                RoutePresentation.Name(message.Selected), RoutePresentation.Details(plan)) + "\n" + options;
-            SetStatus(HudStrings.RouteReceived);
+            _route.text = RoutePresentation.AnyFound(message) ? HudStrings.RouteOptionsHeader : HudStrings.RouteAllUnreachable;
+            for (var index = 0; index < 3; index++)
+            {
+                _optionLabels[index].text = RoutePresentation.OptionLine(message, index);
+                _optionButtons[index].gameObject.SetActive(true);
+            }
+
+            _allButton.gameObject.SetActive(true);
+            Focus(null, emit: false);
+        }
+
+        private void HideOptions()
+        {
+            foreach (var button in _optionButtons)
+            {
+                if (button != null)
+                {
+                    button.gameObject.SetActive(false);
+                }
+            }
+
+            if (_allButton != null)
+            {
+                _allButton.gameObject.SetActive(false);
+            }
+
+            _focused = null;
+        }
+
+        /// <summary>Shows one alternative alone on the map (index) or all three (null).</summary>
+        private void Focus(int? index, bool emit)
+        {
+            _focused = index;
+            for (var i = 0; i < 3; i++)
+            {
+                _optionButtons[i].GetComponent<Image>().color = _focused == i ? OptionFocusedColor : OptionColor;
+            }
+
+            _allButton.GetComponent<Image>().color = _focused == null ? OptionFocusedColor : OptionColor;
+            if (emit)
+            {
+                MapEvents.Emit(index == null ? RouteFocused.ShowAll() : RouteFocused.Only((Alternative)index.Value));
+            }
+        }
+
+        private Button OptionButton(string name, Transform parent, out TMP_Text label)
+        {
+            var buttonObject = new GameObject(name, typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
+            buttonObject.transform.SetParent(parent, false);
+            buttonObject.GetComponent<LayoutElement>().preferredHeight = 54;
+            buttonObject.GetComponent<Image>().color = OptionColor;
+            var button = buttonObject.GetComponent<Button>();
+            button.targetGraphic = buttonObject.GetComponent<Image>();
+            label = Label("Label", buttonObject.transform, string.Empty, 20);
+            label.richText = true;
+            label.alignment = TextAlignmentOptions.MidlineLeft;
+            Stretch(label.rectTransform, new Vector2(14, 4), new Vector2(-14, -4));
+            buttonObject.SetActive(false);
+            return button;
         }
 
         private void SetStatus(string value)
@@ -276,7 +360,7 @@ namespace MartianMap.HUD
             _zoneLabel.gameObject.SetActive(false);
             _title = FixedLabel("Mission title", body, HudStrings.WaitingForMission, 32, 85);
             _budget = FixedLabel("Budget", body, string.Empty, 21, 72);
-            FixedLabel("Objectives heading", body, HudStrings.Objectives, 19, 30);
+            TMP_Text objectivesHeading = FixedLabel("Objectives heading", body, HudStrings.Objectives, 19, 30);
 
             var scrollObject = new GameObject("Objectives", typeof(RectTransform), typeof(ScrollRect));
             scrollObject.transform.SetParent(body, false);
@@ -305,8 +389,33 @@ namespace MartianMap.HUD
             scroll.movementType = ScrollRect.MovementType.Clamped;
 
             _status = FixedLabel("Status", body, Status, 20, 64);
-            _route = FixedLabel("Route", body, HudStrings.NoRoute, 20, 230);
+            _route = FixedLabel("Route", body, HudStrings.RouteHelp, 20, 60);
             _route.richText = true;
+
+            // At the team's request the panel shows only the route options and PLAN ROUTE: the mission
+            // details stay built (and updated) but hidden; the layout skips inactive children.
+            _title.gameObject.SetActive(false);
+            _budget.gameObject.SetActive(false);
+            objectivesHeading.gameObject.SetActive(false);
+            scrollObject.SetActive(false);
+            _status.gameObject.SetActive(false);
+
+            for (var index = 0; index < 3; index++)
+            {
+                var alternative = index;
+                _optionButtons[index] = OptionButton("Route option " + index, body, out _optionLabels[index]);
+                _optionButtons[index].onClick.AddListener(() => Focus(alternative, emit: true));
+            }
+
+            _allButton = OptionButton("Route option all", body, out TMP_Text allLabel);
+            allLabel.text = HudStrings.RouteShowAll;
+            allLabel.alignment = TextAlignmentOptions.Center;
+            _allButton.onClick.AddListener(() => Focus(null, emit: true));
+
+            // Push PLAN ROUTE to the bottom of the panel.
+            var spacer = new GameObject("Spacer", typeof(RectTransform), typeof(LayoutElement));
+            spacer.transform.SetParent(body, false);
+            spacer.GetComponent<LayoutElement>().flexibleHeight = 1;
             var buttonObject = new GameObject("Plan route", typeof(RectTransform), typeof(Image), typeof(Button), typeof(LayoutElement));
             buttonObject.transform.SetParent(body, false);
             buttonObject.GetComponent<LayoutElement>().preferredHeight = 62;
@@ -314,11 +423,12 @@ namespace MartianMap.HUD
             _planButton = buttonObject.GetComponent<Button>();
             _planButton.targetGraphic = buttonObject.GetComponent<Image>();
             _planButton.interactable = false;
-            _planButton.onClick.AddListener(RequestRoute);
+            _planButton.onClick.AddListener(OnPlanClicked);
             TMP_Text buttonLabel = Label("Label", buttonObject.transform, HudStrings.PlanRoute, 23);
             buttonLabel.alignment = TextAlignmentOptions.Center;
             Stretch(buttonLabel.rectTransform, Vector2.zero, Vector2.zero);
-            FixedLabel("Units", body, HudStrings.Units, 17, 40);
+            FixedLabel("Units", body, HudStrings.Units, 17, 40).gameObject.SetActive(false);
+            CollapsiblePanel.Attach(body, leftSide: true, _font); // last child: collapsible at the team's request
 
             if (EventSystem.current == null)
             {
