@@ -30,7 +30,7 @@
 
 ## Before / after the smoothing
 
-The A* rows of `88373f0` (PlanRoute = A* + trace, no smoothing) against this run (A* + smoothing + trace), same seed and protocol, laptop on battery with the CPU at ~2.1–2.4 GHz. `smooth ms` is the smoothing alone. No A* row that passed before fails now; the differences are within the run-to-run noise of 5 runs. The field rows now time `ReturnField`, whose only extra work is its result array (one `float` per node); WallWithGap 1000² crossing 2000 ms (1878.8 → 2000.3 ms) is noise, since the field's code did not change.
+The A* rows of `88373f0` (PlanRoute = A* + trace, no smoothing) against this run (A* + smoothing + trace), same seed and protocol, laptop on battery with the CPU at ~2.1–2.4 GHz. `smooth ms` is the smoothing alone. No A* row that passed before fails now; the differences are within the run-to-run noise of 5 runs. The field rows now time `ReturnField`, whose only extra work is its result array (one `float` per node); WallWithGap 1000² crossing 2000 ms (1878.8 → 2000.3 ms) is mostly noise: the search did not change, and the new array (4 MB at 1000², allocated and zeroed once per call) costs a few ms.
 
 | size | terrain | p50 ms before | p95 ms before | p50 ms after | p95 ms after | smooth ms | E5 before | E5 after |
 |---|---|---|---|---|---|---|---|---|
@@ -44,3 +44,8 @@ The A* rows of `88373f0` (PlanRoute = A* + trace, no smoothing) against this run
 | 2000 | WallWithGap | 12.1 | 17.6 | 17.0 | 19.1 | 2.8 | ok | ok |
 | 2000 | Maze | 77.5 | 1396.9 | 88.0 | 1549.8 | 6.2 | FAIL: p95 | FAIL: p95 |
 | 2000 | Blocked30 | 16.3 | 17.8 | 16.2 | 17.8 | 0.1 | ok | ok |
+
+What these rows do not show:
+
+- **Longer routes.** The smoothing is quadratic in the length of the stretch it straightens. In a review probe (Release, flat diagonal route), A* + smoothing took 180–307 ms + ~40 ms at 1000² (594 nodes) and 1020–1220 ms + 172–234 ms at 2000² (1594 nodes). A* still dominates, at 15–20 % on top. E5 only covers 500 m routes, but `Alternatives` will smooth three routes.
+- **Repeated fields.** Each `ReturnField` allocates its result (16 MB at 2000²) on the large-object heap. The field rows run 1 + 1, so their "0 GC" does not cover a caller that recomputes the field on every base or grid change: that caller will see gen-2 collections.
