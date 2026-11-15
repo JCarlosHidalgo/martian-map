@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Martian Map Bundle C1b",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "bundle_id",
+    "source",
+    "zone_id",
+    "zone_version",
+    "kind",
+    "created_utc",
+    "delay_s",
+    "deliver_at_utc",
+    "files",
+    "payload_oxum"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "bundle_id": {
+      "type": "string",
+      "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "source": {
+      "const": "earth"
+    },
+    "zone_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "zone_version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "kind": {
+      "enum": ["zone_full", "zone_update", "conditions"]
+    },
+    "created_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "delay_s": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "deliver_at_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "expires_utc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "size",
+          "sha256",
+          "media_type"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "pattern": "^data/"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          },
+          "media_type": {
+            "enum": [
+              "application/json",
+              "application/octet-stream",
+              "image/jpeg",
+              "image/png"
+            ]
+          }
+        }
+      }
+    },
+    "payload_oxum": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    }
+  }
+}
