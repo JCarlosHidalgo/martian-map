@@ -162,7 +162,6 @@ namespace MartianMap.Terrain
 
             return changed;
         }
-        }
 
         /// <summary>Builds the textures once; call on the main thread.</summary>
         public void BuildTextures()
