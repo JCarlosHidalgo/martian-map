@@ -63,6 +63,16 @@ namespace MartianMap.Terrain
             {
                 map = GetComponentInChildren<TerrainMap2D>();
             }
+
+            // The orchestration lives next to the map (Tablet, "Orquestación"); added here so the
+            // prefab needs no manual wiring.
+            EnsureComponent<RouteOrchestrator>();
+        }
+
+        private T EnsureComponent<T>() where T : Component
+        {
+            var component = GetComponent<T>();
+            return component != null ? component : gameObject.AddComponent<T>();
         }
 
         private void OnEnable()

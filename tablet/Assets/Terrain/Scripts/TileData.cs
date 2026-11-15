@@ -14,13 +14,18 @@ namespace MartianMap.Terrain
         public const int Cells = Size - 1;
         public const ushort HeightNodata = 65535;
 
-        public TileData(TileInfo info, ushort[] height, byte[] hazard, IReadOnlyDictionary<string, byte[]> layers)
+        /// <param name="slope">uint8 degrees (C1 <c>slope.r8</c>); zeros when the tile has none.</param>
+        /// <param name="roughness">uint8 cm (C1 <c>roughness.r8</c>); zeros when the tile has none.</param>
+        public TileData(TileInfo info, ushort[] height, byte[] hazard, IReadOnlyDictionary<string, byte[]> layers,
+            byte[] slope = null, byte[] roughness = null)
         {
             Info = info ?? throw new ArgumentNullException(nameof(info));
             Height = Check(height, nameof(height));
             BaseHazard = Check(hazard, nameof(hazard));
             Hazard = (byte[])BaseHazard.Clone();
             Layers = layers ?? new Dictionary<string, byte[]>();
+            Slope = slope != null ? Check(slope, nameof(slope)) : new byte[Size * Size];
+            Roughness = roughness != null ? Check(roughness, nameof(roughness)) : new byte[Size * Size];
             foreach (var pair in Layers)
             {
                 Check(pair.Value, pair.Key);
@@ -42,6 +47,12 @@ namespace MartianMap.Terrain
 
         /// <summary>uint8 layers by <c>layer_id</c>, north-up rows.</summary>
         public IReadOnlyDictionary<string, byte[]> Layers { get; }
+
+        /// <summary>uint8 slope in degrees, north-up rows (Routing input).</summary>
+        public byte[] Slope { get; }
+
+        /// <summary>uint8 relief in cm, north-up rows (Routing input).</summary>
+        public byte[] Roughness { get; }
 
         public float MinHeightM { get; private set; }
         public float MaxHeightM { get; private set; }

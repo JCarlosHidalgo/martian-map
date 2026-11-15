@@ -65,7 +65,10 @@ namespace MartianMap.Terrain
                 layers[layer.Id] = await ReadBytesAsync(Combine(tileFolder, layer.File));
             }
 
-            return new TileData(info, height, hazard, layers);
+            // slope and roughness feed Routing only; a tile without them reads as flat and smooth.
+            var slope = await LocalFiles.TryReadBytesAsync(Combine(tileFolder, "slope.r8"));
+            var roughness = await LocalFiles.TryReadBytesAsync(Combine(tileFolder, "roughness.r8"));
+            return new TileData(info, height, hazard, layers, slope, roughness);
         }
 
         private static ushort[] ToUInt16(byte[] littleEndian)
