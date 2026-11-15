@@ -107,6 +107,8 @@ namespace MartianMap.Terrain
                 minY = maxY = 0f;
             }
 
+            // A heat field belongs to the grid of one zone: drop the previous zone's.
+            ClearHeatField();
             Shader.SetGlobalFloat(ShaderIds.ZoneOriginHeightM, originHeight);
             Shader.SetGlobalVector(ShaderIds.ZoneHeightRange, new Vector4(minY, maxY, 0f, 0f));
 
@@ -271,12 +273,18 @@ namespace MartianMap.Terrain
             Shader.SetGlobalFloat(ShaderIds.FogFarRedMin, hazardRedMin / 255f);
             Shader.SetGlobalColor(ShaderIds.FogFarColor, hazardColor);
             Shader.SetGlobalFloat(ShaderIds.FogFarStrength, hazardStrength);
-            Shader.SetGlobalTexture(ShaderIds.HeatTex, _noHeat);
             Shader.SetGlobalTexture(ShaderIds.HazardZoneTex, _black);
-            // A rect far away from any zone, so no pixel falls inside it until a field exists.
+            ClearHeatField();
+            ApplyLayerGlobals();
+        }
+
+        /// <summary>Removes the heat field: no pixel shows heat until <see cref="SetHeatField"/> runs again.</summary>
+        public void ClearHeatField()
+        {
+            Shader.SetGlobalTexture(ShaderIds.HeatTex, _noHeat);
+            // A rect far away from any zone, so no pixel falls inside it.
             Shader.SetGlobalVector(ShaderIds.HeatTexRect, new Vector4(1e7f, 1e7f, 1f, 1f));
             Shader.SetGlobalFloat(ShaderIds.HeatMaxS, 1f);
-            ApplyLayerGlobals();
         }
 
         /// <summary>
