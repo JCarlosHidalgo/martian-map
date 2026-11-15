@@ -50,7 +50,7 @@
     }
   ],
   "source_ids": [
-    "synthetic"
+    "synthetic-test-data"
   ],
   "sha256": {
     "height.r16": "23e46157b82a07d54cdb94fb46a8185e972c582974a975a098b7d01369046891",
