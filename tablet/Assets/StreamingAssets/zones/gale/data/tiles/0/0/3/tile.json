@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "zone_id": "gale",
+  "z": 0,
+  "x": 0,
+  "y": 3,
+  "size_px": 257,
+  "m_per_px": 1.0,
+  "origin_enu_m": [
+    -640,
+    128
+  ],
+  "height": {
+    "file": "height.r16",
+    "dtype": "uint16",
+    "scale": 0.0045931399799883366,
+    "offset": -3693.0,
+    "nodata": 65535,
+    "row_order": "north_up",
+    "endian": "le",
+    "vertical_datum": "areoid"
+  },
+  "rasters": {
+    "slope": {
+      "dtype": "uint8",
+      "unit": "deg"
+    },
+    "roughness": {
+      "dtype": "uint8",
+      "unit": "cm",
+      "window_m": 3
+    },
+    "hazard": {
+      "dtype": "uint8"
+    }
+  },
+  "version": 2,
+  "layers": [
+    {
+      "id": "ortho",
+      "file": "ortho.r8"
+    },
+    {
+      "id": "thermal",
+      "file": "thermal.r8"
+    },
+    {
+      "id": "thermal_ir",
+      "file": "thermal_ir.r8"
+    }
+  ],
+  "source_ids": [
+    "mro-hirise-gale-dtm",
+    "mro-hirise-gale-ortho",
+    "ody-themis-qual-ti",
+    "ody-themis-night-ir"
+  ],
+  "sha256": {
+    "height.r16": "7ce9cc702b561ca77b7cc67dc453db8b77850df8f2e84f8bc85c266d797d4382",
+    "slope.r8": "03d71826f006c1a878c55cb84fc1aa85c04e1ff16bb133038f814354e34d2cfa",
+    "roughness.r8": "7756f8e8c01521d3624f05a68a4aa8c9f2ae1d41b7bf48e2dc7ff8c90a689143",
+    "hazard.r8": "776463798582e1871461a527f46dc7cb3854e322fd1ca2e6ef9206b682c519b4",
+    "ortho.r8": "b779c124280d1b812010968adc6c214365406b1e78f39f925eeb3ac24578b5a7",
+    "thermal.r8": "758491be4e861e263d17964ec912c6af7a50fbddc9a32ff0ba68dbaff65aea92",
+    "thermal_ir.r8": "d7942def22b30fc507c690250d5b2b963b625bba9fa8a616809d9709a679305a"
+  }
+}

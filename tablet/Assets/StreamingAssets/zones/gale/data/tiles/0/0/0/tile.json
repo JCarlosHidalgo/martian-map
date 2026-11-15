@@ -7,14 +7,14 @@
   "size_px": 257,
   "m_per_px": 1.0,
   "origin_enu_m": [
-    -256,
-    -256
+    -640,
+    -640
   ],
   "height": {
     "file": "height.r16",
     "dtype": "uint16",
-    "scale": 0.0023080145474523306,
-    "offset": -3627.0,
+    "scale": 0.0045931399799883366,
+    "offset": -3693.0,
     "nodata": 65535,
     "row_order": "north_up",
     "endian": "le",
@@ -34,22 +34,34 @@
       "dtype": "uint8"
     }
   },
-  "version": 1,
+  "version": 2,
   "layers": [
     {
       "id": "ortho",
       "file": "ortho.r8"
+    },
+    {
+      "id": "thermal",
+      "file": "thermal.r8"
+    },
+    {
+      "id": "thermal_ir",
+      "file": "thermal_ir.r8"
     }
   ],
   "source_ids": [
     "mro-hirise-gale-dtm",
-    "mro-hirise-gale-ortho"
+    "mro-hirise-gale-ortho",
+    "ody-themis-qual-ti",
+    "ody-themis-night-ir"
   ],
   "sha256": {
-    "height.r16": "6a9461db228fc6c043b552eac060637664cdcc9be8603f85ed8f8cda94ec8ab6",
-    "slope.r8": "6f0455be65ed576664019b3dff9eea8a41e46a2ce21aec334a203d72df9f9915",
-    "roughness.r8": "58612dfb1162bab9a342315ee2e0024280be42bfb57bbc74dd71bf76eb5d84cf",
-    "hazard.r8": "3f90dbce8ed859d82700d9bd7ef02f1621aa5834fe087c90b1a4c9e0c56cbcd5",
-    "ortho.r8": "9c042eb0092a4bc25cb58157c5699393a49c9a0292b5cc117881be496badb5ee"
+    "height.r16": "2bed2707a85f484c4c99b70e206112b4a6d1ada00d3036d5d678009c4754a021",
+    "slope.r8": "98adb3ceeb3943ab4f30e10e7b7869209840d944f4fef41f289ddb7982100b2e",
+    "roughness.r8": "df3cac5dec7345c3f7d6a07a674169922c1032c2fe22589de587e0f597d84285",
+    "hazard.r8": "9a63bc8f950b6ee7bf7ddc6f3157ca4ddc8757fdaf1f1aed8522bbc3ea31aac6",
+    "ortho.r8": "16080f6d9cda7fb658f2c7e0c65f5f9f42d94cb243268f38e6cb75d89a893a4d",
+    "thermal.r8": "58fffd11dffa502855a24b8a2e2236a5e4a4cab90ba912834c7ae3f7f0c60743",
+    "thermal_ir.r8": "1ec5018379ae3720330c51686bcc221d298b2148403558dc49cc3397594039de"
   }
 }
