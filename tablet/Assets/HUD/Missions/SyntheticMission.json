@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "zone_id": "synth",
+  "name": "Synthetic science traverse",
+  "base_enu_m": [-100, -20],
+  "stops": [
+    {
+      "id": "s1",
+      "name": "Synthetic terrain observation",
+      "enu_m": [0, -20],
+      "objective": "Record a simulated surface observation to exercise the science-stop workflow.",
+      "science_value": 5,
+      "dwell_s": 600
+    },
+    {
+      "id": "s2",
+      "name": "Synthetic image survey",
+      "enu_m": [100, -20],
+      "objective": "Capture a simulated image survey to exercise mission planning.",
+      "science_value": 8,
+      "dwell_s": 600
+    }
+  ],
+  "budget": {"t_s": 14400, "dose_uGy": 50},
+  "mode": "TSP"
+}
