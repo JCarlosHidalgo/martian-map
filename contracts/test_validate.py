@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import shutil
@@ -18,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -312,6 +314,170 @@ class ContractValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SHA-256 golden"):
             ContractValidator(self.root).run()
 
+    def _mission_fixture(self) -> dict[str, Any]:
+        source = Path(__file__).parent
+        shutil.copyfile(
+            source / "schemas/mission.schema.json", self.root / "schemas/mission.schema.json"
+        )
+        return json.loads((source / "fixtures/mission/mission.json").read_text(encoding="utf-8"))
+
+    def _validate_mission(self, mission: dict[str, Any]) -> None:
+        self._json("fixtures/mission/mission.json", mission)
+        ContractValidator(self.root).run()
+
+    def test_mission_fixture_passes_real_contract_validation(self) -> None:
+        self._validate_mission(self._mission_fixture())
+
+    def test_mission_accepts_both_modes_and_an_omitted_base(self) -> None:
+        original = self._mission_fixture()
+        for mode in ("TSP", "OP"):
+            for explicit_base in (False, True):
+                with self.subTest(mode=mode, explicit_base=explicit_base):
+                    mission = copy.deepcopy(original)
+                    mission["mode"] = mode
+                    if not explicit_base:
+                        del mission["base_enu_m"]
+                    self._validate_mission(mission)
+
+    def test_mission_requires_all_documented_fields_and_rejects_unknown_fields(self) -> None:
+        original = self._mission_fixture()
+        for scope, fields in (
+            ("root", ("schema_version", "zone_id", "name", "stops", "budget", "mode")),
+            ("stop", ("id", "name", "enu_m", "objective", "science_value", "dwell_s")),
+            ("budget", ("t_s", "dose_uGy")),
+        ):
+            for field in (*fields, "unexpected"):
+                with self.subTest(scope=scope, field=field):
+                    mission = copy.deepcopy(original)
+                    target = (
+                        mission["stops"][0]
+                        if scope == "stop"
+                        else mission["budget"]
+                        if scope == "budget"
+                        else mission
+                    )
+                    if field == "unexpected":
+                        target[field] = "unsupported"
+                    else:
+                        del target[field]
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+
+    def test_mission_checks_science_values_times_and_budgets(self) -> None:
+        original = self._mission_fixture()
+        for field, invalid in (
+            ("science_value", (-1, 11, 0.5, True, "5")),
+            ("dwell_s", (-1, True, "600")),
+            ("t_s", (-1, True, "14400")),
+            ("dose_uGy", (-1, True, "50")),
+        ):
+            for value in invalid:
+                with self.subTest(field=field, value=value):
+                    mission = copy.deepcopy(original)
+                    target = (
+                        mission["stops"][0]
+                        if field in ("science_value", "dwell_s")
+                        else mission["budget"]
+                    )
+                    target[field] = value
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+        for science_value in (0, 10):
+            with self.subTest(science_value=science_value):
+                mission = copy.deepcopy(original)
+                mission["stops"][0].update(science_value=science_value, dwell_s=0)
+                mission["budget"] = {"t_s": 0, "dose_uGy": 0}
+                self._validate_mission(mission)
+        mission = copy.deepcopy(original)
+        mission["stops"][0]["dwell_s"] = 0.5
+        self._validate_mission(mission)
+
+    def test_mission_coordinates_are_two_numbers_in_metres(self) -> None:
+        original = self._mission_fixture()
+        for scope in ("base", "stop"):
+            for value in (None, [], [0], [0, 0, 0], ["0", 0], [True, 0], {"e": 0, "n": 0}):
+                with self.subTest(scope=scope, value=value):
+                    mission = copy.deepcopy(original)
+                    target = mission if scope == "base" else mission["stops"][0]
+                    target["base_enu_m" if scope == "base" else "enu_m"] = value
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+        mission = copy.deepcopy(original)
+        mission["base_enu_m"] = [-100.5, -20.25]
+        mission["stops"][0]["enu_m"] = [0.5, -20.25]
+        self._validate_mission(mission)
+
+    def test_mission_rejects_invalid_labels_version_zone_and_mode(self) -> None:
+        original = self._mission_fixture()
+        for field, values in (
+            ("schema_version", (2, True, "1")),
+            ("zone_id", ("SYNTH", "s", "synth\n", "s" * 33)),
+            ("name", ("", None)),
+            ("mode", ("tsp", "unknown", None)),
+            ("stops", ({}, None)),
+        ):
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    mission = copy.deepcopy(original)
+                    mission[field] = value
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+        for field in ("id", "name", "objective"):
+            for value in ("", None):
+                with self.subTest(stop_field=field, value=value):
+                    mission = copy.deepcopy(original)
+                    mission["stops"][0][field] = value
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+
+    def test_mission_fixture_matches_routing_plan_endpoints_and_dwell_times(self) -> None:
+        mission = self._mission_fixture()
+        source = Path(__file__).parent / "fixtures/routing/expected_plan.json"
+        plans = json.loads(source.read_text(encoding="utf-8"))["plans"]
+        self.assertEqual(mission["zone_id"], "synth")
+        self.assertEqual(mission["base_enu_m"], [-100, -20])
+        self.assertEqual([stop["enu_m"] for stop in mission["stops"]], [[0, -20], [100, -20]])
+        self.assertEqual([stop["science_value"] for stop in mission["stops"]], [5, 8])
+        self.assertEqual([stop["dwell_s"] for stop in mission["stops"]], [600, 600])
+        self.assertEqual(mission["budget"], {"t_s": 14400, "dose_uGy": 50})
+        self.assertEqual(mission["mode"], "TSP")
+        points = [
+            mission["base_enu_m"],
+            *[stop["enu_m"] for stop in mission["stops"]],
+            mission["base_enu_m"],
+        ]
+        for plan in plans:
+            self.assertEqual(plan["order"], [stop["id"] for stop in mission["stops"]])
+            self.assertEqual(len(plan["legs"]), len(points) - 1)
+            for index, leg in enumerate(plan["legs"]):
+                self.assertEqual(leg["polyline_enu_m"][0][:2], points[index])
+                self.assertEqual(leg["polyline_enu_m"][-1][:2], points[index + 1])
+            for percentile in ("p10", "p50", "p90"):
+                expected = sum(leg["eta_s"][percentile] for leg in plan["legs"])
+                expected += sum(stop["dwell_s"] for stop in mission["stops"])
+                self.assertAlmostEqual(plan["total_s"][percentile], expected, delta=0.01)
+
+    def test_mission_fixture_base_and_stops_are_walkable_tile_samples(self) -> None:
+        mission = self._mission_fixture()
+        directory = Path(__file__).parent / "fixtures/tile_synth_0_0_0"
+        tile = json.loads((directory / "tile.json").read_text(encoding="utf-8"))
+        hazard = (directory / "hazard.r8").read_bytes()
+        height = (directory / tile["height"]["file"]).read_bytes()
+        size = tile["size_px"]
+        origin_e, origin_n = tile["origin_enu_m"]
+        points = [mission["base_enu_m"], *[stop["enu_m"] for stop in mission["stops"]]]
+        for east, north in points:
+            with self.subTest(east=east, north=north):
+                col = (east - origin_e) / tile["m_per_px"]
+                row = size - 1 - (north - origin_n) / tile["m_per_px"]
+                self.assertEqual(col, int(col))
+                self.assertEqual(row, int(row))
+                self.assertTrue(0 <= col < size and 0 <= row < size)
+                index = int(row) * size + int(col)
+                self.assertEqual(hazard[index], 0)
+                sample = int.from_bytes(height[index * 2 : index * 2 + 2], "little")
+                self.assertNotEqual(sample, tile["height"]["nodata"])
+
     def _openapi(self, example: dict[str, Any], schema: dict[str, Any]) -> None:
         specification = {
             "openapi": "3.1.0",
@@ -356,6 +522,208 @@ class ContractValidatorTests(unittest.TestCase):
     def test_invalid_openapi_is_rejected(self) -> None:
         (self.root / "openapi.yaml").write_bytes(b"openapi: 3.1.0\n")
         with self.assertRaises(OpenAPIValidationError):
+            ContractValidator(self.root).run()
+
+
+class LayerSourceContractTests(unittest.TestCase):
+    """Check the C2 golden and producer-facing errors through the real validator."""
+
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="martian-map-layer-source-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.source = Path(__file__).parent
+        schemas = self.root / "schemas"
+        schemas.mkdir()
+        for name in ("map.json", "map.schema.json", "layer_source.schema.json"):
+            shutil.copyfile(self.source / "schemas" / name, schemas / name)
+        self.fixture = json.loads(
+            (self.source / "fixtures/layer_source/layer_source.json").read_text(encoding="utf-8")
+        )
+        self.path = self.root / "fixtures/layer_source/layer_source.json"
+        self._write(self.path, self.fixture)
+
+    def _write(self, path: Path, value: Any) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes((json.dumps(value, indent=2) + "\n").encode("utf-8"))
+
+    def _assert_invalid(self, value: dict[str, Any]) -> None:
+        self._write(self.path, value)
+        with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+            ContractValidator(self.root).run()
+
+    def test_layer_source_golden_passes(self) -> None:
+        ContractValidator(self.root).run()
+
+    def test_layer_source_requires_document_version_and_source_fields(self) -> None:
+        fields = (
+            "schema_version",
+            "id",
+            "kind",
+            "adapter",
+            "mission",
+            "instrument",
+            "product_id",
+            "time_range",
+            "license",
+            "url",
+            "qualitative",
+        )
+        for field in fields:
+            with self.subTest(field=field):
+                value = deepcopy(self.fixture)
+                del value[field]
+                self._assert_invalid(value)
+
+    def test_layer_source_rejects_invalid_values(self) -> None:
+        cases = (
+            ("schema_version", 2),
+            ("schema_version", True),
+            ("id", "MRO-HiRISE-DTM"),
+            ("id", "source with spaces"),
+            ("id", "mro-hirise"),
+            ("kind", "vector"),
+            ("adapter", "unknown"),
+            ("mission", ""),
+            ("instrument", "   "),
+            ("product_id", ""),
+            ("url", "not a URI"),
+            ("license", "unlisted license"),
+            ("qualitative", "false"),
+            ("resolution_m", 0),
+            ("resolution_m", -1),
+            ("resolution_m", True),
+            ("vertical_datum", "sphere"),
+        )
+        for field, invalid in cases:
+            with self.subTest(field=field, value=invalid):
+                value = deepcopy(self.fixture)
+                value[field] = invalid
+                self._assert_invalid(value)
+
+    def test_layer_source_raster_and_image_rules(self) -> None:
+        missing_resolution = deepcopy(self.fixture)
+        del missing_resolution["resolution_m"]
+        self._assert_invalid(missing_resolution)
+
+        for kind in ("timeseries", "point", "image"):
+            with self.subTest(kind=kind):
+                value = deepcopy(self.fixture)
+                value["kind"] = kind
+                value.pop("resolution_m")
+                value.pop("vertical_datum")
+                if kind == "image":
+                    value.pop("units")
+                self._write(self.path, value)
+                ContractValidator(self.root).run()
+                value["resolution_m"] = 1
+                self._assert_invalid(value)
+
+        image = deepcopy(self.fixture)
+        image["kind"] = "image"
+        image.pop("resolution_m")
+        image.pop("vertical_datum")
+        self._assert_invalid(image)
+
+    def test_layer_source_vertical_datum_is_conditional(self) -> None:
+        value = deepcopy(self.fixture)
+        value.pop("vertical_datum")
+        self._assert_invalid(value)
+
+        value.pop("units")
+        value.pop("coverage_geojson")
+        self._write(self.path, value)
+        ContractValidator(self.root).run()
+
+        value["units"] = "J m-2 K-1 s-1/2"
+        self._write(self.path, value)
+        ContractValidator(self.root).run()
+        value["vertical_datum"] = "areoid"
+        self._assert_invalid(value)
+
+        value = deepcopy(self.fixture)
+        value["kind"] = "point"
+        value.pop("resolution_m")
+        self._assert_invalid(value)
+
+    def test_layer_source_utc_dates_and_interval_shape(self) -> None:
+        invalid_times = (
+            "2026-11-14T00:00:00+00:00",
+            "2026-11-14T00:00:00.000Z",
+            "2026-11-14T00:00:00z",
+            "2026-02-30T00:00:00Z",
+            "2026-11-14",
+        )
+        for invalid in invalid_times:
+            with self.subTest(timestamp=invalid):
+                value = deepcopy(self.fixture)
+                value["time_range"] = [invalid, "2026-11-14T00:00:00Z"]
+                self._assert_invalid(value)
+        for interval in ([], ["2026-11-14T00:00:00Z"], self.fixture["time_range"] * 2):
+            with self.subTest(interval=interval):
+                value = deepcopy(self.fixture)
+                value["time_range"] = interval
+                self._assert_invalid(value)
+
+    def test_layer_source_coverage_uses_c0_coordinates(self) -> None:
+        value = deepcopy(self.fixture)
+        for position in ([-180, -90], [180, 90], [0, 0]):
+            with self.subTest(position=position):
+                value["coverage_geojson"] = {"type": "Point", "coordinates": position}
+                self._write(self.path, value)
+                ContractValidator(self.root).run()
+        for position in ([180.1, 0], [0, 90.1], [0], [0, 0, 0]):
+            with self.subTest(position=position):
+                value["coverage_geojson"] = {"type": "Point", "coordinates": position}
+                self._assert_invalid(value)
+        for coverage in (
+            {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+            {"type": "Polygon", "coordinates": []},
+            {"type": "Polygon", "coordinates": [[[0, 0], [1, 0], [0, 0]]]},
+            {"type": "Point", "coordinates": [0, 0], "crs": "unexpected"},
+        ):
+            with self.subTest(coverage=coverage):
+                value["coverage_geojson"] = coverage
+                self._assert_invalid(value)
+
+    def test_layer_source_omits_absent_optional_values_and_rejects_unknown_fields(self) -> None:
+        for field in ("coverage_geojson", "units", "resolution_m", "vertical_datum"):
+            with self.subTest(field=field):
+                value = deepcopy(self.fixture)
+                value[field] = None
+                self._assert_invalid(value)
+        value = deepcopy(self.fixture)
+        value["unexpected_field"] = "unexpected"
+        self._assert_invalid(value)
+
+    def test_layer_source_embeds_in_zone_without_document_version(self) -> None:
+        embedded = deepcopy(self.fixture)
+        embedded.pop("schema_version")
+        self._write(
+            self.root / "schemas/zone.schema.json",
+            {
+                "$schema": DRAFT_URI,
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["zone_id", "tiles", "pov", "layer_sources"],
+                "properties": {
+                    "zone_id": {"type": "string"},
+                    "tiles": {"type": "array"},
+                    "pov": {"type": "array"},
+                    "layer_sources": {
+                        "type": "array",
+                        "items": {"$ref": "layer_source.schema.json#/$defs/layer_source"},
+                    },
+                },
+            },
+        )
+        zone_path = self.root / "fixtures/zone/zone.json"
+        zone = {"zone_id": "synth", "tiles": [], "pov": [], "layer_sources": [embedded]}
+        self._write(zone_path, zone)
+        ContractValidator(self.root).run()
+        embedded.pop("license")
+        self._write(zone_path, zone)
+        with self.assertRaisesRegex(ValueError, "Schema validation failed"):
             ContractValidator(self.root).run()
 
 

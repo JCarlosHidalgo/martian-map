@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "layer_source.schema.json",
+  "title": "Layer source document (C2)",
+  "description": "A standalone C2 fixture requires schema_version. Zone producers reference #/$defs/layer_source for an embedded source without requiring document metadata. License values preserve the exact contract vocabulary.",
+  "$ref": "#/$defs/layer_source",
+  "required": ["schema_version"],
+  "$defs": {
+    "layer_source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "adapter",
+        "mission",
+        "instrument",
+        "product_id",
+        "time_range",
+        "license",
+        "url",
+        "qualitative"
+      ],
+      "properties": {
+        "schema_version": {
+          "type": "integer",
+          "const": 1
+        },
+        "id": {
+          "type": "string",
+          "description": "A lowercase mission-instrument-product slug.",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+){2,}$"
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["raster", "timeseries", "point", "image"]
+        },
+        "adapter": {
+          "type": "string",
+          "enum": ["stac", "wmts", "ode", "json-feed", "pds-http"]
+        },
+        "mission": { "$ref": "#/$defs/non_empty_string" },
+        "instrument": { "$ref": "#/$defs/non_empty_string" },
+        "product_id": { "$ref": "#/$defs/non_empty_string" },
+        "resolution_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Metres per pixel; required and allowed only for rasters."
+        },
+        "coverage_geojson": {
+          "oneOf": [
+            { "$ref": "#/$defs/point" },
+            { "$ref": "#/$defs/polygon" }
+          ]
+        },
+        "time_range": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/utc_time" },
+          "description": "Source start and end timestamps. Equal timestamps describe an instant; producers must keep chronological order."
+        },
+        "license": {
+          "type": "string",
+          "enum": [
+            "CC0-1.0",
+            "CC-BY-4.0",
+            "Public domain, cite authors",
+            "NASA media guidelines; crédito por ítem"
+          ]
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "The product download URL or its source page."
+        },
+        "units": { "$ref": "#/$defs/non_empty_string" },
+        "vertical_datum": {
+          "type": "string",
+          "const": "areoid",
+          "description": "Required and allowed only for a raster whose units are metres."
+        },
+        "qualitative": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "raster" } } },
+          "then": { "required": ["resolution_m"] },
+          "else": { "not": { "required": ["resolution_m"] } }
+        },
+        {
+          "if": {
+            "required": ["kind", "units"],
+            "properties": {
+              "kind": { "const": "raster" },
+              "units": { "const": "m" }
+            }
+          },
+          "then": { "required": ["vertical_datum"] },
+          "else": { "not": { "required": ["vertical_datum"] } }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "image" } } },
+          "then": { "not": { "required": ["units"] } }
+        }
+      ]
+    },
+    "non_empty_string": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "utc_time": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "position": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        { "type": "number", "minimum": -180, "maximum": 180 },
+        { "type": "number", "minimum": -90, "maximum": 90 }
+      ],
+      "items": false,
+      "description": "C0 longitude east and planetocentric latitude, in degrees."
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "coordinates"],
+      "properties": {
+        "type": { "const": "Point" },
+        "coordinates": { "$ref": "#/$defs/position" }
+      }
+    },
+    "polygon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "coordinates"],
+      "properties": {
+        "type": { "const": "Polygon" },
+        "coordinates": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "array",
+            "minItems": 4,
+            "items": { "$ref": "#/$defs/position" }
+          }
+        }
+      },
+      "description": "A GeoJSON Polygon in C0 coordinates. Producers must check ring closure and polygon topology; JSON Schema checks structure and coordinate bounds."
+    }
+  }
+}
