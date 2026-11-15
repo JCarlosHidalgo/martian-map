@@ -68,6 +68,23 @@ optional `.prj`): polygons in zone ENU metres, or lon/lat with a geographic `.pr
 
 P6 works in `tablet/Assets/HUD/` (assembly `MartianMap.HUD`, prefab `HUD.prefab`).
 
+### Tablet authors
+
+Every device that edits the map has a fixed `author` (`^[a-z0-9-]{2,16}$`), written once on first
+launch and never changed: it identifies the device, not the person, and breaks ties byte by byte
+in the edit merge. Never reuse a value on two devices.
+
+| `author` | Device |
+|---|---|
+| `ev1` | Samsung Galaxy Tab S9 FE (the demo tablet) |
+| `ev2` | Unity editor on a laptop: the second "tablet" of the merge demo |
+| `ev3` | spare Android phone or tablet, if one is used |
+| `ev4` | reserved |
+| `ev5` | reserved |
+| `ev6` | reserved |
+
+The author is entered on the HUD's author screen and saved by `AppConfig.Save`.
+
 `Assets/StreamingAssets/config.default.json` holds the habitat URLs (Prism on port 4010, file stub
 on 4011). Replace the placeholder IP with the habitat laptop's IP on the team router.
 

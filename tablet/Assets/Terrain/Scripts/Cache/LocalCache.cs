@@ -224,6 +224,14 @@ namespace MartianMap.Terrain
             }
         }
 
+        /// <summary>Replaces the cached conditions.json of a zone (from <c>changes</c>).</summary>
+        public void StoreConditions(string zoneId, byte[] conditionsJson)
+        {
+            var folder = ZoneFolder(zoneId);
+            Directory.CreateDirectory(folder);
+            WriteAtomically(Path.Combine(folder, "conditions.json"), conditionsJson);
+        }
+
         /// <summary>Loads a cached zone for drawing; tiles not yet cached are left out.</summary>
         public Task<LoadedZone> LoadZoneAsync(string zoneId, int level = 0)
         {

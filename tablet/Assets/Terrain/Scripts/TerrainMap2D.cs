@@ -41,6 +41,7 @@ namespace MartianMap.Terrain
         private Texture2D _black;
         private Texture2D _noHeat;
         private Texture2D _heat;
+        private Texture2D _hazardZone;
         private LoadedZone _current;
 
         public LoadedZone Current => _current;
@@ -77,6 +78,7 @@ namespace MartianMap.Terrain
             Destroy(_black);
             Destroy(_noHeat);
             Destroy(_heat);
+            Destroy(_hazardZone);
         }
 
         /// <summary>Shows a zone, replacing the current one, and emits ZoneLoaded, TileLoaded and ConditionsChanged.</summary>
@@ -107,6 +109,8 @@ namespace MartianMap.Terrain
                 minY = maxY = 0f;
             }
 
+            // A heat field belongs to the grid of one zone: drop the previous zone's.
+            ClearHeatField();
             Shader.SetGlobalFloat(ShaderIds.ZoneOriginHeightM, originHeight);
             Shader.SetGlobalVector(ShaderIds.ZoneHeightRange, new Vector4(minY, maxY, 0f, 0f));
 
@@ -271,12 +275,46 @@ namespace MartianMap.Terrain
             Shader.SetGlobalFloat(ShaderIds.FogFarRedMin, hazardRedMin / 255f);
             Shader.SetGlobalColor(ShaderIds.FogFarColor, hazardColor);
             Shader.SetGlobalFloat(ShaderIds.FogFarStrength, hazardStrength);
-            Shader.SetGlobalTexture(ShaderIds.HeatTex, _noHeat);
             Shader.SetGlobalTexture(ShaderIds.HazardZoneTex, _black);
-            // A rect far away from any zone, so no pixel falls inside it until a field exists.
+            ClearHeatField();
+            ApplyLayerGlobals();
+        }
+
+        /// <summary>
+        /// Uploads the hazard of the routing grid as <c>_HazardZoneTex</c> (C5): R8, one texel per
+        /// node, rows from the south, with the same UV as <c>_HeatTex</c>. FX reads it for what it
+        /// draws with its own geometry. Call it together with <see cref="SetHeatField"/>.
+        /// </summary>
+        public void SetHazardZone(byte[] hazardByNode, int width, int height)
+        {
+            if (hazardByNode == null || hazardByNode.Length != width * height)
+            {
+                throw new System.ArgumentException($"hazard grid must have {width * height} nodes", nameof(hazardByNode));
+            }
+
+            if (_hazardZone == null || _hazardZone.width != width || _hazardZone.height != height)
+            {
+                Destroy(_hazardZone);
+                _hazardZone = new Texture2D(width, height, TextureFormat.R8, false, true)
+                {
+                    name = "T_HazardZone",
+                    filterMode = FilterMode.Point,
+                    wrapMode = TextureWrapMode.Clamp,
+                };
+            }
+
+            _hazardZone.SetPixelData(hazardByNode, 0);
+            _hazardZone.Apply(false, false);
+            Shader.SetGlobalTexture(ShaderIds.HazardZoneTex, _hazardZone);
+        }
+
+        /// <summary>Removes the heat field: no pixel shows heat until <see cref="SetHeatField"/> runs again.</summary>
+        public void ClearHeatField()
+        {
+            Shader.SetGlobalTexture(ShaderIds.HeatTex, _noHeat);
+            // A rect far away from any zone, so no pixel falls inside it.
             Shader.SetGlobalVector(ShaderIds.HeatTexRect, new Vector4(1e7f, 1e7f, 1f, 1f));
             Shader.SetGlobalFloat(ShaderIds.HeatMaxS, 1f);
-            ApplyLayerGlobals();
         }
 
         /// <summary>

@@ -1,0 +1,151 @@
+# Mission HUD
+
+Open `HUDSandbox.unity` with Unity **6000.3.28f1** and press Play. The sandbox loads P1's
+synthetic contract tile from `contracts/fixtures/`, displays the C6 mission, and uses the
+existing Terrain camera for pan and zoom. The mission panel identifies synthetic data.
+
+The panel lists science objectives, stop coordinates, science values, dwell times, and the
+time and absorbed-dose budgets. The assigned `SyntheticMission.json` is an exact copy of
+the C6 fixture. Its 50 microgray budget is a project design value, not a NASA exposure limit.
+
+`Plan route` stays disabled until a matching zone arrives through `MapEvents.ZoneLoaded`.
+It then emits `RouteRequested` with C4 `Stop`, `Budget`, `EnuPoint`, and `StopMode` values.
+The first route starts at the mission base; subsequent requests use the simulated astronaut
+position. Terrain and Routing own route execution; the
+sandbox does not fabricate a computed route. A received `RouteSelected` updates the result.
+
+The reader rejects duplicate stop ids, invalid required fields, nonfinite values, and
+home/stop coordinates outside the zone bounds. When `base_enu_m` is omitted, it uses
+`ZoneInfo.HabitatEnuM`. Bounds checks do not establish terrain walkability: that requires
+the actual tile/routing integration. Unknown fields are ignored when reading.
+
+## Route alternatives
+
+ROUTE OPTIONS opens a comparison of Fastest, Safest, and Gentlest in C4 order. Choosing a
+card sends `RouteRequested` through Terrain with the current astronaut position, unchanged
+return base, mission stops, mode, and budget. PLAN ROUTE keeps that alternative for later
+requests. A received `RouteSelected` marks the returned selection and fills all three cards.
+
+Each result shows P50 ETA with its P10-P90 range, absorbed dose, return availability, amber
+distance, and accumulated height change. Height change includes climbing and descending.
+Amber and height metrics are sums of the existing C4 leg values, including the return leg;
+the HUD does not calculate paths, costs, dose limits, or penalties. Distances use metres
+below 1000 m and kilometres with two decimals thereafter. Unreachable, missing, or invalid
+results show unavailable instead of zero-cost routes.
+
+Starting a new request, moving the astronaut, or loading a zone clears the old comparison.
+Controls wait for a matching mission and zone. Cards show REQUESTED until Terrain returns
+the selection; they do not label a request as a computed result.
+
+The sandbox loads terrain fixtures but does not implement Terrain's route orchestration.
+Without a `RouteRequested` consumer, the panel stays waiting. Tests feed P3's actual
+`expected_plan.json` through C5 to check the result display without inventing a live route.
+In the app, P4's `TerrainBootstrap` installs `RouteOrchestrator` to answer requests and
+return `RouteSelected`. Its current fallback uses the fixed synthetic fixture while P3's
+route methods remain unimplemented. That fallback is not a computed route from a moved
+astronaut. Keep this limitation explicit when demonstrating the synthetic zone.
+
+Alternative-only changes may return synchronously from Terrain's plan cache. The comparison
+enters its pending state before emitting the request, so an immediate result stays visible.
+
+## Layers and radiation
+
+The science panel controls topographic contours independently of the mutually exclusive
+optical, thermal inertia, and thermal infrared base layers through `LayerToggled`. Missing
+zone layers disable their controls. Qualitative layers have no calibrated numeric legend.
+Thermal inertia carries the guide's 100 m/px limitation and units from the active zone.
+
+Radiation is a source-rate indicator, not a map layer. It consumes `ConditionsChanged` only
+for the active zone and displays the source `value` with one decimal in microgray/hour,
+uncertainty, UTC timestamps, source id, and an explicit MEASURED or MODELLED label. Modifiers
+are listed separately; this panel does not multiply them into the source rate or calculate
+routing duration limits. Forbush factors are identified without extending mission budgets.
+Active SEP windows carry SCENARIO; future conditions carry PENDING. Windows are half-open.
+Modelled cards use a dashed outline and a button to reveal `derived_from`. Missing or invalid
+data stay unavailable. Changing zone clears the previous zone's radiation data.
+
+All UI text is centralized in `HudStrings.cs`; `HudFormatting` implements the agreed time
+and dose-unit formats. The sandbox supplies clearly labelled modelled demonstration
+conditions only when no conditions fixture was loaded. It does not add a production C6
+fixture or enable SEP from the tablet.
+
+## Simulated astronaut position
+
+The marker starts at the mission base, including the zone habitat fallback when C6 omits
+an explicit base. Hold one finger or the left mouse button on the map for 0.65 seconds to
+move it. The marker shows ENU coordinates and is explicitly labelled as a simulated position;
+there is no tracking sensor. It follows the map camera and hides outside its viewport.
+
+Dragging beyond the hold tolerance, multiple touches, scrolling, UI controls, edit mode,
+zone changes, or loss of focus cancel the hold. Touches are resolved through C5
+`MapQuery.TryPick`. The HUD emits `AstronautMoved` on initial placement and successful moves.
+The next route request uses the new position as `start` while preserving `home` and the
+mission budget. An old route summary is marked for replanning; a move does not calculate
+a route. Routing owns terrain feasibility checks.
+
+`AstronautHud` owns the marker and gesture. `MissionHud` owns its mission-relative position
+and resets it when the mission or zone is loaded. P4 owns camera recentering in response to
+`AstronautMoved`; this change does not add a Terrain event listener.
+
+## Settings and author registration
+
+The SETTINGS button opens the habitat URL, tile-files URL, and tablet author form.
+Empty URLs keep cache-only operation available. Addresses are validated and saved by
+Terrain's `AppConfig`; the HUD does not read or write configuration files.
+
+On first use, the form opens automatically and requires an author before it can close.
+Choose a unique team identifier with 2-16 lowercase letters, digits, or hyphens.
+After saving, the author field is locked; server addresses remain editable. Cancelled
+address changes are discarded on reopening. Save failures preserve input and show an
+English message. `ConfigChanged` refreshes saved values in the form.
+
+`SettingsHud.CanEdit` exposes the registration state for the forthcoming HUD edit tools.
+Those tools must check it before entering edit mode or emitting an edit request.
+
+## Regenerate the sandbox
+
+Use **MartianMap > HUD > Create mission sandbox**. This updates only the HUD prefab,
+font/settings assets, and sandbox scene under `Assets/HUD/`. It does not edit `Main.unity`
+or the Android build scene list. Save any open scene before running this command.
+
+Inter is distributed with its SIL Open Font License in `Fonts/Inter-LICENSE.txt`.
+TextMeshPro settings live under this folder because the skeleton has no imported TMP
+essential resources. Existing project TMP settings take precedence when regenerating.
+`Shaders/` contains the official TMP essential shaders with their original GUIDs and the
+package's Unity Companion License. Avoid importing another copy of those same resources.
+
+## Tests
+
+In **Window > General > Test Runner > PlayMode**, run `MartianMap.HUD` tests. They read the
+actual mission asset, cover the habitat fallback and invalid input, and exercise the live
+Canvas/button/event flow with a matching and mismatching zone. Settings tests use an
+isolated configuration double to cover first registration, immutable authors, cache-only
+settings, rejected addresses, storage failures, cancellation, and configuration events
+without changing the developer's saved configuration.
+Astronaut tests cover hold timing/cancellation, initial placement, invalid moves, zone
+changes, unchanged return bases, and the real Input System mouse-to-map flow in the sandbox.
+
+From PowerShell at the repository root:
+
+```powershell
+& 'C:\Program Files\Unity\Hub\Editor\6000.3.28f1\Editor\Unity.exe' `
+  -batchmode -nographics -projectPath "$PWD\tablet" `
+  -runTests -testPlatform PlayMode -testFilter MartianMap.HUD `
+  -testResults "$env:TEMP\martian-map-hud-tests.xml" `
+  -logFile "$env:TEMP\martian-map-hud-tests.log"
+```
+
+Close the editor first when running batch tests against the same project.
+
+## Integration
+
+P4 can keep the existing HUD prefab instance in `Main.unity`: it retains its original GUID.
+The prefab has `MissionHud`, `ScienceHud`, `SettingsHud`, `AstronautHud`, and
+`RouteAlternativesHud`, an assigned mission asset, and a font. Its Canvas and
+controls are created at runtime. There must be only one active EventSystem; the HUD creates
+one only when the scene does not already have one.
+
+This increment covers the mission panel, route handoff, layer controls, and source-rate
+presentation, settings, author registration, simulated astronaut relocation, and route
+comparison controls. POV media
+and edit tools remain separate work.

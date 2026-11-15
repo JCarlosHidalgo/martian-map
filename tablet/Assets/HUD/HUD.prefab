@@ -9,6 +9,11 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4053396569988013252}
+  - component: {fileID: 877559679158362272}
+  - component: {fileID: 7988985064551533865}
+  - component: {fileID: 5024201722771038912}
+  - component: {fileID: 6216426935539730001}
+  - component: {fileID: 5728979307120361834}
   m_Layer: 5
   m_Name: HUD
   m_TagString: Untagged
@@ -31,3 +36,71 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &877559679158362272
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6313097805111331202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d027d60aae5b814db810bb81334f6ec, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: MartianMap.HUD::MartianMap.HUD.MissionHud
+  _missionAsset: {fileID: 4900000, guid: dd58390e8d3b38b4ea7770c9aaca586a, type: 3}
+  _font: {fileID: 11400000, guid: 54c4aeeefbd0d6f40bc8c19f7569641a, type: 2}
+--- !u!114 &7988985064551533865
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6313097805111331202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bd450307a4631d4438a3a9b6e07f6cbf, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: MartianMap.HUD::MartianMap.HUD.ScienceHud
+  _font: {fileID: 11400000, guid: 54c4aeeefbd0d6f40bc8c19f7569641a, type: 2}
+--- !u!114 &5024201722771038912
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6313097805111331202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 06d24abb18ad69a48b9d3f88ea08bbe1, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: MartianMap.HUD::MartianMap.HUD.SettingsHud
+  _font: {fileID: 11400000, guid: 54c4aeeefbd0d6f40bc8c19f7569641a, type: 2}
+--- !u!114 &6216426935539730001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6313097805111331202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45a575cce1d132b468c67f41fdadf69f, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: MartianMap.HUD::MartianMap.HUD.AstronautHud
+  _font: {fileID: 11400000, guid: 54c4aeeefbd0d6f40bc8c19f7569641a, type: 2}
+  _holdDuration: 0.65
+  _holdTolerancePixels: 18
+--- !u!114 &5728979307120361834
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6313097805111331202}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b3c8ed9bfec7864a95d8aeef5ef1b8c, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: MartianMap.HUD::MartianMap.HUD.RouteAlternativesHud
+  _font: {fileID: 11400000, guid: 54c4aeeefbd0d6f40bc8c19f7569641a, type: 2}

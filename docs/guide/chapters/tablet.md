@@ -62,40 +62,58 @@ frente D §19).
 ## Mundo y tiles (D2)
 
 **Cada zona es un mundo ENU/equirectangular local, con su origen en `zone.json`. El terreno son
-tiles 257² `uint16` con offset y escala por tile, borde compartido y skirts.**
+tiles 257² `uint16` con offset y escala por tile y borde compartido. El mapa es 2D** *(equipo)*: no
+hay datos suficientes para un terreno 3D creíble, así que el terreno es un plano visto desde
+arriba.
 
+- El mapa es el plano Y = 0 (X = este, Z = norte): un quad por tile de `z = 0`, visto por una
+  cámara ortográfica cenital, con el norte arriba.
+- La altura no se pierde: el shader del terreno la dibuja como sombreado del relieve, color por
+  altitud y curvas de nivel, y sigue entrando entera en el costo y en las rutas.
 - El heightmap regular comparte celdas con el costo y con las ediciones (U3).
 - float32 en coordenadas planetocéntricas da pasos de ~0,25 m; a 10 km de un origen local, ~1 mm.
 - `uint16` con escala por tile cuantiza < 1 cm.
 - `zone.json` lleva el CRS IAU_2015:49900, la lat/lon del origen y la proyección; sus campos están
   en [Tierra](./tierra.md), sección "Tiles (C1)".
-- El LOD es un quadtree propio; CDLOD es una mejora.
+- Se dibujan solo los tiles de `z = 0`: una zona de 3 × 3 km son 144 quads, que la tablet dibuja
+  sin LOD *(inferencia)*. Los niveles `z > 0` siguen en C1 para quien los necesite.
+- **Cámara** *(equipo)*: un dedo desplaza y dos dedos hacen zoom con pellizco; en el PC, arrastrar
+  desplaza y la rueda hace zoom hacia el cursor. El punto bajo el dedo se queda bajo el dedo. En
+  modo edición un dedo queda para el `HUD`.
 
 El formato del tile es C1, en [Tierra](./tierra.md), sección "Tiles (C1)".
 
-**Vista de contexto global:** una esfera MOLA propia de baja resolución (opcional). Cesium Mars
-solo se usa con conexión y **fuera del build de la tablet**: los ToS de ion §2.2.2 prohíben copiar
-o almacenar su contenido para uso offline; el plugin es Apache-2.0
+**Vista de contexto global:** fuera del MVP. Cesium Mars solo se usaría con conexión y **fuera del
+build de la tablet**: los ToS de ion §2.2.2 prohíben copiar o almacenar su contenido para uso
+offline; el plugin es Apache-2.0
 ([Cesium ToS](https://cesium.com/legal/terms-of-service/), S11; frente D §18).
 
-Factibilidad en 48 h: media-alta (los skirts son ≈ ½ día).
+Factibilidad en 48 h: alta.
 
 Pendientes y riesgos:
 
-- Bugs de costura y de LOD.
-- Cesium 1.26.1 en Unity 6.3 es **NO VERIFICADO**, e irrelevante: el terreno no depende de Cesium.
-  Si se usa en el video, el logo "Cesium ion" va visible.
+- El rendimiento con todos los tiles de Gale en la tablet → **E1**, en la tablet.
+- Si se usa Cesium en el video, el logo "Cesium ion" va visible.
 
 ## Caché local
 
-La tablet guarda **los tiles C1 como archivos** en `persistentDataPath/zones/…` y **el catálogo y
-el log de ediciones en un SQLite local** (`gilzoide/unity-sqlite-net` 1.3.3).
+La tablet guarda **los tiles C1 como archivos** en `persistentDataPath/zones/{zone_id}/`, con la
+misma estructura que el `data/` de un bundle, y **el catálogo y el log de ediciones en archivos
+JSON**: es el plan C de **E8** *(equipo)*, porque E8 no se puede correr sin la tablet.
+
+- El catálogo es `persistentDataPath/catalog.json`: cada zona con su `zone_version`, cada tile e
+  imagen POV con su versión y su `sha256`, y los cursores `since` de C3. Se escribe en un archivo
+  temporal y se sustituye. Está detrás de una interfaz, así que SQLite
+  (`gilzoide/unity-sqlite-net` 1.3.3) lo reemplaza sin tocar nada más si E8 pasa.
+- El log de ediciones de cada zona es `{zone_id}/edits.jsonl`: una edición por línea, con el `Edit`
+  de C3 más dos campos locales que no viajan, `_from_habitat` y `_acked`.
+- Un tile se escribe en una carpeta temporal y se mueve a su sitio cuando todos sus archivos pasan
+  su `sha256`; una zona solo aparece en el catálogo cuando todos sus tiles están.
 
 - Un tile se vuelve a descargar cuando su `?v=` difiere del cacheado, y se verifica su `sha256`.
 - Al recibir `changes`, `Terrain` llama a `apply()` y refresca `_HazardTex`.
-- `apply()` trabaja sobre los tiles de `z = 0`. Para que una edición se vea de lejos, `Terrain`
-  recalcula el `_HazardTex` de los tiles de `z > 0` que la cubren, con la regla de reducción de
-  [Convenciones](./convenciones.md), sección "Datos (C0)" *(equipo)*.
+- `apply()` trabaja sobre los tiles de `z = 0`, que son los únicos que el mapa 2D dibuja: no hay
+  `_HazardTex` de `z > 0` que recalcular.
 - **Solo `Terrain` habla HTTP con el hábitat.** `HUD` y `Routing` reciben de `Terrain` lo que
   necesitan (sección "Orquestación").
 - Las imágenes POV se guardan en `persistentDataPath/zones/{zone}/pov/`, con la misma regla de
@@ -491,11 +509,14 @@ La equivalencia entre x64-JIT y ARM64-IL2CPP es **NO VERIFICADA** → **E9**.
 
 ## Efectos visuales (D8)
 
-**El holograma es Shader Graph** (fresnel, scanlines, curvas de nivel por `frac` de la altura,
-wireframe, bloom) **y el heatmap es una textura R8.** La niebla tiene dos partes:
+**El terreno es un shader HLSL de URP de una sola pasada, y `FX` lo estiliza con funciones HLSL
+que el shader incluye** *(equipo)*: el estilo holográfico, el peligro y el heatmap. El heatmap es
+una textura R8. La niebla tiene dos partes:
 
-- **Niebla lejana:** un tinte en el shader del terreno.
+- **Niebla lejana:** un tinte en el shader del terreno, con las bandas ámbar y roja del peligro.
 - **Niebla cercana:** una sola pasada analítica + pocas partículas grandes.
+
+Cómo se reparte ese shader entre P4 y P5: sección "Contrato de escena (C5)".
 
 Por qué:
 
@@ -546,13 +567,13 @@ C5 no tiene fixture en `contracts/`: su entregable es código que compila en `ta
 
 | Entregable | Dónde | Contenido en H2 |
 |---|---|---|
-| `MapEvents` y `MapQuery` | `tablet/Assets/Terrain/` | todos los eventos de la tabla "Eventos", con el struct de su carga, y las dos consultas, que en H2 resuelven contra el plano Y = 0: `TryPick` da el punto de ese plano bajo el toque y `HeightAt` da 0. P4 las sustituye por el terreno real sin cambiar la firma |
+| `MapEvents` y `MapQuery` | `tablet/Assets/Terrain/` | todos los eventos de la tabla "Eventos", con el struct de su carga, y las consultas de la tabla "Eventos". El mapa 2D es el plano Y = 0, así que `TryPick` da el punto de ese plano bajo el toque y `HeightAt` da 0; la altitud real la da `TryElevationAt` |
 | Tipos de datos | `tablet/Assets/Terrain/` | las clases que leen `zone.json` y `conditions.json`, con los campos de sus tablas |
 | `AppConfig` | `tablet/Assets/Terrain/` | completa: es corta y no depende de ningún contrato, así que es lo primero que P4 escribe en H0. Sección "Configuración" |
 | Cargador de fixtures | `tablet/Assets/Terrain/` | lee `expected_route.json`, `expected_plan.json`, `cost_params.json`, el `zone.json` y el `conditions.json` de `contracts/fixtures/` a los tipos de C4 y C5. Lo escribe P4 después de H0:45, cuando la firma de C4 está en `main` |
 | `ShaderIds` | `tablet/Assets/Terrain/` | una constante por propiedad de esta sección |
 | Prefabs `Terrain`, `FX`, `HUD`, `Routes` | la carpeta de cada dueño | vacíos, ya colocados en `Main.unity`. `Terrain` y `HUD` los crea P4 antes de H0, y `FX` y `Routes` los crea P5, con el esqueleto; desde H0 cada uno es de su dueño |
-| Sub Graphs de `FX` | `tablet/Assets/FX/` | los de "Cómo dibuja `FX` sobre el terreno", sin efecto. Los crea P5 antes de H0 *(equipo)*; desde H0 son de P5 |
+| Funciones de `FX` | `tablet/Assets/FX/Shaders/FxTerrainHooks.hlsl` | las de "Cómo dibuja `FX` sobre el terreno", con un cuerpo por defecto que escribió P4 para que el mapa se vea; son de P5 |
 
 - El "bus de eventos falso" de cada dueño es un script de su escena de pruebas que emite los
   eventos de `MapEvents` con los fixtures; lo escribe cada uno, sobre el cargador de fixtures de
@@ -604,8 +625,10 @@ Las pone `Terrain` en cada tile, con un `MaterialPropertyBlock`.
 | Propiedad | Formato | Contenido |
 |---|---|---|
 | `_HeightTex` | **R16_UNORM**, 257² | el `uint16` de C1 tal cual |
-| `_HeightScale`, `_HeightOffset` | float *(equipo)* | Y de la escena en metros = `_HeightOffset + _HeightScale · muestra`, con la muestra leída como 0–1. `_HeightScale` = `height.scale · 65535`; `_HeightOffset` = `height.offset − origin_height_m` |
-| `_HazardTex` | R8, 257² | el `uint8` de C1 leído como 0–1 |
+| `_HeightScale`, `_HeightOffset` | float *(equipo)* | altura en metros relativa al origen de la zona = `_HeightOffset + _HeightScale · muestra`, con la muestra leída como 0–1: la que sombrea el shader. `_HeightScale` = `height.scale · 65535`; `_HeightOffset` = `height.offset − origin_height_m` |
+| `_NodataTex` | R8, 257², sin filtrar *(equipo)* | 1 donde la muestra de `height` es `nodata`; el shader dibuja ahí un rayado gris. En `_HeightTex` esas muestras se rellenan con la vecina válida para que el sombreado no salte |
+| `_MPerPx` | float *(equipo)* | el `m_per_px` del tile, para la pendiente del sombreado |
+| `_HazardTex` | R8, 257² | el peligro efectivo del tile leído como 0–1: `max(base de Tierra, zonas de P5, ediciones)` |
 | `_LayerTex0`, `_LayerTex1`, `_LayerTex2` | R8, 257² | las capas del tile: tabla "Capas" |
 | UV0 | | el tile, de 0 a 1 |
 
@@ -632,6 +655,9 @@ Se ponen con `Shader.SetGlobal…`, así que ningún material necesita una refer
 | `_FogFarColor` | `FX` | el color del tinte lejano |
 | `_FogFarStrength` | `FX` | 0–1: cuánto tiñe |
 | `_FogFarAmberMin`, `_FogFarRedMin` | `Terrain` | 0–1: `hazard_amber_min` y `hazard_red_min` de `cost_params.json`, divididos por 255 |
+| `_ZoneHeightRange` | `Terrain` | `(mín, máx)` de la altura relativa al origen en la zona, para la rampa de color por altitud |
+| `_TopoOn`, `_HazardOn`, `_HeatOn` | `Terrain` | 0 o 1, según `LayerToggled` de `topo`, `hazard` y `heat`, que no tienen textura por tile |
+| `_ContourIntervalM` | `Terrain` | metros entre curvas de nivel; una de cada cinco es maestra |
 
 - **El tinte de niebla lejana vive en el material del terreno** (P4): lee `_HazardTex` y las
   cuatro propiedades `_FogFar…`. El color y la fuerza los fija `FX`; los umbrales, `Terrain`.
@@ -640,27 +666,27 @@ Se ponen con `Shader.SetGlobal…`, así que ningún material necesita una refer
 
 *(equipo)*
 
-**El terreno se dibuja en una sola pasada, con un solo shader, que es de P4.** Ese Shader Graph
-incluye los Sub Graphs de P5, y así `FX` no añade overdraw sobre el terreno.
+**El terreno se dibuja en una sola pasada, con un solo shader, que es de P4**:
+`MartianMap/Terrain/TerrainMap2D`, HLSL de URP, en `tablet/Assets/Terrain/Shaders/`. Incluye
+`tablet/Assets/FX/Shaders/FxTerrainHooks.hlsl`, que es de P5, y así `FX` no añade overdraw sobre el
+terreno. Un Shader Graph no se puede escribir ni revisar como texto, por eso el terreno es HLSL.
 
-| Sub Graph (P5, en `tablet/Assets/FX/`) | Entradas | Salida |
+| Función (P5) | Entradas | Salida |
 |---|---|---|
-| `SG_Hologram` | UV0, posición de mundo, normal, color base | color y emisión: fresnel, scanlines, curvas de nivel y wireframe |
-| `SG_FogFar` | color, muestra de `_HazardTex` | color con el tinte lejano |
-| `SG_Heatmap` | color, posición de mundo | color con el heatmap, leído de `_HeatTex` |
+| `FxApplyHazard` | color, peligro 0–1, `_FogFarAmberMin`, `_FogFarRedMin`, `_FogFarColor`, `_FogFarStrength`, posición ENU | color con el tinte de peligro |
+| `FxApplyHeat` | color, muestra de `_HeatTex` (1 = sin regreso) | color con el heatmap |
+| `FxApplyMapStyle` | color, posición ENU, UV0 | color final: el estilo holográfico |
 
-- P4 escribe el Shader Graph del terreno, en `tablet/Assets/Terrain/`: muestrea las texturas por
-  tile, elige la capa base y encadena los tres Sub Graphs. P5 no toca ese archivo ni el material.
-- En H2 los tres Sub Graphs existen con esas entradas y devuelven el color sin cambiarlo; P5 los
-  rellena después.
+- El shader de P4 muestrea las texturas por tile, sombrea el relieve, elige la capa base, dibuja
+  las curvas de nivel y el `nodata`, y llama a las tres funciones. P5 no toca el shader ni el
+  material; P4 no toca el cuerpo de las funciones.
+- Las firmas son parte de C5: cambiarlas es un cambio de contrato.
 - **Lo que `FX` dibuja con geometría propia** (la niebla cercana, sus partículas y el prefab
   `Routes`) no ve las texturas por tile. Lee el peligro de `_HazardZoneTex`, global: R8, con un
-  texel por nodo de la `CostGrid` y la misma UV que `_HeatTex`. `Terrain` la llena con `CostGrid.hazard`
-  cada vez que rearma la grilla.
-- **Wireframe** *(equipo)*: es una rejilla que sale de UV0, sin atributo de vértice ni
-  coordenadas baricéntricas. Hay línea donde `frac(UV0 · N)` queda cerca de 0 o de 1, con `fwidth`
-  para el grosor; N = 256 da una línea por celda.
-- Las curvas de nivel salen de `frac` de la altura sobre el areoide: Y + `_ZoneOriginHeightM`.
+  texel por nodo de la `CostGrid` y la misma UV que `_HeatTex`. `Terrain` la llena con
+  `CostGrid.hazard` cada vez que planifica.
+- Las curvas de nivel salen de `frac` de la altura sobre el areoide: la altura relativa +
+  `_ZoneOriginHeightM`.
 
 ### Capas
 
@@ -668,12 +694,12 @@ incluye los Sub Graphs de P5, y así `FX` no añade overdraw sobre el terreno.
 
 | `layer_id` | Indicador | En el tile (P1) | En el material (P4) | Quién lo dibuja |
 |---|---|---|---|---|
-| `topo` | topográfico | `height` | `_HeightTex` | `FX`: las curvas de nivel del holograma |
+| `topo` | topográfico | `height` | `_HeightTex` | el material del terreno: sombreado, color por altitud y curvas de nivel (`_TopoOn`) |
 | `ortho` | óptico | `layers[]`, `ortho` | `_LayerTex0` | el material del terreno |
 | `thermal` | térmico | `layers[]`, `thermal` | `_LayerTex1` | el material del terreno, con una rampa de color |
 | `thermal_ir` | térmico, cualitativo | `layers[]`, `thermal_ir` | `_LayerTex2` | el material del terreno |
-| `hazard` | peligro | `rasters.hazard` | `_HazardTex` | el tinte lejano (material) y la niebla cercana (`FX`) |
-| `heat` | regreso al hábitat | | `_HeatTex` | `FX`: el heatmap |
+| `hazard` | peligro | `rasters.hazard` | `_HazardTex` | el tinte lejano (material, con `FxApplyHazard`) y la niebla cercana (`FX`) |
+| `heat` | regreso al hábitat | | `_HeatTex` | el material del terreno, con `FxApplyHeat` (`_HeatOn`) |
 
 - El `HUD` (P6) tiene un toggle por fila y emite `LayerToggled` con ese `layer_id`.
 - `ortho`, `thermal` y `thermal_ir` son excluyentes: el `HUD` apaga una al encender otra.
@@ -682,6 +708,24 @@ incluye los Sub Graphs de P5, y así `FX` no añade overdraw sobre el terreno.
   unidad y el rango de la leyenda.
 - La radiación no es una capa: es un número en el `HUD`.
 - Los archivos de `layers[]`: [Tierra](./tierra.md), sección "Tiles (C1)".
+
+### Zonas de peligro de `FX` (Shapefile)
+
+*(equipo)*
+
+P5 entrega zonas de peligro como un Shapefile, y `Terrain` las funde con el peligro del tile, así
+que la niebla y las rutas las ven igual que el peligro de Tierra.
+
+| Tema | Regla |
+|---|---|
+| Archivos | `tablet/Assets/StreamingAssets/hazard_shapes/{zone_id}.shp`, con su `.dbf` y, opcional, su `.prj` |
+| Geometría | Polygon, PolygonZ o PolygonM; anillos par-impar, con agujeros |
+| Coordenadas | metros ENU de la zona (x = este, y = norte) sin `.prj` o con uno proyectado; longitud y latitud en grados (IAU_2015:49900) con un `.prj` geográfico |
+| Valor | campo numérico `HAZARD` (0–255), o de texto `LEVEL` = `amber` (128) o `red` (255); 255 si no hay ninguno |
+| Fusión | se rasteriza sobre las muestras de cada tile de `z = 0`; el peligro del tile es `max(base, zonas, ediciones)` |
+
+- Un archivo malo se registra y no bloquea la zona.
+- El ejemplo es `hazard_shapes/demo.shp`, de la zona demo que se genera en código.
 
 ### Eventos
 
@@ -711,7 +755,8 @@ usa para situar toques, pines y paradas:
 | Consulta | Devuelve |
 |---|---|
 | `MapQuery.TryPick(screenPosition, out enu_m)` | el punto del terreno bajo un toque, o falso si no toca terreno |
-| `MapQuery.HeightAt(enu_m)` | la Y de la escena en ese punto |
+| `MapQuery.HeightAt(enu_m)` | la Y de la escena en ese punto: 0 en el mapa 2D |
+| `MapQuery.TryElevationAt(enu_m, out m)` *(equipo)* | la altura sobre el areoide en ese punto, o falso donde no hay dato: la que muestra el `HUD` |
 
 - `FX` y el prefab `Routes` no usan los tipos de `Routing`: dibujan `polyline`. De `Edits`, `FX`
   lee `LiveEntity`.
@@ -756,6 +801,21 @@ Una edición:
 El texto del `op` *(propuesta de P3)*: `Terrain` lo escribe con `EditOpText.ToWire` y lo lee, del
 log local o de `changes`, con `EditOpText.TryParse`. Si `TryParse` da falso, descarta esa edición,
 escribe `[Terrain] … op=<texto>` y sigue; no escribe su propia tabla.
+
+Reglas de la orquestación *(equipo)*:
+
+- **Una petición que solo cambia `alternative`** reutiliza las tres `Plan` ya calculadas y emite
+  `RouteSelected` sin volver a llamar a `Routing`.
+- **Sin `conditions.json`** (o con una tasa que `Routing` rechaza), `Terrain` planifica con
+  10 µGy/h, el extremo alto de la tasa base esperada (E14), y lo escribe en el log: el límite de
+  duración se acorta en lugar de ignorarse *(inferencia conservadora)*.
+- **Mientras `Routing` lance `NotImplementedException`**, la zona `synth` responde con
+  `expected_plan.json`, que es la ruta del walking skeleton; las demás zonas escriben en el log que
+  no hay ruta.
+- **Sin `author` guardado**, `Terrain` no acepta la edición y emite `EditRejected` con
+  `code: author_missing`.
+- Con la caché vacía, `Terrain` muestra la zona `synth` del contrato, que es la que usa la misión
+  sintética del `HUD`; si llega una zona del hábitat, la sustituye.
 
 ## HUD e indicadores (D10)
 
