@@ -38,6 +38,35 @@ namespace MartianMap.Routing.Tests
             Assert.That(Time(g, (0, 0), (2, 1)), Is.EqualTo(10.647942749999).Within(Tol));
         }
 
+        [Test]
+        public void TheAscentWeightAddsSecondsPerMetreOfHeightChange()
+        {
+            // Oracle (cases_alt.py t1): TraceTests' 5 × 3 grid, (0,0)→(4,2), whose ascent is 3.0 m:
+            // the choice cost goes from 88.37963962489474 to 118.37963962489474 s with 10 s/m, and
+            // the time without penalties stays 76.88314506177288 s.
+            CostGrid g = TraceTests.G;
+            double fastest = Cost.SegmentCostS(g, g.Index(0, 0), g.Index(4, 2), P.V0Mps.P50, P, Weights.Fastest, out double t0);
+            double gentle = Cost.SegmentCostS(g, g.Index(0, 0), g.Index(4, 2), P.V0Mps.P50, P, new Weights(1, 10), out double t1);
+            Assert.That(fastest, Is.EqualTo(88.37963962489474).Within(Tol));
+            Assert.That(gentle, Is.EqualTo(118.37963962489474).Within(Tol));
+            Assert.That(t0, Is.EqualTo(76.88314506177288).Within(Tol));
+            Assert.That(t1, Is.EqualTo(t0));
+        }
+
+        [Test]
+        public void WeightsForEachAlternative()
+        {
+            // tablet.md, "Las tres alternativas": safest multiplies the amber penalty by
+            // alt_safest_amber_mult (4), gentlest adds alt_gentlest_s_per_m (10) per metre of height change.
+            Assert.That(Weights.Fastest.AmberMult, Is.EqualTo(1));
+            Assert.That(Weights.Fastest.AscentSPerM, Is.EqualTo(0));
+            Weights f = Weights.For(Alternative.Fastest, P), s = Weights.For(Alternative.Safest, P), g = Weights.For(Alternative.Gentlest, P);
+            Assert.That((f.AmberMult, f.AscentSPerM), Is.EqualTo((1.0, 0.0)));
+            Assert.That((s.AmberMult, s.AscentSPerM), Is.EqualTo((4.0, 0.0)));
+            Assert.That((g.AmberMult, g.AscentSPerM), Is.EqualTo((1.0, 10.0)));
+            Assert.Throws<ArgumentOutOfRangeException>(() => Weights.For((Alternative)3, P));
+        }
+
         [TestCase(1, 0)]
         [TestCase(0, 1)]
         public void ADiagonalDoesNotCutABlockedCorner(int i, int j)
@@ -95,6 +124,58 @@ namespace MartianMap.Routing.Tests
             Assert.That(Time(g, (1, 0), (3, 1)), Is.EqualTo(35.15191279744196).Within(Tol));
             Assert.That(Time(g, (3, 2), (2, 0)), Is.EqualTo(19.48920801029821).Within(Tol));
             Assert.That(Time(g, (0, 0), (4, 2), v0: P.V0Mps.P90), Is.EqualTo(96.1039313272161).Within(Tol));
+        }
+
+        [Test]
+        public void SegmentCostMatchesBothSegmentTimes()
+        {
+            float[] height =
+            {
+                0f, 0.5f, 1.25f, 0.75f, 0f,
+                0.25f, 1f, 2f, 1.5f, 0.5f,
+                0.5f, 1.25f, 2.5f, 2f, 1f,
+            };
+            byte[] relief =
+            {
+                0, 40, 0, 50, 0,
+                10, 0, 45, 0, 0,
+                0, 0, 0, 38, 0,
+            };
+            CostGrid g = Grid(5, 3, heightM: height, hazard: Set(5, 3, (2, 1, 128)), relief: relief);
+            foreach (((int, int) a, (int, int) b) in new[] { ((0, 0), (4, 2)), ((1, 0), (3, 1)), ((3, 2), (2, 0)) })
+            {
+                int na = g.Index(a.Item1, a.Item2), nb = g.Index(b.Item1, b.Item2);
+                double choice = Cost.SegmentCostS(g, na, nb, P.V0Mps.P50, P, Weights.Fastest, out double time);
+                Assert.That(choice, Is.EqualTo(Cost.SegmentTimeS(g, na, nb, P.V0Mps.P50, P, withAmberPenalty: true)), $"{a} -> {b}");
+                Assert.That(time, Is.EqualTo(Cost.SegmentTimeS(g, na, nb, P.V0Mps.P50, P, withAmberPenalty: false)), $"{a} -> {b}");
+            }
+        }
+
+        [Test]
+        public void TheAmberMultiplierScalesOnlyThePenalty()
+        {
+            // Oracle (~/scratch/c4-verify/oracle, route_oracle.segment, mult=4): the knight move of
+            // AKnightMoveGivesAQuarterToEachOfItsFourNodes, 10.647942749999 + 4 · 2.4 · 1.118033988749895.
+            CostGrid g = Grid(3, 2, hazard: Set(3, 2, (1, 0, 128)));
+            double choice = Cost.SegmentCostS(g, g.Index(0, 0), g.Index(2, 1), P.V0Mps.P50, P, new Weights(4, 0), out double time);
+            Assert.That(choice, Is.EqualTo(21.381069041997993).Within(Tol));
+            Assert.That(time, Is.EqualTo(10.647942749999).Within(Tol));
+        }
+
+        [Test]
+        public void ABlockedSegmentCostsInfinityBothWays()
+        {
+            CostGrid g = Grid(3, 2, hazard: Set(3, 2, (1, 0, 255)));
+            double choice = Cost.SegmentCostS(g, g.Index(0, 0), g.Index(2, 1), P.V0Mps.P50, P, Weights.Fastest, out double time);
+            Assert.That(choice, Is.EqualTo(double.PositiveInfinity));
+            Assert.That(time, Is.EqualTo(double.PositiveInfinity));
+        }
+
+        [Test]
+        public void TheSpeedBoundIsV0TimesFTerreno()
+        {
+            // 0.70 · 0.6, by hand.
+            Assert.That(Cost.MaxSpeedMps(0.70, P), Is.EqualTo(0.42).Within(1e-12));
         }
 
         [Test]

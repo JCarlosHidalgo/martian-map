@@ -36,6 +36,12 @@ namespace MartianMap.Routing
         /// <summary>A copy of exactly <paramref name="count"/> values.</summary>
         internal static T[] Array<T>(T[] source, int count, string name)
         {
+            return (T[])Exactly(source, count, name).Clone();
+        }
+
+        /// <summary><paramref name="source"/> itself, not a copy, once it is known to hold exactly <paramref name="count"/> values.</summary>
+        internal static T[] Exactly<T>(T[] source, int count, string name)
+        {
             if (source == null)
             {
                 throw new ArgumentNullException(name);
@@ -46,7 +52,7 @@ namespace MartianMap.Routing
                 throw new ArgumentException($"Expected {count} values.", name);
             }
 
-            return (T[])source.Clone();
+            return source;
         }
     }
 }

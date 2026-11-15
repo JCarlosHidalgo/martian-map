@@ -34,6 +34,52 @@ namespace MartianMap.Terrain.Editor
             Debug.Log("[Terrain] 2D map setup done");
         }
 
+        private static readonly string[] MainScenePrefabs =
+        {
+            "Assets/FX/FX.prefab",     // P5: global FX parameters and near fog
+            "Assets/FX/Routes.prefab", // P5: draws RouteSelected's polyline
+        };
+
+        /// <summary>
+        /// Integrates the other owners' prefabs into Main.unity, once each (P4 is the integrator).
+        /// Batch: <c>-executeMethod MartianMap.Terrain.Editor.Map2DSetup.IntegrateMainScene</c>
+        /// </summary>
+        [MenuItem("MartianMap/Integrate prefabs into Main")]
+        public static void IntegrateMainScene()
+        {
+            var scene = EditorSceneManager.OpenScene(MainScenePath, OpenSceneMode.Single);
+            var added = 0;
+            foreach (var path in MainScenePrefabs)
+            {
+                var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                if (prefab == null)
+                {
+                    Debug.LogWarning($"[Terrain] prefab missing path={path}");
+                    continue;
+                }
+
+                var present = false;
+                foreach (var root in scene.GetRootGameObjects())
+                {
+                    if (PrefabUtility.GetCorrespondingObjectFromSource(root) == prefab)
+                    {
+                        present = true;
+                        break;
+                    }
+                }
+
+                if (!present)
+                {
+                    PrefabUtility.InstantiatePrefab(prefab, scene);
+                    added++;
+                }
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            Debug.Log($"[Terrain] Main.unity integration done prefabs_added={added}");
+        }
+
         private static Material EnsureMaterial()
         {
             var shader = Shader.Find(ShaderName);

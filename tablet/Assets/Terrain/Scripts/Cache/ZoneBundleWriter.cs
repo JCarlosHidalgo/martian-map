@@ -32,6 +32,8 @@ namespace MartianMap.Terrain
                 {
                     [t.Height.File] = ToBytes(tile.Height),
                     ["hazard.r8"] = tile.BaseHazard,
+                    ["slope.r8"] = tile.Slope,
+                    ["roughness.r8"] = tile.Roughness,
                 };
                 foreach (var layer in t.Layers)
                 {

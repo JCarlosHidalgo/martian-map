@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "edit_log.schema.json",
+  "title": "edit_log",
+  "description": "An incoming edit log in arrival order or its merged winners in (lamport, author, uuid) order.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "edits"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "edits": {"type": "array", "items": {"$ref": "edit.schema.json"}}
+  }
+}

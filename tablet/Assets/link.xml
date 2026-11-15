@@ -1,0 +1,14 @@
+<!--
+  IL2CPP managed code stripping (Medium) removes constructors and properties that only
+  reflection uses. Newtonsoft.Json builds our JSON types (zone.json, tile.json, C3 responses,
+  cost_params.json, mission.json) by reflection, so on Android it failed with "Unable to find a
+  constructor to use for type ...". Preserve our own assemblies whole; they are small.
+  Owner: P4 (project-level build setting). Add an assembly here when it deserializes JSON.
+-->
+<linker>
+  <assembly fullname="MartianMap.Terrain" preserve="all" />
+  <assembly fullname="MartianMap.HUD" preserve="all" />
+  <assembly fullname="MartianMap.FX" preserve="all" ignoreIfMissing="1" />
+  <assembly fullname="MartianMap.Routing" preserve="all" />
+  <assembly fullname="MartianMap.Edits" preserve="all" />
+</linker>

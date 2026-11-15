@@ -31,33 +31,159 @@ namespace MartianMap.Routing
         /// is, and otherwise comes from the south-westmost tile (lowest <c>n</c>, then lowest
         /// <c>e</c>). The result does not depend on the order of <paramref name="tiles"/>.</item>
         /// </list>
+        /// It throws <see cref="ArgumentNullException"/> for null <paramref name="tiles"/>, a null tile or a
+        /// null <paramref name="p"/>, and <see cref="ArgumentException"/> for no tiles, a non-finite
+        /// <paramref name="originHeightM"/> or tile origin, or a box with more nodes than an <c>int</c> counts.
+        /// <paramref name="p"/> does not change the grid, which keeps the rasters without the cost.
         /// </summary>
-        public static CostGrid BuildGrid(TileRasters[] tiles, double originHeightM, CostParams p) =>
-            throw new NotImplementedException();
+        public static CostGrid BuildGrid(TileRasters[] tiles, double originHeightM, CostParams p)
+        {
+            if (tiles == null)
+            {
+                throw new ArgumentNullException(nameof(tiles));
+            }
 
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            if (tiles.Length == 0)
+            {
+                throw new ArgumentException("BuildGrid needs at least one tile.", nameof(tiles));
+            }
+
+            foreach (TileRasters t in tiles)
+            {
+                if (t == null)
+                {
+                    throw new ArgumentNullException(nameof(tiles), "A tile is null.");
+                }
+            }
+
+            if (!double.IsFinite(originHeightM))
+            {
+                throw new ArgumentException("origin_height_m must be finite.", nameof(originHeightM));
+            }
+
+            return GridBuilder.Build(tiles, originHeightM);
+        }
+
+        /// <summary>
+        /// The fastest route from <paramref name="start"/> to <paramref name="goal"/>: A*
+        /// 16-connected over the segment rule, choosing with the amber penalty, at v₀ P50, then
+        /// smoothed by <see cref="Smoothing.Smooth"/> (a shortcut only where it costs no more than
+        /// the A* edges it replaces). <c>cells</c>, <c>polyline_enu_m</c> and every other field come
+        /// from <see cref="Cost.Trace"/> over the smoothed waypoints. Each point
+        /// goes to its nearest node (a point midway goes to the east or north one);
+        /// <see cref="Route.NotFound"/> if either node is blocked or there is no path. With both points
+        /// on the same free node, the route is found and stays there: one cell, one point, all 0.
+        /// A goal that cannot be reached is only known after exploring the whole connected part of
+        /// the grid around <paramref name="start"/>, which on a large grid takes as long as a field:
+        /// call it off the main thread.
+        /// </summary>
         public static Route PlanRoute(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
         {
             RequirePointIn(grid, start, nameof(start));
             RequirePointIn(grid, goal, nameof(goal));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            return Leg(grid, NearestNode(grid, start), NearestNode(grid, goal), p, Weights.Fastest, out _);
         }
 
-        /// <summary>The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90.</summary>
+        /// <summary>
+        /// One leg between two nodes with the weights <paramref name="w"/>: A* at v₀ P50, then
+        /// <see cref="Smoothing.Smooth"/> with the same weights, then <see cref="Cost.Trace"/>.
+        /// <paramref name="costS"/> is the cost the leg was chosen by: the sum, in <c>double</c> and
+        /// left to right, of <see cref="Cost.SegmentCostS"/> with <paramref name="w"/> over the
+        /// smoothed waypoints; 0 if <paramref name="s"/> = <paramref name="t"/> and +∞ with no route.
+        /// </summary>
+        internal static Route Leg(CostGrid g, int s, int t, CostParams p, Weights w, out double costS)
+        {
+            double v0 = p.V0Mps.P50;
+            int[] nodes = Search.AStar(g, s, t, v0, p, w, out costS);
+            if (nodes == null)
+            {
+                return Route.NotFound;
+            }
+
+            int[] waypoints = Smoothing.Smooth(g, nodes, v0, p, w);
+            costS = 0;
+            for (int k = 1; k < waypoints.Length; k++)
+            {
+                costS += Cost.SegmentCostS(g, waypoints[k - 1], waypoints[k], v0, p, w, out _);
+            }
+
+            return Cost.Trace(g, waypoints, p);
+        }
+
+        /// <summary>
+        /// The node nearest to <paramref name="point"/>, already checked to be in the grid:
+        /// <c>i = floor((e − origin_e) / cell_m + 0.5)</c>, and the same for <c>j</c>. A point midway
+        /// between two nodes goes to the one with the higher index (east or north).
+        /// </summary>
+        internal static int NearestNode(CostGrid g, EnuPoint point)
+        {
+            int i = (int)Math.Floor(((point.E - g.OriginEnuM.E) / g.CellM) + 0.5);
+            int j = (int)Math.Floor(((point.N - g.OriginEnuM.N) / g.CellM) + 0.5);
+            i = Math.Min(Math.Max(i, 0), g.Width - 1);
+            j = Math.Min(Math.Max(j, 0), g.Height - 1);
+            return (j * g.Width) + i;
+        }
+
+        /// <summary>
+        /// The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90: each node's way back is
+        /// chosen with the amber penalty, and its value is that way's time without it. It is
+        /// computed from the node nearest to <paramref name="home"/> (the same rounding as
+        /// <see cref="PlanRoute"/>), and <see cref="Field.Home"/> keeps the point as given. With that
+        /// node blocked every value is +∞: there is no return, which is a result, not an error. It
+        /// visits the whole grid: call it off the main thread.
+        /// </summary>
         public static Field ReturnField(CostGrid grid, EnuPoint home, CostParams p)
         {
             RequirePointIn(grid, home, nameof(home));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            var timeS = new float[grid.Width * grid.Height];
+            Search.Field(grid, NearestNode(grid, home), p.V0Mps.P90, p, timeS);
+            return Field.Adopt(grid, home, timeS);
         }
 
         /// <summary>
         /// One route per value of <see cref="Alternative"/>, in that order: always all of them, even
-        /// when two coincide.
+        /// when two coincide (docs/guide/chapters/tablet.md, "Las tres alternativas"). Each is
+        /// <see cref="PlanRoute"/>'s A* and smoothing with its own weights, from the same nodes:
+        /// fastest is the formula as it is (and exactly <see cref="PlanRoute"/>), safest multiplies
+        /// the amber penalty by <c>alt_safest_amber_mult</c>, and gentlest adds
+        /// <c>alt_gentlest_s_per_m</c> seconds per metre of height change, climbed plus descended.
+        /// The smoothing takes a shortcut only where it does not worsen the alternative's own cost.
+        /// Every field comes from <see cref="Cost.Trace"/>, so <c>eta_s</c> has no penalty. With
+        /// no route, the three are <see cref="Route.NotFound"/>.
         /// </summary>
         public static IReadOnlyList<Route> Alternatives(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
         {
             RequirePointIn(grid, start, nameof(start));
             RequirePointIn(grid, goal, nameof(goal));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            int s = NearestNode(grid, start);
+            int t = NearestNode(grid, goal);
+            var routes = new Route[3];
+            for (int a = 0; a < routes.Length; a++)
+            {
+                routes[a] = Leg(grid, s, t, p, Weights.For((Alternative)a, p), out _);
+            }
+
+            return Array.AsReadOnly(routes);
         }
 
         /// <summary>
@@ -173,6 +299,38 @@ namespace MartianMap.Routing
         /// <see cref="Alternative"/>, in that order, all with the order of the fastest.
         /// <paramref name="homeField"/> is the <see cref="ReturnField"/> already computed for the
         /// heatmap, used again for <c>return_ok</c>; it throws if it was computed on another grid.
+        /// <para>TSP (docs/guide/chapters/tablet.md, "API de Routing"): the order minimises the sum of
+        /// the fastest legs' costs (time P50 plus the amber penalty, what A* minimises), the return
+        /// to home included; the legs are <see cref="PlanRoute"/>'s, both ways. Held-Karp gives the
+        /// optimum exactly, and of the orders within 1e-9 of it the lexicographically smallest by
+        /// index in <paramref name="stops"/> wins, so a tie keeps the input order. A stop that cannot
+        /// be reached from <paramref name="start"/> goes last, in input order, and its legs are not
+        /// found; if home cannot be reached, the open path is ordered. With a leg not found,
+        /// <c>total_s</c> and <c>dose_uGy</c> are +∞ and <c>return_ok</c> is false. Otherwise
+        /// <c>return_ok</c> says whether, on leaving each stop, the walk at P90 plus every
+        /// <c>dwell_s</c> so far plus the field's time back fits (<see cref="ReturnFits"/>); with no
+        /// stops there is nothing to leave, so it only says whether the leg home was found, without
+        /// the budget. Each alternative has its own legs, totals, dose and <c>return_ok</c>.
+        /// With more than <see cref="StopOrder.MaxExact"/> stops reachable from
+        /// <paramref name="start"/>, the order is nearest neighbour from the start and then 2-opt over
+        /// the same costs, both ways, which is deterministic but not always the optimum.</para>
+        /// <para>OP: of the stops reachable from <paramref name="start"/>, the subset with the most
+        /// <c>science_value</c> whose fastest plan fits the <c>return_ok</c> rule at every stop, so the
+        /// fastest plan's <c>return_ok</c> is true whenever it has a stop; the rest, the unreachable
+        /// ones too, go to <c>dropped</c> in input order, and a stop of value 0 is never taken. Each
+        /// subset is ordered as in TSP and the rule is asked of that order. Up to
+        /// <see cref="StopOrder.MaxExact"/> reachable stops it is exact; on a tie of value, the lower
+        /// cost (legs plus <c>dwell_s</c>, within 1e-9), then the subset that holds the stop of lowest
+        /// input index where the two differ. Beyond, greedy insertion by value per cost and 2-opt
+        /// (<see cref="StopOrder.Choose"/>). <c>order</c> and <c>dropped</c> are the same in the three
+        /// plans.</para>
+        /// It throws <see cref="ArgumentException"/> for two stops with the same id and
+        /// <see cref="ArgumentOutOfRangeException"/> for a <paramref name="mode"/> that is not defined.
+        /// It runs one A* per ordered pair of reachable stops, and one per stop from the start: the
+        /// time grows with the square of the stops, and it is dominated by the long legs and by the
+        /// unreachable stops, each of which costs a search of the whole connected part of the grid
+        /// around <paramref name="start"/> (in TSP, again in each other alternative). Call it off the
+        /// main thread.
         /// </summary>
         public static IReadOnlyList<Plan> OrderStops(
             CostGrid grid,
@@ -208,7 +366,229 @@ namespace MartianMap.Routing
             }
 
             Conditions.RequireUtc(tUtc, nameof(tUtc));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Stop stop in stops)
+            {
+                if (!ids.Add(stop.Id))
+                {
+                    throw new ArgumentException($"Two stops have the id '{stop.Id}'.", nameof(stops));
+                }
+            }
+
+            if (mode != StopMode.Tsp && mode != StopMode.Op)
+            {
+                throw new ArgumentOutOfRangeException(nameof(mode));
+            }
+
+            int k = stops.Length;
+            int startNode = NearestNode(grid, start);
+            int homeNode = NearestNode(grid, homeField.Home);
+            var node = new int[k];
+            for (int i = 0; i < k; i++)
+            {
+                node[i] = NearestNode(grid, stops[i].EnuM);
+            }
+
+            // The fastest legs, kept by (from, to) with the start as k and home as k + 1.
+            var fastest = new Route[k + 2, k + 2];
+            var reachable = new List<int>();
+            var fromStart = new double[k];
+            for (int i = 0; i < k; i++)
+            {
+                fastest[k, i] = Leg(grid, startNode, node[i], p, Weights.Fastest, out fromStart[i]);
+                if (fastest[k, i].Found)
+                {
+                    reachable.Add(i);
+                }
+            }
+
+            int m = reachable.Count;
+            var between = new double[m, m];
+            var toHome = new double[m];
+            bool homeReached = true;
+            for (int a = 0; a < m; a++)
+            {
+                int ia = reachable[a];
+                fastest[ia, k + 1] = Leg(grid, node[ia], homeNode, p, Weights.Fastest, out toHome[a]);
+                homeReached &= fastest[ia, k + 1].Found;
+                for (int b = 0; b < m; b++)
+                {
+                    if (a != b)
+                    {
+                        fastest[ia, reachable[b]] = Leg(grid, node[ia], node[reachable[b]], p, Weights.Fastest, out between[a, b]);
+                    }
+                }
+            }
+
+            var reachedFromStart = new double[m];
+            for (int a = 0; a < m; a++)
+            {
+                reachedFromStart[a] = fromStart[reachable[a]];
+            }
+
+            double limitS = DurationLimit(conditions, tUtc, budget.DoseUGy);
+            double availableS = Math.Min(budget.TS, limitS);
+            double[] back = homeReached ? toHome : null;
+            int[] best;
+            if (mode == StopMode.Tsp)
+            {
+                best = m <= StopOrder.MaxExact
+                    ? StopOrder.Order(reachedFromStart, between, back)
+                    : StopOrder.Heuristic(reachedFromStart, between, back);
+            }
+            else
+            {
+                var value = new int[m];
+                var dwell = new double[m];
+                for (int a = 0; a < m; a++)
+                {
+                    value[a] = stops[reachable[a]].ScienceValue;
+                    dwell[a] = stops[reachable[a]].DwellS;
+                }
+
+                // Only the greedy insertion needs the leg with no stops; the plan reuses it.
+                double direct = 0;
+                if (m > StopOrder.MaxExact && homeReached)
+                {
+                    fastest[k, k + 1] = Leg(grid, startNode, homeNode, p, Weights.Fastest, out direct);
+                }
+
+                // The return_ok rule of the fastest plan, over the fastest legs of the matrix.
+                bool Fits(int[] chosen)
+                {
+                    double t90 = 0;
+                    int fromKey = k;
+                    foreach (int a in chosen)
+                    {
+                        int i = reachable[a];
+                        Route r = fastest[fromKey, i];
+                        if (r == null || !r.Found)
+                        {
+                            return false;
+                        }
+
+                        t90 += r.EtaS.P90 + stops[i].DwellS;
+                        if (!ReturnFits(t90, homeField.TimeSArray[node[i]], availableS))
+                        {
+                            return false;
+                        }
+
+                        fromKey = i;
+                    }
+
+                    // The leg home must be found too, or the plan has no return.
+                    return chosen.Length == 0 || (fastest[fromKey, k + 1] != null && fastest[fromKey, k + 1].Found);
+                }
+
+                best = StopOrder.Choose(reachedFromStart, between, back, direct, value, dwell, Fits);
+            }
+
+            // In TSP every stop is in the order, the unreachable ones last; in OP the rest is dropped.
+            var inOrder = new bool[k];
+            var order = new int[mode == StopMode.Tsp ? k : best.Length];
+            for (int a = 0; a < best.Length; a++)
+            {
+                order[a] = reachable[best[a]];
+                inOrder[order[a]] = true;
+            }
+
+            int at = best.Length;
+            var dropped = new List<string>();
+            for (int i = 0; i < k; i++)
+            {
+                if (inOrder[i])
+                {
+                    continue;
+                }
+
+                if (mode == StopMode.Tsp)
+                {
+                    order[at++] = i;
+                }
+                else
+                {
+                    dropped.Add(stops[i].Id);
+                }
+            }
+
+            var ordered = new string[order.Length];
+            for (int i = 0; i < order.Length; i++)
+            {
+                ordered[i] = stops[order[i]].Id;
+            }
+
+            string[] droppedIds = dropped.ToArray();
+            var plans = new Plan[3];
+            for (int alt = 0; alt < plans.Length; alt++)
+            {
+                plans[alt] = PlanOf(grid, stops, order, ordered, droppedIds, node, startNode, homeNode, homeField, fastest, Weights.For((Alternative)alt, p), alt == (int)Alternative.Fastest, availableS, limitS, conditions, tUtc, p);
+            }
+
+            return Array.AsReadOnly(plans);
+        }
+
+        /// <summary>
+        /// The plan of one alternative over a fixed <paramref name="order"/>: its legs (reusing the
+        /// fastest legs of the matrix for the fastest alternative), totals, dose and
+        /// <c>return_ok</c>, as <see cref="OrderStops"/> says.
+        /// </summary>
+        private static Plan PlanOf(
+            CostGrid grid,
+            Stop[] stops,
+            int[] order,
+            string[] ordered,
+            string[] dropped,
+            int[] node,
+            int startNode,
+            int homeNode,
+            Field homeField,
+            Route[,] fastest,
+            Weights w,
+            bool isFastest,
+            double availableS,
+            double limitS,
+            Conditions conditions,
+            DateTime tUtc,
+            CostParams p)
+        {
+            // The matrix keys every stop by its index, with the start as n and home as n + 1.
+            int k = order.Length, n = stops.Length;
+            var legs = new Route[k + 1];
+            double t10 = 0, t50 = 0, t90 = 0;
+            bool found = true, fits = true;
+            int from = startNode, fromKey = n;
+            for (int leg = 0; leg <= k; leg++)
+            {
+                bool toHome = leg == k;
+                int to = toHome ? homeNode : node[order[leg]];
+                int toKey = toHome ? n + 1 : order[leg];
+                Route r = isFastest ? fastest[fromKey, toKey] : null;
+                legs[leg] = r ?? Leg(grid, from, to, p, w, out _);
+                found &= legs[leg].Found;
+                double dwell = toHome ? 0 : stops[order[leg]].DwellS;
+                t10 += legs[leg].EtaS.P10 + dwell;
+                t50 += legs[leg].EtaS.P50 + dwell;
+                t90 += legs[leg].EtaS.P90 + dwell;
+                if (!toHome)
+                {
+                    fits &= ReturnFits(t90, homeField.TimeSArray[to], availableS);
+                }
+
+                from = to;
+                fromKey = toKey;
+            }
+
+            if (!found)
+            {
+                return new Plan(ordered, dropped, legs, new Percentiles(double.PositiveInfinity, double.PositiveInfinity, double.PositiveInfinity), double.PositiveInfinity, limitS, false);
+            }
+
+            return new Plan(ordered, dropped, legs, new Percentiles(t10, t50, t90), DoseUGy(conditions, tUtc, t50), limitS, fits);
         }
 
         /// <summary>

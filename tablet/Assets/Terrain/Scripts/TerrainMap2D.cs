@@ -41,6 +41,13 @@ namespace MartianMap.Terrain
         private Texture2D _black;
         private Texture2D _noHeat;
         private Texture2D _heat;
+        private Texture2D _hazardZone;
+        private bool _hasHeatField;
+        private bool _hazardZoneDirty;
+        private Vector4 _zoneGridRect = new Vector4(1e7f, 1e7f, 1f, 1f);
+
+        /// <summary>Node spacing of the zone hazard grid, as the routing grid (2 m, C4).</summary>
+        public const float ZoneGridCellM = 2f;
         private LoadedZone _current;
 
         public LoadedZone Current => _current;
@@ -62,11 +69,31 @@ namespace MartianMap.Terrain
         private void OnEnable()
         {
             MapEvents.LayerToggled += OnLayerToggled;
+            MapEvents.TileLoaded += OnTileLoaded;
         }
 
         private void OnDisable()
         {
             MapEvents.LayerToggled -= OnLayerToggled;
+            MapEvents.TileLoaded -= OnTileLoaded;
+        }
+
+        // A tile's hazard changed (edit, P5 shapes): republish the zone hazard once this frame.
+        private void OnTileLoaded(TileLoaded e)
+        {
+            if (_current != null && e.ZoneId == _current.Zone.ZoneId)
+            {
+                _hazardZoneDirty = true;
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (_hazardZoneDirty)
+            {
+                _hazardZoneDirty = false;
+                PublishZoneHazard();
+            }
         }
 
         private void OnDestroy()
@@ -77,6 +104,7 @@ namespace MartianMap.Terrain
             Destroy(_black);
             Destroy(_noHeat);
             Destroy(_heat);
+            Destroy(_hazardZone);
         }
 
         /// <summary>Shows a zone, replacing the current one, and emits ZoneLoaded, TileLoaded and ConditionsChanged.</summary>
@@ -107,6 +135,8 @@ namespace MartianMap.Terrain
                 minY = maxY = 0f;
             }
 
+            // A heat field belongs to the grid of one zone: drop the previous zone's.
+            ClearHeatField();
             Shader.SetGlobalFloat(ShaderIds.ZoneOriginHeightM, originHeight);
             Shader.SetGlobalVector(ShaderIds.ZoneHeightRange, new Vector4(minY, maxY, 0f, 0f));
 
@@ -175,6 +205,38 @@ namespace MartianMap.Terrain
             {
                 MapEvents.Emit(new TileLoaded(_current.Zone.ZoneId, tile.Info.Z, tile.Info.X, tile.Info.Y));
             }
+        }
+
+        /// <summary>The effective hazard (0–255) at an ENU point, nearest sample of its z = 0 tile; false outside data.</summary>
+        public bool TryHazardAt(Vector2 enuM, out byte hazard)
+        {
+            hazard = 0;
+            if (_current == null || !ExtentEnu.Contains(enuM))
+            {
+                return false;
+            }
+
+            var local = enuM - ExtentEnu.min;
+            if (!_tilesByIndex.TryGetValue(((int)(local.x / TileData.Cells), (int)(local.y / TileData.Cells)), out var tile))
+            {
+                return false;
+            }
+
+            var origin = tile.OriginEnuM;
+            var mpp = (float)tile.Info.MPerPx;
+            var col = Mathf.Clamp(Mathf.RoundToInt((enuM.x - origin.x) / mpp), 0, TileData.Cells);
+            var row = TileData.Cells - Mathf.Clamp(Mathf.RoundToInt((enuM.y - origin.y) / mpp), 0, TileData.Cells);
+            hazard = tile.Hazard[row * TileData.Size + col];
+            return true;
+        }
+
+        /// <summary>Takes the hazard thresholds of <c>cost_params.json</c> (C5: _FogFarAmberMin, _FogFarRedMin).</summary>
+        public void ApplyCostParams(MartianMap.Routing.CostParams costParams)
+        {
+            hazardAmberMin = costParams.HazardAmberMin;
+            hazardRedMin = costParams.HazardRedMin;
+            Shader.SetGlobalFloat(ShaderIds.FogFarAmberMin, hazardAmberMin / 255f);
+            Shader.SetGlobalFloat(ShaderIds.FogFarRedMin, hazardRedMin / 255f);
         }
 
         public void SetLayer(string layerId, bool on)
@@ -262,12 +324,100 @@ namespace MartianMap.Terrain
             Shader.SetGlobalFloat(ShaderIds.FogFarRedMin, hazardRedMin / 255f);
             Shader.SetGlobalColor(ShaderIds.FogFarColor, hazardColor);
             Shader.SetGlobalFloat(ShaderIds.FogFarStrength, hazardStrength);
-            Shader.SetGlobalTexture(ShaderIds.HeatTex, _noHeat);
             Shader.SetGlobalTexture(ShaderIds.HazardZoneTex, _black);
-            // A rect far away from any zone, so no pixel falls inside it until a field exists.
-            Shader.SetGlobalVector(ShaderIds.HeatTexRect, new Vector4(1e7f, 1e7f, 1f, 1f));
+            ClearHeatField();
+            ApplyLayerGlobals();
+        }
+
+        /// <summary>
+        /// Uploads the hazard of the routing grid as <c>_HazardZoneTex</c> (C5): R8, one texel per
+        /// node, rows from the south, with the same UV as <c>_HeatTex</c>. FX reads it for what it
+        /// draws with its own geometry. Call it together with <see cref="SetHeatField"/>.
+        /// </summary>
+        public void SetHazardZone(byte[] hazardByNode, int width, int height)
+        {
+            if (hazardByNode == null || hazardByNode.Length != width * height)
+            {
+                throw new System.ArgumentException($"hazard grid must have {width * height} nodes", nameof(hazardByNode));
+            }
+
+            if (_hazardZone == null || _hazardZone.width != width || _hazardZone.height != height)
+            {
+                Destroy(_hazardZone);
+                _hazardZone = new Texture2D(width, height, TextureFormat.R8, false, true)
+                {
+                    name = "T_HazardZone",
+                    filterMode = FilterMode.Point,
+                    wrapMode = TextureWrapMode.Clamp,
+                };
+            }
+
+            _hazardZone.SetPixelData(hazardByNode, 0);
+            _hazardZone.Apply(false, false);
+            Shader.SetGlobalTexture(ShaderIds.HazardZoneTex, _hazardZone);
+        }
+
+        /// <summary>Removes the heat field: no pixel shows heat until <see cref="SetHeatField"/> runs again.</summary>
+        public void ClearHeatField()
+        {
+            _hasHeatField = false;
+            Shader.SetGlobalTexture(ShaderIds.HeatTex, _noHeat);
+            // _HeatTexRect is shared with _HazardZoneTex: keep the zone grid's.
+            Shader.SetGlobalVector(ShaderIds.HeatTexRect, _zoneGridRect);
             Shader.SetGlobalFloat(ShaderIds.HeatMaxS, 1f);
             ApplyLayerGlobals();
+        }
+
+        /// <summary>
+        /// Publishes <c>_HazardZoneTex</c> for the whole zone from the z = 0 tiles (P5's near fog reads
+        /// it): one texel per node of a 2 m grid with node (0, 0) at the SW corner of the extent,
+        /// like the routing grid. The value is the tile hazard at the nearest sample (base, shapes,
+        /// edits). Routing replaces it with its own grid when it plans.
+        /// </summary>
+        public void PublishZoneHazard()
+        {
+            if (_current == null)
+            {
+                return;
+            }
+
+            var cell = ZoneGridCellM;
+            var extent = ExtentEnu;
+            var width = Mathf.Max(1, Mathf.CeilToInt(extent.width / cell) + 1);
+            var height = Mathf.Max(1, Mathf.CeilToInt(extent.height / cell) + 1);
+            var hazard = new byte[width * height];
+            for (var j = 0; j < height; j++)
+            {
+                var n = extent.yMin + j * cell;
+                for (var i = 0; i < width; i++)
+                {
+                    var e = extent.xMin + i * cell;
+                    var tx = (int)((e - extent.xMin) / TileData.Cells);
+                    var ty = (int)((n - extent.yMin) / TileData.Cells);
+                    if (!_tilesByIndex.TryGetValue((tx, ty), out var tile) &&
+                        !_tilesByIndex.TryGetValue((tx - 1, ty), out tile) &&
+                        !_tilesByIndex.TryGetValue((tx, ty - 1), out tile) &&
+                        !_tilesByIndex.TryGetValue((tx - 1, ty - 1), out tile))
+                    {
+                        hazard[j * width + i] = 255; // outside every tile: no data
+                        continue;
+                    }
+
+                    var origin = tile.OriginEnuM;
+                    var mpp = (float)tile.Info.MPerPx;
+                    var col = Mathf.Clamp(Mathf.RoundToInt((e - origin.x) / mpp), 0, TileData.Cells);
+                    var row = TileData.Cells - Mathf.Clamp(Mathf.RoundToInt((n - origin.y) / mpp), 0, TileData.Cells);
+                    hazard[j * width + i] = tile.Hazard[row * TileData.Size + col];
+                }
+            }
+
+            SetHazardZone(hazard, width, height);
+            _zoneGridRect = new Vector4(extent.xMin - cell * 0.5f, extent.yMin - cell * 0.5f,
+                1f / (width * cell), 1f / (height * cell));
+            if (!_hasHeatField)
+            {
+                Shader.SetGlobalVector(ShaderIds.HeatTexRect, _zoneGridRect);
+            }
         }
 
         /// <summary>
@@ -322,6 +472,8 @@ namespace MartianMap.Terrain
             Shader.SetGlobalTexture(ShaderIds.HeatTex, _heat);
             Shader.SetGlobalVector(ShaderIds.HeatTexRect, new Vector4(e0, n0, 1f / (width * cellM), 1f / (height * cellM)));
             Shader.SetGlobalFloat(ShaderIds.HeatMaxS, maxS);
+            _hasHeatField = true;
+            ApplyLayerGlobals();
         }
 
         private void ApplyLayerGlobals()
@@ -331,7 +483,8 @@ namespace MartianMap.Terrain
             Shader.SetGlobalFloat(ShaderIds.LayerOn2, _layerOn[LayerIds.ThermalIr] ? 1f : 0f);
             Shader.SetGlobalFloat(ShaderIds.TopoOn, _layerOn[LayerIds.Topo] ? 1f : 0f);
             Shader.SetGlobalFloat(ShaderIds.HazardOn, _layerOn[LayerIds.Hazard] ? 1f : 0f);
-            Shader.SetGlobalFloat(ShaderIds.HeatOn, _layerOn[LayerIds.Heat] ? 1f : 0f);
+            // Without a heat field the layer draws nothing (no darkening of the whole map).
+            Shader.SetGlobalFloat(ShaderIds.HeatOn, _layerOn[LayerIds.Heat] && _hasHeatField ? 1f : 0f);
         }
 
         /// <summary>A unit quad on XZ from (0, 0) to (1, 1), facing up, UV (0, 0) at the SW corner.</summary>
