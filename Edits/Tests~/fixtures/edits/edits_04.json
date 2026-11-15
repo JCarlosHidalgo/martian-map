@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "edits": [
+    {
+      "uuid": "8f7e699b-f233-4c89-97c9-f659b29b422f",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "8555bd76-8736-4c86-9a90-a106642a1cbe",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-12800, -2560],
+          [-7680, -2560],
+          [-7680, 2560],
+          [-12800, 2560]
+        ],
+        "level": 200
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "48c8fc9c-bcd0-4ec4-9982-31b2fdc77eb9",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "ef03ada8-05ad-4dfe-8502-5c004bef6cab",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-2560, -2560],
+          [2560, -2560],
+          [2560, 2560],
+          [-2560, 2560]
+        ],
+        "level": 200
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "62798f30-4248-4966-be07-db26b990a6a3",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "16662513-ff42-4756-a1c8-71a6eae48269",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [7680, -2560],
+          [12800, -2560],
+          [12800, 2560],
+          [7680, 2560]
+        ],
+        "level": 200
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "3c921451-7b8e-48ef-a43e-b939ac394762",
+      "lamport": 2,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "8555bd76-8736-4c86-9a90-a106642a1cbe",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-12800, -2560],
+          [-7680, -2560],
+          [-7680, 2560],
+          [-12800, 2560]
+        ],
+        "level": 50
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "389f4a86-342a-4bb5-bb99-8e54470b1609",
+      "lamport": 2,
+      "author": "ev2",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "ef03ada8-05ad-4dfe-8502-5c004bef6cab",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-2560, -2560],
+          [2560, -2560],
+          [2560, 2560],
+          [-2560, 2560]
+        ],
+        "level": 50,
+        "confirmed": true
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "e9a97aac-2ce7-44e4-b483-adb3c72e5b92",
+      "lamport": 2,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "16662513-ff42-4756-a1c8-71a6eae48269",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [7680, -2560],
+          [12800, -2560],
+          [12800, 2560],
+          [7680, 2560]
+        ],
+        "level": 50
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "364aa593-8da7-4b19-ac73-9cda8fb219bd",
+      "lamport": 3,
+      "author": "ev3",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "8555bd76-8736-4c86-9a90-a106642a1cbe",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-12800, -2560],
+          [-7680, -2560],
+          [-7680, 2560],
+          [-12800, 2560]
+        ],
+        "level": 40,
+        "confirmed": false
+      },
+      "tombstone": false
+    }
+  ]
+}

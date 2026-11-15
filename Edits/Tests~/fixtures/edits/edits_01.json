@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "edits": [
+    {
+      "uuid": "43f11328-05c7-4eeb-9f0c-0fb76c7781b0",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "1668a78e-12ec-4bb7-8e39-80189a03900a",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-28160, -28160],
+          [-12800, -28160],
+          [-12800, -12800],
+          [-28160, -12800]
+        ],
+        "level": 100
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "80dd6265-5633-44f9-bc5d-91bc2654e923",
+      "lamport": 2,
+      "author": "ev2",
+      "creator": "ev2",
+      "zone_id": "synth",
+      "entity_id": "fe53ce5e-442b-4d56-990c-ff2549219675",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [-17920, -17920],
+          [-5120, -17920],
+          [-5120, -5120],
+          [-17920, -5120]
+        ],
+        "level": 180
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "a1e82329-040a-491b-b492-904fd238adc6",
+      "lamport": 3,
+      "author": "ev3",
+      "creator": "ev3",
+      "zone_id": "synth",
+      "entity_id": "664be6c0-40db-4c2f-a54c-cfa6cf1d15b8",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [7680, 7680],
+          [15360, 7680],
+          [15360, 15360],
+          [7680, 15360]
+        ],
+        "level": 60
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "f5a81157-0804-4403-b2ae-9b252bb35316",
+      "lamport": 4,
+      "author": "ev3",
+      "creator": "ev3",
+      "zone_id": "synth",
+      "entity_id": "6f56388c-9931-40dc-ba88-d77f4bb478e4",
+      "op": "obstacle.set",
+      "payload": {
+        "polygon": [
+          [-1280, 17920],
+          [1280, 17920],
+          [1280, 20480],
+          [-1280, 20480]
+        ]
+      },
+      "tombstone": false
+    }
+  ]
+}

@@ -141,7 +141,7 @@ Orden de trabajo *(equipo)*. Las horas de cada pieza están en [Tablet](./tablet
 |---|---|
 | H0–2 | C4: lo que no depende de código |
 | H2–4 | el núcleo: heap propio, campo Dijkstra y A\* 16-conexo sin suavizado, con la fórmula del costo, y el cuerpo de `Benchmark.Run`. Lo miden E5 y E7 en H4–H5 |
-| H4–6 | `apply()` y sus `expected_NN.sha256` (E9); `BuildGrid` desde un tile |
+| H4–6 | `apply()`, `LiveEntities` y sus `expected_NN.sha256` (E9); `BuildGrid` desde un tile |
 | H6–12 | suavizado, `ReturnField` y `DurationLimit`; regenera `expected_route.json` |
 | H12–24 | las 3 alternativas y `OrderStops` con Held-Karp |
 | H24–36 | greedy + 2-opt y orienteering: lo primero que se recorta |

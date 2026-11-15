@@ -207,10 +207,10 @@ Límites que se declaran:
 
 | Qué | Algoritmo |
 |---|---|
-| Tramo | **A\* 16-conexo + suavizado**: string-pulling que solo acepta un atajo si no empeora el costo integrado, que es el de la regla de los tramos aplicada al atajo entero *(propuesta)* |
+| Tramo | **A\* 16-conexo + suavizado**: string-pulling que solo acepta un atajo si no empeora el costo integrado, que es el de la regla de los tramos aplicada al atajo entero *(propuesta)*. El atajo de un ancla a un nodo posterior del camino de A\* se acepta si su costo (tiempo P50 más la penalización ámbar, el mismo que minimiza A\*) no pasa de la suma de las aristas que sustituye, con un margen relativo de 10⁻⁹ para los empates de redondeo de un atajo colineal; desde cada ancla se alarga nodo a nodo y para en el primer rechazo, y el último aceptado es el ancla siguiente. Así la ruta suavizada nunca cuesta más que la de A\* *(propuesta de P3)* |
 | Regreso | **campo Dijkstra inverso al hábitat**: da radio de regreso, punto de no-retorno y heatmap en una corrida |
-| Alternativas | 3, por suma ponderada |
-| Orden de paradas | **Held-Karp (k ≤ 12) o greedy + 2-opt**, en modos TSP con depósito y orienteering |
+| Alternativas | 3, por suma ponderada: cada una es el A\* y el suavizado del tramo con sus propios pesos, que entran en la regla de los tramos; un atajo solo se acepta si no empeora el costo de su alternativa *(propuesta de P3)* |
+| Orden de paradas | **Held-Karp (k ≤ 12) o greedy + 2-opt**, en modos TSP con depósito y orienteering. El umbral cuenta las paradas a las que se llega desde `start`; por encima, en TSP, vecino más cercano desde `start` y 2-opt, y en OP, inserción greedy por valor/costo y 2-opt *(propuesta de P3)* |
 | Opcionales | HPA\*, D\* Lite y OR-Tools |
 
 - Theta\* básico no garantiza el óptimo y cruza zonas de peligro si se implementa mal (contra R4).
@@ -228,6 +228,10 @@ Cómo:
 - Arrays planos (SoA), sin `class Node`, sin LINQ.
 - Llamadas thread-safe; el campo corre en un hilo de fondo.
 - Planificación a 2 m: hasta 4 M de celdas (zona de 4×4 km; la de 3×3 km son 2,25 M).
+- La memoria de trabajo de la búsqueda, una por hilo, guarda lo que es de un valor por nodo; la
+  lista de nodos tocados no pasa de un octavo de la grilla (más allá, se reinicia la grilla entera)
+  y el heap se recorta al devolverla, así que una búsqueda larga no la deja grande *(propuesta de
+  P3)*.
 - Un CI compila la librería **solo** contra netstandard2.1.
 
 Esfuerzo estimado: ~4–6 h el tramo, ~1–2 h el campo, ~3–4 h las paradas. En qué orden se
@@ -287,9 +291,9 @@ dentro de un método síncrono.
 |---|---|
 | `TileRasters` | un tile de `z = 0`: `origin_enu_m` (su esquina suroeste, de `tile.json`), `height` (`ushort[]`), `scale`, `offset`, y `slope`, `roughness` y `hazard` (`byte[]`), tal como vienen en C1 |
 | `CostGrid` | la grilla de planificación: `width` y `height` en nodos, `cell_m` (2), `origin_enu_m` (el nodo `(0, 0)`, la esquina suroeste) y cuatro arrays planos de `width × height`: `height_m` (`float32`), `slope_deg`, `roughness_cm` y `hazard` (`uint8`). El nodo `(i, j)` está en el índice `j · width + i`; `i` crece al este y `j` al norte |
-| punto: `start`, `goal`, `home`, `enu_m` de una parada | `(e, n)` en metros ENU de la zona, `float64`. Tiene que ser finito y caer en la caja de los nodos de la `CostGrid`, bordes incluidos; si no, la llamada lanza *(propuesta de P3)*. `Routing` lo lleva al nodo más cercano; si ese nodo está bloqueado, el resultado es "no hay ruta" |
+| punto: `start`, `goal`, `home`, `enu_m` de una parada | `(e, n)` en metros ENU de la zona, `float64`. Tiene que ser finito y caer en la caja de los nodos de la `CostGrid`, bordes incluidos; si no, la llamada lanza *(propuesta de P3)*. `Routing` lo lleva al nodo más cercano, `i = floor((e − origin_e) / cell_m + 0,5)` e ídem `j`: el punto medio entre dos nodos va al de índice mayor, al este o al norte *(propuesta de P3)*; si ese nodo está bloqueado, el resultado es "no hay ruta". Si `start` y `goal` caen en el mismo nodo libre, la ruta se encuentra y se queda en él: `cells` = ese nodo, un punto, y todo lo demás a 0 *(propuesta de P3)* |
 | `Route` | `{found (bool), cells[] (índices de nodo), polyline_enu_m[] ([e, n, u]), length_m, ascent_m, amber_m, eta_s{p10,p50,p90}, max_hazard (uint8)}` |
-| `Field` | `{grid, home, time_s[]}`: un `float32` por nodo, el tiempo de regreso a `home` con v₀ P90; `+∞` donde no hay regreso. Solo lo crea `ReturnField`, y lleva la `CostGrid` y el `home` con que se calculó *(propuesta)* |
+| `Field` | `{grid, home, time_s[]}`: un `float32` por nodo, el tiempo de regreso a `home` con v₀ P90; `+∞` donde no hay regreso. El regreso se elige como la ruta, con la penalización ámbar, y `time_s` guarda su tiempo P90 sin ella, igual que `eta_s` *(propuesta de P3)*. Solo lo crea `ReturnField`, y lleva la `CostGrid` y el `home` con que se calculó *(propuesta)*: el punto tal como se pasó, aunque el campo sale de su nodo más cercano. Si ese nodo está bloqueado, todo el campo es `+∞`, sin excepción *(propuesta de P3)* |
 | `Alternative` | un enum: `Fastest`, `Safest`, `Gentlest`, con los valores 0, 1 y 2 *(propuesta)*. Toda lista de `Route` o de `Plan` de alternativas trae siempre las tres, en ese orden, aunque dos coincidan |
 | `CostParams` | los campos de `cost_params.json`, uno a uno: es el `params` de todas las llamadas *(propuesta)* |
 | `Stop` | `{id, enu_m, science_value, dwell_s}`; `science_value` es un entero de 0 a 10 |
@@ -346,9 +350,25 @@ dentro de un método síncrono.
   - Una muestra compartida que dos tiles traen distinta: `slope`, `roughness` y `hazard` toman
     el máximo; `height` es `nodata` si lo es en alguno y, si no, la del tile más al suroeste
     (menor `n`, luego menor `e`). El resultado no depende del orden de `tiles`.
+  - `BuildGrid` lanza *(propuesta de P3)*: `ArgumentNullException` con `tiles`, un tile o `params`
+    nulos; `ArgumentException` con `tiles` vacío, `origin_height_m` o el origen de un tile no
+    finitos, un tile repetido, un origen fuera de la retícula de 256 m, o una caja con más nodos de
+    los que cuenta un `int`. `params` no cambia la grilla: guarda los rasters sin aplicar el costo.
 - **`Benchmark.Run`** *(equipo)* es C# puro, dentro del paquete `Routing` y no en `Tests~/`, para
   que lo llamen igual `dotnet` en el portátil y la escena de benchmark de la tablet. Entra en la
-  firma de H0:45, con el cuerpo vacío, y P3 lo rellena en H2–4, con el núcleo. Quién escribe la
+  firma de H0:45, con el cuerpo vacío, y P3 lo rellena en H2–4, con el núcleo. Se corre solo en
+  el portátil, con `dotnet run -c Release --project "Routing/Tests~/BenchmarkRunner"`: la tablet no
+  se prueba *(decisión de P3, 2026-11-14)*. Corre, de menor a mayor tamaño, los 5 terrenos en 1000²
+  y 2000²: tramos de A\* de 500 m con 1 corrida de calentamiento y 5 medidas, y el campo con 1 + 1. La fila de
+  A\* cronometra `PlanRoute` entero (A\*, suavizado y trazado) y su columna `smooth ms` da el p50 del
+  suavizado solo; la del campo cronometra `ReturnField` *(propuesta de P3)*. Fuera del criterio de E5
+  (su veredicto es `outside E5`), y después de todas las filas de E5 de su tamaño, porque buscan
+  más lejos y agrandan la memoria de trabajo de la búsqueda, cada caso de A\* tiene una fila
+  `Alternatives` sobre los mismos pares, y en 1000² cada terreno una fila `OrderStops k=12`: 12
+  paradas libres a ≤ 100 m del `home` de la fila del campo, que es también el `start`, con el campo
+  de ese `home`; su columna `order ms` da el tiempo de Held-Karp solo *(propuesta de P3)*.
+  La memoria que da es el heap gestionado, con la grilla y la memoria de trabajo de la búsqueda
+  vivas (`GC.GetTotalMemory(true)`) *(propuesta de P3)*. Quién escribe la
   escena y el APK: [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones".
 - **`DurationLimit`** *(equipo)*: `limit_s` es el primer `t` en que la dosis absorbida desde
   `t_utc` llega a `dose_uGy`; con una tasa constante, `dose_uGy / tasa · 3600`. La tasa es
@@ -365,6 +385,39 @@ dentro de un método síncrono.
   el resto en `dropped`. El orden se decide con la alternativa más rápida y es el mismo en las tres
   `Plan`. En TSP, una parada a la que no se llega sigue en `order`: su tramo es un `Route` con
   `found` falso, `total_s` es +∞ y `return_ok` es falso *(propuesta de P3)*.
+- **El orden en TSP** *(propuesta de P3)*: minimiza la suma de los costos de los tramos de la más
+  rápida (tiempo P50 más la penalización ámbar, lo que minimiza A\*), con el regreso a
+  `home_field.home`; `dwell_s` no entra, porque en TSP es constante. Los tramos son los de
+  `PlanRoute` entre cada par de paradas, en los dos sentidos (con `c ≠ 0` no son simétricos), y
+  Held-Karp da el óptimo exacto hasta 12 paradas. De los órdenes que no pasan del óptimo
+  × (1 + 10⁻⁹), gana el lexicográficamente menor por posición en `stops`: en un empate de redondeo
+  se queda el orden de entrada. Las paradas a las que no se llega desde `start` van al final, en el
+  orden de entrada; si `home` no se alcanza, se ordena el camino abierto. Con algún tramo no
+  encontrado, `total_s` y `dose_uGy` son +∞ y `return_ok` es falso. Sin paradas, la `Plan` es un
+  solo tramo de `start` a `home`, y `return_ok` solo dice si ese tramo se encuentra: la regla de
+  `return_ok` se mira al salir de cada parada, y sin paradas no se compara con el presupuesto
+  *(decisión de P3, 2026-11-15)*. Cada alternativa tiene sus tramos, totales, dosis y `return_ok`.
+  Con más de 12 paradas a las que se llega desde `start`, el orden es el vecino más cercano desde
+  `start` (por costo; en un empate, la de menor posición en `stops`) y después 2-opt de mejor
+  mejora sobre los mismos costos en sus dos sentidos: un cambio entra si baja el costo más de
+  10⁻⁹ relativo, y en un empate gana el par de posiciones menor. Es determinista, pero no siempre el
+  óptimo *(decisión de P3, 2026-11-15)*.
+- **OP** *(decisión de P3, 2026-11-15)*: de las paradas a las que se llega desde `start`, se queda el
+  subconjunto de más `science_value` cuya `Plan` más rápida cumple la regla de `return_ok` al salir
+  de cada parada; así la `Plan` de `fastest` tiene `return_ok` verdadero siempre que lleve alguna
+  parada. Cada subconjunto se ordena como en TSP y la regla se mira sobre ese orden. Las demás,
+  también las inalcanzables, van a `dropped`, en el orden de entrada; una parada con
+  `science_value` 0 no se elige. Hasta 12 paradas alcanzables es exacto: la tabla de Held-Karp da el
+  costo óptimo de cada subconjunto, y en un empate de valor gana el de menor costo (tramos más
+  `dwell_s`, con el mismo margen de 10⁻⁹) y después el que incluye la parada de menor posición en
+  `stops` donde difieren. Por encima, inserción greedy: se inserta la parada y la posición de mayor
+  `science_value / (Δcosto + dwell_s)` que sigue cumpliendo la regla, y cuando ninguna cabe, 2-opt
+  que solo acepta órdenes que la cumplen; se repite mientras el 2-opt mejore. `order` y `dropped`
+  son los mismos en las tres `Plan`.
+- **El tiempo de `OrderStops`** crece con el cuadrado de las paradas: un A\* por cada par ordenado
+  de paradas alcanzables y uno desde `start` a cada parada. No hay un máximo de paradas. Lo dominan
+  los tramos largos y las paradas inalcanzables: cada una cuesta una búsqueda de toda la parte
+  conexa de la grilla alrededor de `start` (en TSP, otra en cada alternativa) *(propuesta de P3)*.
 - `Plan.dose_uGy` es la integral de esa misma tasa de `t_utc` a `t_utc + total_s.p50` *(propuesta)*. `return_ok` es falso si,
   al salir de alguna parada, lo transcurrido a P90 (la caminata P90 acumulada más los `dwell_s`)
   más el regreso a `home` con P90 del `home_field` supera `min(budget.t_s, limit_s)`; la igualdad
@@ -376,8 +429,8 @@ Lo que lanza `ArgumentException` en `Routing` (un argumento inválido,
 - **Cualquier número que no es finito** (NaN o ±∞): en los puntos, en `TileRasters`, `CostGrid`
   (`cell_m`, `origin_enu_m` y cada `height_m`), `Conditions`, `Stop`, `Budget` y
   `DurationLimit`. `nodata` es `height_m` = 0, nunca NaN. Así no entra ningún NaN en el cálculo,
-  y el único +∞ que sale significa "no hay camino": `Field.time_s` donde no hay regreso y el
-  `total_s` de un plan con una parada inalcanzable.
+  y el único +∞ que sale significa "no hay camino": `Field.time_s` donde no hay regreso, y el
+  `total_s` y la `dose_uGy` de un plan con un tramo no encontrado.
 - **Un punto fuera de la grilla** (`ArgumentOutOfRangeException`), también una parada en modo OP.
 - **Una fecha que no es UTC**: `ConditionModifier`, `DurationLimit` y `OrderStops`.
   `DateTime.Parse` devuelve hora local; se lee con `DateTimeStyles.AdjustToUniversal`.
@@ -391,7 +444,7 @@ Lo que lanza `ArgumentException` en `Routing` (un argumento inválido,
   `f_terreno` y `f_rug_min` en (0, 1]…), más lo que el esquema no puede comparar:
   `v0.p90` ≤ `p50` ≤ `p10` ≤ `walk_ceiling_mps`, `relief_penalty_from_cm` < `relief_block_cm` y
   `hazard_amber_min` < `hazard_red_min`.
-- `OrderStops`: un `home_field` de otra `CostGrid`, unas `conditions` nulas, o un `stops` nulo o con una parada nula.
+- `OrderStops`: un `home_field` de otra `CostGrid`, unas `conditions` nulas, un `stops` nulo o con una parada nula, o dos paradas con el mismo `id`, porque `order` y `dropped` son listas de `id` *(propuesta de P3)*; y un `mode` que no es TSP ni OP (`ArgumentOutOfRangeException`) *(propuesta de P3)*.
 
 Las tres alternativas *(equipo)*:
 
@@ -404,6 +457,12 @@ Las tres alternativas *(equipo)*:
 La tercera mide desnivel y no esfuerzo: el costo metabólico está fuera de alcance
 ([Contexto del reto](./contexto.md), sección "Fuera de alcance"). Dos alternativas pueden dar la
 misma ruta.
+
+Cómo entran los pesos *(propuesta de P3)*: en la regla de los tramos de "Costo de caminata (D6)",
+pieza a pieza, como la penalización ámbar. El desnivel es el de `ascent_m`, subido más bajado: cada
+pieza suma `alt_gentlest_s_per_m` por su `|desnivel|`. Las tres van a v₀ P50, y cada una se suaviza
+con sus pesos. `eta_s` sigue sin penalizaciones, así que `safest` y `gentlest` salen más lentas o
+iguales que `fastest`.
 
 ### `Edits.Apply`
 
@@ -418,6 +477,31 @@ ensamblados no se referencian.
 `entity_id`, su ganadora, con `entity_id`, `op`, `creator`, `level` y `payload`. Aplica las mismas
 reglas que `Apply`, en el mismo recorrido, así que la regla de merge tiene una sola implementación
 en C#. `Terrain` la llama para emitir `EntitiesChanged`; no calcula ganadoras por su cuenta.
+
+Cómo se fusiona y qué lanza *(propuesta de P3)*:
+
+- Las ediciones se recorren en orden `(lamport, author, uuid)`, con `author` y `uuid` comparados
+  byte a byte; por cada `entity_id` queda una ganadora, y cada edición la reemplaza (LWW) salvo
+  que la regla la ignore entera.
+- Una edición se ignora si la entidad está viva y la edición la baja (un tombstone, o un nivel
+  menor en `hazard.set`/`obstacle.set`), su `author` no es su `creator`, su `confirmed` no es
+  verdadero y no es `from_habitat`. `note.set` siempre es LWW.
+- Una entidad borrada no tiene nivel: la edición siguiente del mismo `op` la recrea, la escriba
+  quien la escriba.
+- Una edición con otro `op` que la ganadora vigente de su entidad se ignora, también si la
+  ganadora es un tombstone: una entidad no cambia de `op`.
+- `LiveEntities` devuelve las ganadoras sin tombstone en el orden `(lamport, author, uuid)` de la
+  ganadora, el de `log_merged.json`; `creator` es el de la ganadora y `level` el de su `payload`,
+  255 o nulo.
+- `Apply` copia `baseHazard` y, por cada entidad viva con polígono, escribe `max(muestra, level)`
+  en las muestras de dentro. La muestra `(r, c)` está en `(256 · (origin.E + c),
+  256 · (origin.N + 256 − r))`, en punto fijo; dentro es en el borde (vértices incluidos) o en el
+  interior por par-impar, con productos exactos de 128 bits, así que ningún vértice `int`
+  desborda. `zone_id` no se mira: `Terrain` pasa las ediciones de la zona.
+- Lanzan `ArgumentNullException` con `edits` nulo o con un elemento nulo, y `ArgumentException`
+  con dos ediciones del mismo `uuid`; `Apply`, además, `ArgumentNullException` con `baseHazard`
+  nulo y `ArgumentException` si no tiene 257 × 257 muestras. Una edición que la regla ignora no
+  lanza.
 
 El tipo `Edit` de C# *(equipo)* lleva los campos del esquema de `Edit`, más `from_habitat`
 (bool), que no viaja: `Terrain` lo pone a verdadero en una ganadora recibida por `changes`, y es
@@ -464,10 +548,16 @@ sí dependen entran después *(equipo)*:
 | `cost_params.json` y su esquema | completos | |
 | La firma pública: los tipos y las llamadas de esta sección, en `Routing/` y `Edits/` | compila contra netstandard2.1; cada cuerpo de cálculo lanza `NotImplementedException`, pero los constructores, la comprobación de los argumentos, `DurationLimit` y `EditOpText` ya funcionan | se rellena según el orden de [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones" |
 | `routing/costgrid_synth.bin` | completo: lo genera un script | |
-| `routing/expected_route.json` | una `Route` que genera el script de `costgrid_synth.bin`, sin A\* *(equipo)*: una recta sobre la rampa de la grilla sintética, con `eta_s` = longitud_3D / (v₀ · exp(−b · |s + c|) · `f_terreno`), `c` = 0 y s = ±20/256 (+ hacia el este, − hacia el oeste): la función es simétrica, así que la ida y la vuelta sobre la misma recta tardan lo mismo. Su `u` sigue la rampa, así que se dibuja sobre el tile sintético. Fija la forma y es el mock de `Terrain`, `FX` y `HUD` | P3 la regenera con el A\* suavizado, por un PR en `contracts/` |
-| `routing/expected_plan.json` | `{schema_version, plans[]}`: las tres `Plan`, en el orden de `Alternative`, que genera el mismo script con las dos paradas de la misión sintética. Sobre la rampa las tres son iguales. Es el mock de `RouteSelected` | P3 la regenera con `OrderStops` |
+| `routing/expected_route.json` | una `Route` que genera el script de `costgrid_synth.bin`, sin A\* *(equipo)*: una recta sobre la rampa de la grilla sintética, con `eta_s` = longitud_3D / (v₀ · exp(−b · |s + c|) · `f_terreno`), `c` = 0 y s = ±20/256 (+ hacia el este, − hacia el oeste): la función es simétrica, así que la ida y la vuelta sobre la misma recta tardan lo mismo. Su `u` sigue la rampa, así que se dibuja sobre el tile sintético. Fija la forma y es el mock de `Terrain`, `FX` y `HUD` | P3 la regenera con el A\* suavizado, por un PR en `contracts/`. Desde H6–12 la genera `PlanRoute`, y también los tramos de `expected_plan.json`: sobre la rampa la ruta suavizada es la misma recta, así que ninguno de los dos cambió ni un byte *(P3, 2026-11-14)* |
+| `routing/expected_plan.json` | `{schema_version, plans[]}`: las tres `Plan`, en el orden de `Alternative`, que genera el mismo script con las dos paradas de la misión sintética. Sobre la rampa las tres son iguales. Es el mock de `RouteSelected` | P3 la regenera con `OrderStops` (desde H12–24 la genera `OrderStops`: sobre la rampa los dos órdenes empatan, gana el de entrada, `s1, s2`, y las tres alternativas son la fila, así que el archivo no cambió ni un byte *(P3, 2026-11-15)*) |
 | `edits/base_tile/` y `edits/edits_NN.json` | completos; `base_tile/` es una copia del tile sintético de C1 | |
 | `edits/expected_NN.sha256` | no existen | entran con `apply()`, antes de H6: los usa E9 |
+
+Los fixtures de E9 viven por ahora en `Edits/Tests~/fixtures/edits/` *(propuesta de P3)*, con el
+mismo layout (`base_tile/` + `edits_NN.json` + `expected_NN.sha256`, N = 6): `base_tile/` es una
+copia del tile sintético de P1 de `origin/p1/ingest`, y `validate.py` no acepta un `edits_NN.json`
+sin el esquema de `edit_log` de P2. Cuando el tile de P1 y el `edit_log` de P2 estén en `main`,
+pasan a `contracts/fixtures/edits/` con `git mv`, y en los tests solo cambia `GoldenTests.Dir`.
 
 - `costgrid_synth.bin` *(equipo)* es una `CostGrid` serializada, little-endian: `width` y `height`
   (`int32`), `cell_m` (`float32`), `origin_e` y `origin_n` (`float64`), y después los cuatro
@@ -506,6 +596,8 @@ sí dependen entran después *(equipo)*:
 - Los datos originales no se tocan.
 
 La equivalencia entre x64-JIT y ARM64-IL2CPP es **NO VERIFICADA** → **E9**.
+P3 no corre E9 en la tablet *(propuesta de P3)*: E9 se cierra con N/N hashes iguales en
+`dotnet test`, y la ejecución en IL2CPP ARM64 queda fuera de alcance por decisión.
 
 ## Efectos visuales (D8)
 
