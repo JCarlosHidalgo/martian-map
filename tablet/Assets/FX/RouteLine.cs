@@ -7,8 +7,8 @@ namespace MartianMap.FX
 {
     /// <summary>
     /// Draws the three route alternatives of <see cref="RouteSelected"/>: the selected one in green,
-    /// the other two in cyan and purple (in Alternative order), each as a bright core and a soft
-    /// halo. With fewer than three plans it draws <c>RouteSelected.Polyline</c> alone. Line widths
+    /// the other two in cyan and purple (in Alternative order), each as a single bright line (no
+    /// halo, at the team's request). With fewer than three plans it draws <c>RouteSelected.Polyline</c> alone. Line widths
     /// are kept in screen pixels, so the routes stay visible at any zoom. <see cref="RouteFocused"/>
     /// (from the HUD) shows one alternative alone, in its colour, or all three again.
     /// </summary>
@@ -203,12 +203,12 @@ namespace MartianMap.FX
             _haloMaterials[slot].SetColor("_Color", new Color(color.r, color.g, color.b, color.a * 0.28f));
             _widthScale[slot] = widthScale;
             core.positionCount = polyline.Length;
-            halo.positionCount = polyline.Length;
+            // No halo at the team's request: only the core line, so the route reads clearly.
+            halo.positionCount = 0;
             for (var i = 0; i < polyline.Length; i++)
             {
                 var p = polyline[i];
                 core.SetPosition(i, new Vector3(p.x, p.y + lift, p.z));
-                halo.SetPosition(i, new Vector3(p.x, p.y + lift - 0.02f, p.z));
             }
         }
     }
