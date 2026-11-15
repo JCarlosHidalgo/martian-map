@@ -7,6 +7,6 @@
   "properties": {
     "zone_version": {"type": "integer", "minimum": 1},
     "zone": {"type": "object", "description": "Unmodified C1 zone.json. Constrain with zone.schema.json when P1 publishes C1 zone."},
-    "conditions": {"type": "object", "description": "Unmodified C6 conditions.json. Constrain with conditions.schema.json when P5 publishes C6."}
+    "conditions": {"$ref": "conditions.schema.json"}
   }
 }
