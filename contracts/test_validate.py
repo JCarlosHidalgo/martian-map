@@ -267,8 +267,8 @@ class ContractValidatorTests(unittest.TestCase):
     def test_bundle_copy_difference_fails_even_with_updated_hash(self) -> None:
         self._dataset()
         self._bundle()
-        copy = self.fixtures / "bundle_synth" / "data" / "conditions.json"
-        copy.write_bytes(copy.read_bytes() + b"\n")
+        copied_conditions = self.fixtures / "bundle_synth" / "data" / "conditions.json"
+        copied_conditions.write_bytes(copied_conditions.read_bytes() + b"\n")
         self._refresh_bundle()
         with self.assertRaisesRegex(ValueError, "byte for byte"):
             ContractValidator(self.root).run()
@@ -622,13 +622,13 @@ class ConditionsContractTests(unittest.TestCase):
         # Shared synthetic source and C4 FixtureGen inputs from the contract guide.
         self.assertEqual(self.original["value"], 6.0)
         self.assertEqual(self.original["uncertainty"], 0.2)
-        self.assertEqual(self.original["basis"], "modelled")
-        self.assertIn("not a mission measurement", self.original["derived_from"])
+        self.assertEqual(self.original["basis"], "measured")
+        self.assertIn("Synthetic example", self.original["derived_from"])
         modifier = self.original["modifiers"][0]
         self.assertEqual(modifier["type"], "WSAEnlilSimulations")
         self.assertEqual(modifier["factor"], 0.95)
-        self.assertEqual(modifier["valid_from"], "2026-11-14T00:00:00Z")
-        self.assertEqual(modifier["valid_to"], "2026-11-15T00:00:00Z")
+        self.assertEqual(modifier["valid_from"], "2025-11-05T12:00:00Z")
+        self.assertEqual(modifier["valid_to"], "2025-11-07T12:00:00Z")
 
     def test_conditions_required_and_unknown_fields_are_checked(self) -> None:
         for scope, fields in (
@@ -713,8 +713,8 @@ class ConditionsContractTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "Schema validation failed"):
                         ContractValidator(self.root).run()
 
-    def test_conditions_utc_dates_support_c4_precision_and_reject_invalid_dates(self) -> None:
-        for timestamp in ("2026-11-14T12:00:00.1234567Z", "2026-11-14T12:00:00+00:00"):
+    def test_conditions_utc_dates_follow_c0_and_reject_invalid_dates(self) -> None:
+        for timestamp in ("2026-11-14T12:00:00Z", "2025-11-05T12:00:00Z"):
             with self.subTest(valid=timestamp):
                 value = deepcopy(self.original)
                 value["t_utc"] = timestamp
@@ -724,6 +724,8 @@ class ConditionsContractTests(unittest.TestCase):
             "2026-02-30T12:00:00Z",
             "2026-11-14T12:00:00",
             "2026-11-14T12:00:00+01:00",
+            "2026-11-14T12:00:00+00:00",
+            "2026-11-14T12:00:00.1234567Z",
             "2026-11-14T12:00:00.12345678Z",
             "2026-11-14T12:00:00Z\n",
         ):
@@ -740,7 +742,7 @@ class ConditionsContractTests(unittest.TestCase):
             "fixtures/conditions/conditions.json",
             "fixtures/bundle_synth/data/conditions.json",
         ):
-            for end in ("2026-11-13T00:00:00Z", "2026-11-14T00:00:00.0000000+00:00"):
+            for end in ("2025-11-04T12:00:00Z", "2025-11-05T12:00:00Z"):
                 with self.subTest(relative=relative, end=end):
                     value = deepcopy(self.original)
                     value["modifiers"][0]["valid_to"] = end
@@ -752,14 +754,15 @@ class ConditionsContractTests(unittest.TestCase):
                     else:
                         self._write(self.original)
 
-    def test_conditions_window_comparison_preserves_100_nanosecond_precision(self) -> None:
+    def test_conditions_window_rejects_fractional_seconds(self) -> None:
         value = deepcopy(self.original)
         value["modifiers"][0].update(
-            valid_from="2026-11-14T12:00:00.0000001Z",
-            valid_to="2026-11-14T12:00:00.0000002+00:00",
+            valid_from="2025-11-05T12:00:00.0000001Z",
+            valid_to="2025-11-05T12:00:00.0000002Z",
         )
         self._write(value)
-        ContractValidator(self.root).run()
+        with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+            ContractValidator(self.root).run()
 
     def test_conditions_reject_overflowed_json_numbers(self) -> None:
         path = self._write(self.original)
