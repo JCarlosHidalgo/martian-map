@@ -213,7 +213,8 @@ namespace MartianMap.HUD
             Assert.That(_hud.OpenPhotoAsync("photo-a").Result, Is.False);
             Assert.That(_root.GetComponentsInChildren<Button>(true).Single(button => button.name == "POV gallery").gameObject.activeSelf, Is.False);
             MapEvents.Emit(new EditModeChanged(false));
-            Assert.That(_root.GetComponentsInChildren<Button>(true).Single(button => button.name == "POV gallery").gameObject.activeSelf, Is.True);
+            // The gallery button is hidden at the team's request, also outside edit mode.
+            Assert.That(_root.GetComponentsInChildren<Button>(true).Single(button => button.name == "POV gallery").gameObject.activeSelf, Is.False);
         }
 
         [UnityTest]

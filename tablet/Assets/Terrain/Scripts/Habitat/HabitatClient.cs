@@ -150,7 +150,16 @@ namespace MartianMap.Terrain
         private async Task CycleAsync(string habitat, string files)
         {
             var cache = bootstrap.EnsureCache();
-            await SendPendingAsync(habitat);
+            try
+            {
+                await SendPendingAsync(habitat);
+            }
+            catch (HabitatHttpException sendFailed)
+            {
+                // A habitat without POST /edits (or a failed batch) must not stop zone sync: the edits
+                // stay pending and are sent again next cycle.
+                Debug.LogWarning($"[Terrain] edits not sent; retrying next cycle error={sendFailed.Message}");
+            }
 
             // New or updated zones.
             var zones = HabitatApi.ParseZones(await HabitatHttp.GetTextAsync($"{habitat}/zones?since={cache.GetCursor(ZonesCursor)}"));

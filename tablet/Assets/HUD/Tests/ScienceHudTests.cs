@@ -94,7 +94,8 @@ namespace MartianMap.HUD
                 Assert.That(outline.gameObject.activeSelf, Is.True);
                 Button derivation = root.GetComponentsInChildren<Button>(true).Single(button => button.name == "Derivation");
                 derivation.onClick.Invoke();
-                Assert.That(root.GetComponentsInChildren<TMP_Text>().Any(text => text.text.Contains("Derived from:")), Is.True);
+                // The derivation is hidden at the team's request: it never shows on screen.
+                Assert.That(root.GetComponentsInChildren<TMP_Text>().Any(text => text.text.Contains("Derived from:")), Is.False);
                 source.TValidUtc = DateTime.UtcNow.AddHours(-2).ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
                 source.Modifiers.Add(new ConditionsModifier
                 {

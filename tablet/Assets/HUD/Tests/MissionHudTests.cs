@@ -78,7 +78,8 @@ namespace MartianMap.HUD
                 Assert.That(observed.HasValue, Is.False);
                 MapEvents.Emit(new ZoneLoaded(MissionDefinitionTests.Zone(), string.Empty, "ev1"));
                 Assert.That(button.interactable, Is.True);
-                Assert.That(root.GetComponentsInChildren<TMP_Text>().Any(text => text.text.Contains("simulated")), Is.True);
+                // The mission details are loaded but hidden (the panel shows only route options).
+                Assert.That(root.GetComponentsInChildren<TMP_Text>(true).Any(text => text.text.Contains("simulated")), Is.True);
                 Canvas.ForceUpdateCanvases();
                 foreach (TMP_Text text in root.GetComponentsInChildren<TMP_Text>().Where(text => text.name.StartsWith("Stop ", StringComparison.Ordinal)))
                 {

@@ -36,6 +36,7 @@ namespace MartianMap.Terrain
 
         private byte[] _shapeHazard;
         private byte[] _editHazard;
+        private byte[] _layerHazard;
 
         public TileInfo Info { get; }
 
@@ -45,7 +46,7 @@ namespace MartianMap.Terrain
         /// <summary>uint8 hazard 0–255 as Earth wrote it, north-up rows.</summary>
         public byte[] BaseHazard { get; }
 
-        /// <summary>The effective hazard: <c>max(base, P5 shapes, edits)</c>, north-up rows.</summary>
+        /// <summary>The effective hazard: <c>max(base, P5 shapes, edits, layers)</c>, north-up rows.</summary>
         public byte[] Hazard { get; }
 
         /// <summary>uint8 layers by <c>layer_id</c>, north-up rows.</summary>
@@ -131,6 +132,17 @@ namespace MartianMap.Terrain
             return RecomputeHazard();
         }
 
+        /// <summary>
+        /// The hazard the layers imply on this tile (<see cref="LayerHazard"/>: soft ground from
+        /// thermal inertia or thermal IR), or null for none. Main thread.
+        /// </summary>
+        /// <returns>True if the effective hazard changed.</returns>
+        public bool SetLayerHazard(byte[] layerHazard)
+        {
+            _layerHazard = layerHazard != null ? Check(layerHazard, nameof(layerHazard)) : null;
+            return RecomputeHazard();
+        }
+
         private bool RecomputeHazard()
         {
             var changed = false;
@@ -145,6 +157,11 @@ namespace MartianMap.Terrain
                 if (_editHazard != null && _editHazard[i] > value)
                 {
                     value = _editHazard[i];
+                }
+
+                if (_layerHazard != null && _layerHazard[i] > value)
+                {
+                    value = _layerHazard[i];
                 }
 
                 if (Hazard[i] != value)

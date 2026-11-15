@@ -7,9 +7,10 @@ using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 namespace MartianMap.Terrain
 {
     /// <summary>
-    /// A route between two points of the map: a short tap sets A, the next sets B and asks
-    /// <see cref="RouteOrchestrator.PlanBetween"/> for the route (P5's <c>Routes</c> prefab draws it);
-    /// the third tap starts again with a new A. A tap is a press released within 0.35 s that moved
+    /// A route between two points of the map: a short tap sets A, the next sets B; the route is
+    /// planned only when the HUD's PLAN ROUTE calls <see cref="PlanPoints"/>, so it can be planned
+    /// again (after an edit, say) without placing the points again. The third tap starts again with
+    /// a new A. <see cref="RouteOrchestrator.PlanBetween"/> computes it; P5's <c>Routes</c> draws it. A tap is a press released within 0.35 s that moved
     /// less than 12 px, so it never fights the camera's drag nor P6's long press, and it is ignored
     /// over the HUD and in edit mode. A and B are drawn as screen-size markers (no materials, so they
     /// render the same on the tablet).
@@ -22,6 +23,26 @@ namespace MartianMap.Terrain
         private const float MarkerPixels = 26f;
 
         [SerializeField] private RouteOrchestrator orchestrator;
+
+        private static RoutePointsTool _instance;
+
+        /// <summary>True when A and B are both on the map: PLAN ROUTE plans between them.</summary>
+        public static bool HasBothPoints => _instance != null && _instance._a.HasValue && _instance._b.HasValue;
+
+        /// <summary>Raised when A or B is set or cleared.</summary>
+        public static event System.Action PointsChanged;
+
+        /// <summary>Plans the three alternatives between A and B; false if there are no two points.</summary>
+        public static bool PlanPoints()
+        {
+            if (!HasBothPoints || _instance.orchestrator == null)
+            {
+                return false;
+            }
+
+            _instance.PlanAsync(_instance._a.Value, _instance._b.Value);
+            return true;
+        }
 
         private Vector2? _a;
         private Vector2? _b;
@@ -49,6 +70,7 @@ namespace MartianMap.Terrain
             }
 
             _disc = BuildDisc(64);
+            _instance = this;
         }
 
         private void OnEnable()
@@ -66,6 +88,11 @@ namespace MartianMap.Terrain
 
         private void OnDestroy()
         {
+            if (_instance == this)
+            {
+                _instance = null;
+            }
+
             if (_disc != null)
             {
                 Destroy(_disc);
@@ -82,6 +109,7 @@ namespace MartianMap.Terrain
         {
             _a = null;
             _b = null;
+            PointsChanged?.Invoke();
         }
 
         private void Update()
@@ -164,15 +192,13 @@ namespace MartianMap.Terrain
                 _a = enu;
                 _b = null;
                 Debug.Log($"[Terrain] route point A=({enu.x:F0},{enu.y:F0}); tap B");
+                PointsChanged?.Invoke();
                 return;
             }
 
             _b = enu;
-            Debug.Log($"[Terrain] route point B=({enu.x:F0},{enu.y:F0}); planning");
-            if (orchestrator != null)
-            {
-                PlanAsync(_a.Value, _b.Value);
-            }
+            Debug.Log($"[Terrain] route point B=({enu.x:F0},{enu.y:F0}); press PLAN ROUTE");
+            PointsChanged?.Invoke();
         }
 
         private async void PlanAsync(Vector2 a, Vector2 b)
