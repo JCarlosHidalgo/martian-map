@@ -85,16 +85,17 @@ namespace MartianMap.Routing.Tests
         [Test]
         public void TheOrderIsTheFastestsInAllThree()
         {
-            // The leg (0, 4) → (14, 4) crosses amber on the fastest route and goes around it on the safest.
+            // Oracle (check_order.py; every leg a unique optimum): from (0, 4) and back, the fastest
+            // order is a c b (143.7688 s against 143.8760 s for a b c), while the safest's own order
+            // would be a b c (163.9412 s; a c b costs it 166.4095 s). All three plans keep a c b.
             CostGrid g = Grids.FromMap(Grids.AmberPatch15x9, Grids.TiltHeight);
             Field home = Router.ReturnField(g, At(0, 4), P);
-            Stop[] stops = { new Stop("x", At(14, 4), 1, 0), new Stop("y", At(14, 0), 1, 0) };
+            Stop[] stops = { new Stop("a", At(0, 5), 1, 0), new Stop("b", At(8, 5), 1, 0), new Stop("c", At(13, 3), 1, 0) };
             IReadOnlyList<Plan> plans = Router.OrderStops(g, At(0, 4), stops, home, new Budget(14400, 50), Calm, T, StopMode.Tsp, P);
-            Assert.That(plans[1].Order, Is.EqualTo(plans[0].Order));
-            Assert.That(plans[2].Order, Is.EqualTo(plans[0].Order));
-            double fastestAmber = plans[0].Legs.Sum(l => l.AmberM), safestAmber = plans[1].Legs.Sum(l => l.AmberM);
-            Assert.That(fastestAmber, Is.GreaterThan(0));
-            Assert.That(safestAmber, Is.LessThan(fastestAmber));
+            foreach (Plan plan in plans)
+            {
+                Assert.That(plan.Order, Is.EqualTo(new[] { "a", "c", "b" }));
+            }
         }
 
         [TestCase(2709.488281940435, true)]
