@@ -314,6 +314,7 @@ class ContractValidatorTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "SHA-256 golden"):
             ContractValidator(self.root).run()
 
+<<<<<<< HEAD
     def _mission_fixture(self) -> dict[str, Any]:
         source = Path(__file__).parent
         shutil.copyfile(
@@ -478,6 +479,8 @@ class ContractValidatorTests(unittest.TestCase):
                 sample = int.from_bytes(height[index * 2 : index * 2 + 2], "little")
                 self.assertNotEqual(sample, tile["height"]["nodata"])
 
+=======
+>>>>>>> c3a7bf2b9defb57adcec8af8aa31be0a1dd700e9
     def _edit_identifier_fixture(self) -> dict[str, Any]:
         source = Path(__file__).parent
         for name in ("edit.schema.json", "edit_log.schema.json"):
