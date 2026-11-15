@@ -20,8 +20,11 @@ namespace MartianMap.Terrain
             /// <summary>A procedural crater field of several tiles, generated in code.</summary>
             Demo,
 
-            /// <summary>One tile like the C1 synthetic fixture: ramp, asymmetric hazard, nodata corner.</summary>
-            FixtureLike,
+            /// <summary>
+            /// The C1 contract tile <c>tile_synth_0_0_0</c> (P1) as zone <c>synth</c>; falls back to the
+            /// generated look-alike if the fixture is missing.
+            /// </summary>
+            ContractFixture,
 
             /// <summary>A zone folder inside StreamingAssets with zone.json at its root (no bundle.json).</summary>
             StreamingAssetsFolder,
@@ -103,8 +106,8 @@ namespace MartianMap.Terrain
                 case ZoneSource.Cache:
                     zone = await LoadFromCacheAsync(null);
                     break;
-                case ZoneSource.FixtureLike:
-                    zone = SyntheticZone.CreateFixtureLike();
+                case ZoneSource.ContractFixture:
+                    zone = await LoadContractFixtureAsync();
                     break;
                 case ZoneSource.StreamingAssetsFolder:
                     zone = await ZoneFolderLoader.LoadAsync(LocalFiles.Combine(Application.streamingAssetsPath, streamingAssetsFolder));
@@ -189,6 +192,19 @@ namespace MartianMap.Terrain
             finally
             {
                 _loading = false;
+            }
+        }
+
+        private static async Task<LoadedZone> LoadContractFixtureAsync()
+        {
+            try
+            {
+                return await FixtureLoader.LoadSynthZoneAsync();
+            }
+            catch (System.IO.FileNotFoundException missing)
+            {
+                Debug.LogWarning($"[Terrain] contract tile missing file={missing.FileName}; showing the generated look-alike");
+                return SyntheticZone.CreateFixtureLike();
             }
         }
 

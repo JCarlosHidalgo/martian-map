@@ -23,6 +23,7 @@ namespace MartianMap.Terrain
         public const string ExpectedPlanPath = "routing/expected_plan.json";
         public const string ZonePath = "zone/zone.json";
         public const string ConditionsPath = "conditions/conditions.json";
+        public const string SynthTileFolder = "tile_synth_0_0_0";
 
         /// <summary><c>StreamingAssets/fixtures</c>, valid on Android too.</summary>
         public static string DefaultRoot => LocalFiles.Combine(Application.streamingAssetsPath, "fixtures");
@@ -42,6 +43,64 @@ namespace MartianMap.Terrain
 
         public static async Task<ConditionsInfo> LoadConditionsAsync(string root = null) =>
             JsonConvert.DeserializeObject<ConditionsInfo>(await ReadAsync(root, ConditionsPath));
+
+        /// <summary>
+        /// The synthetic zone of the contracts: the C1 tile <c>tile_synth_0_0_0</c> drawn as zone
+        /// <c>synth</c>. Takes <c>zone/zone.json</c> and <c>conditions/conditions.json</c> when they
+        /// exist; until P1 delivers them, the zone is built from the shared synthetic coordinates of
+        /// the guide (Convenciones, "Cómo se fija un contrato").
+        /// </summary>
+        public static async Task<LoadedZone> LoadSynthZoneAsync(string root = null)
+        {
+            root ??= DefaultRoot;
+            var tileFolder = LocalFiles.Combine(root, SynthTileFolder);
+            var tileJson = await LocalFiles.ReadBytesAsync(LocalFiles.Combine(tileFolder, "tile.json"));
+            var tile = await ZoneFolderLoader.LoadTileAsync(tileFolder);
+
+            var zoneBytes = await LocalFiles.TryReadBytesAsync(LocalFiles.Combine(root, ZonePath));
+            var zone = zoneBytes != null
+                ? JsonConvert.DeserializeObject<ZoneInfo>(Encoding.UTF8.GetString(zoneBytes))
+                : SynthZoneFromGuide(tile.Info, Sha256.Hex(tileJson));
+
+            ConditionsInfo conditions = null;
+            var conditionsBytes = await LocalFiles.TryReadBytesAsync(LocalFiles.Combine(root, ConditionsPath));
+            if (conditionsBytes != null)
+            {
+                conditions = JsonConvert.DeserializeObject<ConditionsInfo>(Encoding.UTF8.GetString(conditionsBytes));
+            }
+
+            Debug.Log($"[Terrain] contract fixture loaded zone_id={zone.ZoneId} zone_json={(zoneBytes != null ? "fixture" : "guide")} " +
+                      $"conditions={(conditions != null ? "fixture" : "none")}");
+            return new LoadedZone(zone, new[] { tile }, conditions, LocalFiles.Combine(root, "zone", "pov"));
+        }
+
+        /// <summary>Zone <c>synth</c> as the guide fixes it: one 256 m tile centred on the origin.</summary>
+        public static ZoneInfo SynthZoneFromGuide(TileInfo tile, string tileJsonSha256)
+        {
+            var zone = new ZoneInfo
+            {
+                SchemaVersion = 1,
+                ZoneId = "synth",
+                Name = "Synthetic zone (contract fixture)",
+                Crs = "IAU_2015:49900",
+                OriginLatDeg = -4.81,
+                OriginLonDeg = 137.385,
+                OriginHeightM = 12.5,
+                Projection = "equirectangular_local",
+                HabitatEnuM = new[] { -100.0, -20.0 },
+                ExtentEnuM = new[] { -128.0, -128.0, 128.0, 128.0 },
+                BaseMPerPx = 1.0,
+            };
+            zone.Tiles.Add(new ZoneTileRef { Z = tile.Z, X = tile.X, Y = tile.Y, Version = tile.Version, Sha256 = tileJsonSha256 });
+            zone.Layers.Add(new ZoneLayerInfo { Id = LayerIds.Ortho, SourceId = "synthetic", Qualitative = true });
+            zone.Layers.Add(new ZoneLayerInfo
+            {
+                Id = LayerIds.Thermal, SourceId = "synthetic", Qualitative = false,
+                Unit = "J m-2 K-1 s-1/2", Scale = 2.0, Offset = 100.0,
+            });
+            zone.Layers.Add(new ZoneLayerInfo { Id = LayerIds.ThermalIr, SourceId = "synthetic", Qualitative = true });
+            return zone;
+        }
 
         public static CostParams ParseCostParams(string json)
         {
