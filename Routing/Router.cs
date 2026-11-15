@@ -91,10 +91,33 @@ namespace MartianMap.Routing
                 throw new ArgumentNullException(nameof(p));
             }
 
-            int s = NearestNode(grid, start);
-            int t = NearestNode(grid, goal);
-            int[] nodes = Search.AStar(grid, s, t, p.V0Mps.P50, p, Weights.Fastest, out _);
-            return nodes == null ? Route.NotFound : Cost.Trace(grid, Smoothing.Smooth(grid, nodes, p.V0Mps.P50, p, Weights.Fastest), p);
+            return Leg(grid, NearestNode(grid, start), NearestNode(grid, goal), p, Weights.Fastest, out _);
+        }
+
+        /// <summary>
+        /// One leg between two nodes with the weights <paramref name="w"/>: A* at v₀ P50, then
+        /// <see cref="Smoothing.Smooth"/> with the same weights, then <see cref="Cost.Trace"/>.
+        /// <paramref name="costS"/> is the cost the leg was chosen by: the sum, in <c>double</c> and
+        /// left to right, of <see cref="Cost.SegmentCostS"/> with <paramref name="w"/> over the
+        /// smoothed waypoints; 0 if <paramref name="s"/> = <paramref name="t"/> and +∞ with no route.
+        /// </summary>
+        internal static Route Leg(CostGrid g, int s, int t, CostParams p, Weights w, out double costS)
+        {
+            double v0 = p.V0Mps.P50;
+            int[] nodes = Search.AStar(g, s, t, v0, p, w, out costS);
+            if (nodes == null)
+            {
+                return Route.NotFound;
+            }
+
+            int[] waypoints = Smoothing.Smooth(g, nodes, v0, p, w);
+            costS = 0;
+            for (int k = 1; k < waypoints.Length; k++)
+            {
+                costS += Cost.SegmentCostS(g, waypoints[k - 1], waypoints[k], v0, p, w, out _);
+            }
+
+            return Cost.Trace(g, waypoints, p);
         }
 
         /// <summary>
@@ -134,13 +157,33 @@ namespace MartianMap.Routing
 
         /// <summary>
         /// One route per value of <see cref="Alternative"/>, in that order: always all of them, even
-        /// when two coincide.
+        /// when two coincide (docs/guide/chapters/tablet.md, "Las tres alternativas"). Each is
+        /// <see cref="PlanRoute"/>'s A* and smoothing with its own weights, from the same nodes:
+        /// fastest is the formula as it is (and exactly <see cref="PlanRoute"/>), safest multiplies
+        /// the amber penalty by <c>alt_safest_amber_mult</c>, and gentlest adds
+        /// <c>alt_gentlest_s_per_m</c> seconds per metre of height change, climbed plus descended.
+        /// The smoothing takes a shortcut only where it does not worsen the alternative's own cost.
+        /// Every field comes from <see cref="Cost.Trace"/>, so <c>eta_s</c> has no penalty. With
+        /// no route, the three are <see cref="Route.NotFound"/>.
         /// </summary>
         public static IReadOnlyList<Route> Alternatives(CostGrid grid, EnuPoint start, EnuPoint goal, CostParams p)
         {
             RequirePointIn(grid, start, nameof(start));
             RequirePointIn(grid, goal, nameof(goal));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            int s = NearestNode(grid, start);
+            int t = NearestNode(grid, goal);
+            var routes = new Route[3];
+            for (int a = 0; a < routes.Length; a++)
+            {
+                routes[a] = Leg(grid, s, t, p, Weights.For((Alternative)a, p), out _);
+            }
+
+            return Array.AsReadOnly(routes);
         }
 
         /// <summary>
