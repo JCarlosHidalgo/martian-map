@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -67,12 +68,12 @@ namespace MartianMap.Routing.FixtureGen
             var routeJson = new JsonText.Obj { { "schema_version", 1 } };
             routeJson.AddRange(RouteJson(route));
 
-            var plan = PlanJson(BuildPlan(grid, p));
+            // expected_plan.json: OrderStops on the synthetic mission, one plan per alternative. On
+            // the ramp the two orders tie and the input order wins, and the three alternatives are the row.
             var planJson = new JsonText.Obj
             {
                 { "schema_version", 1 },
-                // On the ramp the three alternatives coincide.
-                { "plans", new object[] { plan, plan, plan } },
+                { "plans", PlannedMission(grid, p).Select(plan => (object)PlanJson(plan)).ToArray() },
             };
 
             return new Output(SerializeGrid(grid), JsonText.Write(routeJson), JsonText.Write(planJson));
@@ -162,42 +163,20 @@ namespace MartianMap.Routing.FixtureGen
             return route;
         }
 
-        /// <summary>The TSP plan of the synthetic mission, in the given stop order: base → s1 → s2 → base, every leg from PlanRoute. Until OrderStops exists the order, totals and return_ok are computed here.</summary>
-        private static Plan BuildPlan(CostGrid g, CostParams p)
+        /// <summary>
+        /// <see cref="Router.OrderStops"/> on the synthetic mission (TSP, with the field of
+        /// <see cref="Router.ReturnField"/> at the base), which must find every leg and fit.
+        /// </summary>
+        private static IReadOnlyList<Plan> PlannedMission(CostGrid g, CostParams p)
         {
-            double limitS = Router.DurationLimit(SynthConditions, PlanTimeUtc, MissionBudget.DoseUGy);
-            double availableS = Math.Min(MissionBudget.TS, limitS);
-
-            var legs = new Route[Stops.Length + 1];
-            EnuPoint at = Base;
-            double t10 = 0, t50 = 0, t90 = 0;
-            bool returnOk = true;
-            for (int k = 0; k < Stops.Length; k++)
+            Field home = Router.ReturnField(g, Base, p);
+            var plans = Router.OrderStops(g, Base, Stops, home, MissionBudget, SynthConditions, PlanTimeUtc, StopMode.Tsp, p);
+            if (plans.Any(plan => !plan.ReturnOk || plan.Legs.Any(l => !l.Found)))
             {
-                legs[k] = PlannedRoute(g, p, at, Stops[k].EnuM);
-                t10 += legs[k].EtaS.P10 + Stops[k].DwellS;
-                t50 += legs[k].EtaS.P50 + Stops[k].DwellS;
-                t90 += legs[k].EtaS.P90 + Stops[k].DwellS;
-                at = Stops[k].EnuM;
-
-                // On leaving this stop, the elapsed time at P90 plus the return at P90 must fit.
-                double backP90 = PlannedRoute(g, p, at, Base).EtaS.P90;
-                returnOk &= Router.ReturnFits(t90, backP90, availableS);
+                throw new InvalidOperationException("The synthetic mission must find every leg and fit its budget.");
             }
 
-            legs[Stops.Length] = PlannedRoute(g, p, at, Base);
-            t10 += legs[Stops.Length].EtaS.P10;
-            t50 += legs[Stops.Length].EtaS.P50;
-            t90 += legs[Stops.Length].EtaS.P90;
-
-            return new Plan(
-                Stops.Select(s => s.Id).ToArray(),
-                Array.Empty<string>(),
-                legs,
-                new Percentiles(t10, t50, t90),
-                Router.DoseUGy(SynthConditions, PlanTimeUtc, t50),
-                limitS,
-                returnOk);
+            return plans;
         }
 
         private static JsonText.Obj RouteJson(Route r) => new JsonText.Obj

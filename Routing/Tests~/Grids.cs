@@ -138,6 +138,36 @@ namespace MartianMap.Routing.Tests
         /// <summary>The same shape as <see cref="HillHeight"/>, 0.3 m high.</summary>
         internal static float BumpHeight(int i, int j) => (float)(0.3 * Math.Exp(-(((i - 7) * (i - 7)) + ((j - 4) * (j - 4))) / 4.0));
 
+        /// <summary>
+        /// Amber patches on 15 × 9 (oracle cases_alt.py, a random search): from <c>(0, 4)</c> to
+        /// <c>(14, 4)</c> the fastest route crosses amber and the safest goes around it; with
+        /// <see cref="TiltHeight"/> every alternative has a unique optimum.
+        /// </summary>
+        internal static readonly string[] AmberPatch15x9 =
+        {
+            "......aa.......",
+            "......aa.......",
+            "....aaaa.......",
+            "....aa.........",
+            "....a..........",
+            "....aa.........",
+            "....a..........",
+            "....a..........",
+            "........aa.....",
+        };
+
+        /// <summary>A gentle bowl that breaks the ties of flat ground: <c>0.001 · i² + 0.0013 · j²</c>.</summary>
+        internal static float TiltHeight(int i, int j) => (float)((0.001 * i * i) + (0.0013 * j * j));
+
+        /// <summary>A free 21 × 9 grid, for <see cref="RidgeHeight"/>.</summary>
+        internal static readonly string[] Flat21x9 = Rows(21, 9);
+
+        /// <summary>
+        /// A ridge 1.2 m high along <c>i = 10</c> that fades out past <c>j = 6</c>:
+        /// <c>1.2 · exp(−(i − 10)² / 4) / (1 + exp(2 (j − 6)))</c>.
+        /// </summary>
+        internal static float RidgeHeight(int i, int j) => (float)(1.2 * Math.Exp(-((i - 10) * (i - 10)) / 4.0) / (1 + Math.Exp(2.0 * (j - 6))));
+
         internal static CostGrid FromMap(string[] rows, Func<int, int, float> heightM = null)
         {
             int height = rows.Length;

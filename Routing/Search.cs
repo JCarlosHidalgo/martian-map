@@ -21,13 +21,13 @@ namespace MartianMap.Routing
 
         /// <summary>
         /// The cheapest path from <paramref name="start"/> to <paramref name="goal"/>, both included,
-        /// minimising <see cref="Cost.SegmentCostS"/> with <paramref name="amberMult"/>; or
+        /// minimising <see cref="Cost.SegmentCostS"/> with the weights <paramref name="weights"/>; or
         /// <c>null</c>, with <paramref name="costS"/> = +∞, if there is none. <paramref name="costS"/>
         /// is the cost of the returned path, summed in <c>double</c> over its edges. The heuristic is
         /// the horizontal distance over <see cref="Cost.MaxSpeedMps"/>, admissible and consistent, so
         /// a closed node is never reopened. A move that leaves the grid is skipped.
         /// </summary>
-        internal static int[] AStar(CostGrid g, int start, int goal, double v0Mps, CostParams p, double amberMult, out double costS)
+        internal static int[] AStar(CostGrid g, int start, int goal, double v0Mps, CostParams p, Weights weights, out double costS)
         {
             int count = g.Width * g.Height;
             if ((uint)start >= (uint)count || (uint)goal >= (uint)count)
@@ -94,7 +94,7 @@ namespace MartianMap.Routing
                             continue;
                         }
 
-                        double edge = Cost.SegmentCostS(g, u, v, v0Mps, p, amberMult, out _);
+                        double edge = Cost.SegmentCostS(g, u, v, v0Mps, p, weights, out _);
                         if (double.IsPositiveInfinity(edge))
                         {
                             continue;
@@ -140,7 +140,7 @@ namespace MartianMap.Routing
                 costS = 0;
                 for (int k = 1; k < path.Length; k++)
                 {
-                    costS += Cost.SegmentCostS(g, path[k - 1], path[k], v0Mps, p, amberMult, out _);
+                    costS += Cost.SegmentCostS(g, path[k - 1], path[k], v0Mps, p, weights, out _);
                 }
 
                 return path;
@@ -218,7 +218,7 @@ namespace MartianMap.Routing
                             continue;
                         }
 
-                        double edge = Cost.SegmentCostS(g, u, v, v0Mps, p, 1.0, out double edgeTimeS);
+                        double edge = Cost.SegmentCostS(g, u, v, v0Mps, p, Weights.Fastest, out double edgeTimeS);
                         if (double.IsPositiveInfinity(edge))
                         {
                             continue;
