@@ -4,6 +4,25 @@ namespace MartianMap.HUD
     public static class HudStrings
     {
         public const string Brand = "MARTIAN MAP  /  SCIENCE OPERATIONS";
+        public const string Settings = "SETTINGS";
+        public const string SettingsTitle = "TABLET SETTINGS";
+        public const string HabitatUrl = "Habitat server URL";
+        public const string FilesUrl = "Tile files URL";
+        public const string Author = "Tablet author identifier";
+        public const string ConnectionHelp = "Use http://host:port for each server. Leave URLs empty to work from the local cache.";
+        public const string AuthorRegistration = "Choose 2-16 lowercase letters, digits or hyphens. Coordinate a unique identifier with your team; it cannot be changed after saving.";
+        public const string AuthorLocked = "This tablet's author is permanent. Server addresses can still be updated.";
+        public const string AuthorRequired = "Register this tablet's author before editing.";
+        public const string AuthorInvalid = "Author must contain 2-16 lowercase letters, digits or hyphens.";
+        public const string HabitatUrlInvalid = "Habitat URL must be http://host:port, or empty for cache-only use.";
+        public const string FilesUrlInvalid = "Files URL must be http://host:port, or empty for cache-only use.";
+        public const string SettingsRejected = "Settings were rejected. Check the URLs and the registered author.";
+        public const string SettingsReadFailed = "Saved settings could not be read. Check the device configuration and reopen Settings.";
+        public const string SettingsWriteFailed = "Settings could not be saved on this device. Your input is preserved; try again.";
+        public const string SettingsReady = "Settings loaded.";
+        public const string SettingsSaved = "Settings saved.";
+        public const string SaveSettings = "SAVE SETTINGS";
+        public const string CloseSettings = "CLOSE";
         public const string WaitingForMission = "Waiting for mission.";
         public const string MissionDataUnavailable = "Mission data is unavailable.";
         public const string MissionUnavailable = "Mission unavailable";
