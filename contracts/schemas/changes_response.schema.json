@@ -13,7 +13,7 @@
       "type": "array",
       "items": {"$ref": "#/$defs/tile_ref"}
     },
-    "conditions": {"type": "object", "description": "Unmodified C6 conditions.json; constrain when C6 is published."}
+    "conditions": {"$ref": "conditions.schema.json"}
   },
   "allOf": [
     {"if": {"properties": {"has_more": {"const": true}}}, "then": {"properties": {"tiles": {"maxItems": 0}}, "not": {"required": ["conditions"]}}}
