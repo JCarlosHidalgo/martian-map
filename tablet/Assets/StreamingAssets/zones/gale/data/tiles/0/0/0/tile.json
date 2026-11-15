@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "zone_id": "gale",
+  "z": 0,
+  "x": 0,
+  "y": 0,
+  "size_px": 257,
+  "m_per_px": 1.0,
+  "origin_enu_m": [
+    -256,
+    -256
+  ],
+  "height": {
+    "file": "height.r16",
+    "dtype": "uint16",
+    "scale": 0.0023080145474523306,
+    "offset": -3627.0,
+    "nodata": 65535,
+    "row_order": "north_up",
+    "endian": "le",
+    "vertical_datum": "areoid"
+  },
+  "rasters": {
+    "slope": {
+      "dtype": "uint8",
+      "unit": "deg"
+    },
+    "roughness": {
+      "dtype": "uint8",
+      "unit": "cm",
+      "window_m": 3
+    },
+    "hazard": {
+      "dtype": "uint8"
+    }
+  },
+  "version": 1,
+  "layers": [
+    {
+      "id": "ortho",
+      "file": "ortho.r8"
+    }
+  ],
+  "source_ids": [
+    "mro-hirise-gale-dtm",
+    "mro-hirise-gale-ortho"
+  ],
+  "sha256": {
+    "height.r16": "6a9461db228fc6c043b552eac060637664cdcc9be8603f85ed8f8cda94ec8ab6",
+    "slope.r8": "6f0455be65ed576664019b3dff9eea8a41e46a2ce21aec334a203d72df9f9915",
+    "roughness.r8": "58612dfb1162bab9a342315ee2e0024280be42bfb57bbc74dd71bf76eb5d84cf",
+    "hazard.r8": "3f90dbce8ed859d82700d9bd7ef02f1621aa5834fe087c90b1a4c9e0c56cbcd5",
+    "ortho.r8": "9c042eb0092a4bc25cb58157c5699393a49c9a0292b5cc117881be496badb5ee"
+  }
+}
