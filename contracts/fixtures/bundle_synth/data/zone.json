@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "zone_id": "synth",
+  "name": "Zona sintética",
+  "crs": "IAU_2015:49900",
+  "origin_lat_deg": -4.81,
+  "origin_lon_deg": 137.385,
+  "origin_height_m": 12.5,
+  "projection": "equirectangular_local",
+  "radius_m": 3396190,
+  "habitat_enu_m": [
+    -100,
+    -20
+  ],
+  "extent_enu_m": [
+    -128,
+    -128,
+    128,
+    128
+  ],
+  "base_m_per_px": 1.0,
+  "tiles": [
+    {
+      "z": 0,
+      "x": 0,
+      "y": 0,
+      "version": 1,
+      "sha256": "714f6a999f5ee5e23e0424130d32d121a231e77595ba79a681d56eaa08b18866"
+    }
+  ],
+  "layers": [
+    {
+      "id": "ortho",
+      "dtype": "uint8",
+      "source_id": "synthetic-test-data",
+      "qualitative": true
+    },
+    {
+      "id": "thermal",
+      "dtype": "uint8",
+      "source_id": "synthetic-test-data",
+      "qualitative": false,
+      "unit": "J m-2 K-1 s-1/2",
+      "scale": 2,
+      "offset": 100
+    },
+    {
+      "id": "thermal_ir",
+      "dtype": "uint8",
+      "source_id": "synthetic-test-data",
+      "qualitative": true
+    }
+  ],
+  "layer_sources": [
+    {
+      "id": "synthetic-test-data",
+      "kind": "raster",
+      "adapter": "json-feed",
+      "mission": "synthetic",
+      "instrument": "test-generator",
+      "product_id": "synthetic-tile-0-0-0",
+      "resolution_m": 1.0,
+      "time_range": [
+        "2026-11-15T00:00:00Z",
+        "2026-11-15T00:00:00Z"
+      ],
+      "license": "CC0-1.0",
+      "url": "https://github.com/JCarlosHidalgo/martian-map",
+      "qualitative": true
+    }
+  ],
+  "pov": [
+    {
+      "id": "synthetic-pov-01",
+      "source_id": "synthetic",
+      "enu_m": [
+        0,
+        0
+      ],
+      "t_utc": "2026-11-14T00:00:00Z",
+      "file": "synthetic_view.jpg",
+      "media_type": "image/jpeg",
+      "sha256": "ced04a52cc808a6089badc50974fd1eaaf37d2a603d44b5b47af885f37d1a23c",
+      "version": 1,
+      "credit": "Martian Map - imagem ilustrativa sintética, não NASA"
+    }
+  ]
+}
