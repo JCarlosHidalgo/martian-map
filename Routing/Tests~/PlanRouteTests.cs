@@ -222,7 +222,8 @@ namespace MartianMap.Routing.Tests
             }
 
             // A collection now, so the earlier tests' garbage does not count; then only the route's
-            // own small lists (~20 KB a query) are allocated, never an array per node (640 KB here).
+            // own small lists (~26 KB a query) are allocated, never an array per node: even a byte
+            // per node is 160 KB here, twice the bound.
             GC.Collect();
             GC.WaitForPendingFinalizers();
             int before = GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2);
@@ -234,7 +235,7 @@ namespace MartianMap.Routing.Tests
                 Assert.That(r.Found, Is.True);
             }
 
-            Assert.That((GC.GetAllocatedBytesForCurrentThread() - bytes) / 10, Is.LessThan(200_000));
+            Assert.That((GC.GetAllocatedBytesForCurrentThread() - bytes) / 10, Is.LessThan(80_000));
             Assert.That(GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2), Is.EqualTo(before));
         }
     }

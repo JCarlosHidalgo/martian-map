@@ -135,7 +135,7 @@ namespace MartianMap.Routing.Tests
         [Test]
         public void TheFieldReusesTheWorkspaceWithoutGc()
         {
-            // 200²: an array per node would be 160 KB, above the bound.
+            // 200²: a reused workspace allocates ~0.6 KB a field; even a byte per node is 40 KB, twice the bound.
             CostGrid g = Grids.Flat(200, 200);
             var t = new float[g.Width * g.Height];
             Search.Field(g, g.Index(100, 100), P.V0Mps.P90, P, t);
@@ -145,7 +145,7 @@ namespace MartianMap.Routing.Tests
             long bytes = GC.GetAllocatedBytesForCurrentThread();
             Search.Field(g, g.Index(0, 199), P.V0Mps.P90, P, t);
 
-            Assert.That(GC.GetAllocatedBytesForCurrentThread() - bytes, Is.LessThan(100_000));
+            Assert.That(GC.GetAllocatedBytesForCurrentThread() - bytes, Is.LessThan(20_000));
             Assert.That(GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2), Is.EqualTo(before));
         }
 
