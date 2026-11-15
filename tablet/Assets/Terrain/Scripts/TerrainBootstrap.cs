@@ -125,7 +125,8 @@ namespace MartianMap.Terrain
         /// <summary>
         /// Opens the cache, imports the preloaded zones, emits ZonesChanged and loads
         /// <paramref name="zoneId"/>, or the last active zone, or the first one. With an empty cache
-        /// it falls back to the generated demo zone.
+        /// it shows the contract zone <c>synth</c>, which the HUD's synthetic mission targets; the
+        /// generated demo zone is the last resort.
         /// </summary>
         private async Task<LoadedZone> LoadFromCacheAsync(string zoneId)
         {
@@ -142,8 +143,8 @@ namespace MartianMap.Terrain
             MapEvents.Emit(new ZonesChanged(zones));
             if (zones.Count == 0)
             {
-                Debug.LogWarning("[Terrain] cache is empty and no zone ships in the APK; showing the generated demo zone");
-                return SyntheticZone.CreateDemo();
+                Debug.LogWarning("[Terrain] cache is empty and no zone ships in the APK; showing the contract zone synth");
+                return await LoadContractFixtureAsync();
             }
 
             var target = zoneId ?? _cache.ActiveZone;
@@ -203,8 +204,8 @@ namespace MartianMap.Terrain
             }
             catch (System.IO.FileNotFoundException missing)
             {
-                Debug.LogWarning($"[Terrain] contract tile missing file={missing.FileName}; showing the generated look-alike");
-                return SyntheticZone.CreateFixtureLike();
+                Debug.LogWarning($"[Terrain] contract tile missing file={missing.FileName}; showing the generated demo zone");
+                return SyntheticZone.CreateDemo();
             }
         }
 
