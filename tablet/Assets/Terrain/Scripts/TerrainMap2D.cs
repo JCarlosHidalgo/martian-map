@@ -207,6 +207,29 @@ namespace MartianMap.Terrain
             }
         }
 
+        /// <summary>The effective hazard (0–255) at an ENU point, nearest sample of its z = 0 tile; false outside data.</summary>
+        public bool TryHazardAt(Vector2 enuM, out byte hazard)
+        {
+            hazard = 0;
+            if (_current == null || !ExtentEnu.Contains(enuM))
+            {
+                return false;
+            }
+
+            var local = enuM - ExtentEnu.min;
+            if (!_tilesByIndex.TryGetValue(((int)(local.x / TileData.Cells), (int)(local.y / TileData.Cells)), out var tile))
+            {
+                return false;
+            }
+
+            var origin = tile.OriginEnuM;
+            var mpp = (float)tile.Info.MPerPx;
+            var col = Mathf.Clamp(Mathf.RoundToInt((enuM.x - origin.x) / mpp), 0, TileData.Cells);
+            var row = TileData.Cells - Mathf.Clamp(Mathf.RoundToInt((enuM.y - origin.y) / mpp), 0, TileData.Cells);
+            hazard = tile.Hazard[row * TileData.Size + col];
+            return true;
+        }
+
         /// <summary>Takes the hazard thresholds of <c>cost_params.json</c> (C5: _FogFarAmberMin, _FogFarRedMin).</summary>
         public void ApplyCostParams(MartianMap.Routing.CostParams costParams)
         {

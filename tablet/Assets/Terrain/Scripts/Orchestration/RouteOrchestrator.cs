@@ -212,6 +212,124 @@ namespace MartianMap.Terrain
                       $"seconds={Time.realtimeSinceStartup - started:F2}");
         }
 
+        /// <summary>
+        /// A route between two map points (RoutePointsTool): <c>Router.Alternatives</c> gives the
+        /// three alternatives, each wrapped as a one-leg <see cref="Plan"/>, and
+        /// <see cref="MapEvents.RouteSelected"/> shows the fastest. While Routing is not implemented
+        /// (P3) the answer is a provisional straight line from A to B over the terrain, with its
+        /// length, ascent, amber metres, highest hazard and walking times; it is logged as such.
+        /// </summary>
+        public async void PlanBetween(Vector2 aEnuM, Vector2 bEnuM)
+        {
+            var zone = map != null ? map.Current : null;
+            if (zone == null || _busy)
+            {
+                return;
+            }
+
+            _busy = true;
+            try
+            {
+                var zoneId = zone.Zone.ZoneId;
+                var costParams = (bootstrap != null ? bootstrap.CostParams : null) ?? await FixtureLoader.LoadCostParamsAsync();
+                var tiles = zone.Tiles.Where(t => t.Info.Z == 0).Select(ToRasters).ToArray();
+                var originHeight = zone.Zone.OriginHeightM;
+                var grid = _gridZone == zoneId ? _grid : null;
+                var a = new EnuPoint(aEnuM.x, aEnuM.y);
+                var b = new EnuPoint(bEnuM.x, bEnuM.y);
+                IReadOnlyList<Route> routes;
+                try
+                {
+                    var result = await Task.Run(() =>
+                    {
+                        var g = grid ?? Router.BuildGrid(tiles, originHeight, costParams);
+                        return (g, Router.Alternatives(g, a, b, costParams));
+                    });
+                    _grid = result.g;
+                    _gridZone = zoneId;
+                    routes = result.Item2;
+                }
+                catch (NotImplementedException)
+                {
+                    var straight = StraightRoute(aEnuM, bEnuM, costParams, (float)originHeight);
+                    routes = new[] { straight, straight, straight };
+                    Debug.LogWarning($"[Terrain] Routing is not implemented yet (P3): provisional straight route " +
+                                     $"length_m={straight.LengthM:F0} ascent_m={straight.AscentM:F1} max_hazard={straight.MaxHazard}");
+                }
+
+                if (map.Current == null || map.Current.Zone.ZoneId != zoneId)
+                {
+                    return;
+                }
+
+                var rate = (zone.Conditions != null && zone.Conditions.Value > 0) ? zone.Conditions.Value : FallbackDoseRateUGyH;
+                var plans = routes.Select(r => new Plan(
+                    new[] { "B" },
+                    Array.Empty<string>(),
+                    new[] { r },
+                    r.EtaS,
+                    rate * r.EtaS.P50 / 3600.0,
+                    double.PositiveInfinity,
+                    r.Found)).ToList();
+
+                _plans = plans;
+                _plansZone = zoneId;
+                _last = null; // a point-to-point route is not a mission: the next mission request plans anew
+                EmitSelected(plans, Alternative.Fastest);
+                Debug.Log($"[Terrain] point route zone_id={zoneId} from=({aEnuM.x:F0},{aEnuM.y:F0}) to=({bEnuM.x:F0},{bEnuM.y:F0}) found={routes[0].Found}");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError($"[Terrain] point route failed error={exception.Message}");
+            }
+            finally
+            {
+                _busy = false;
+            }
+        }
+
+        /// <summary>
+        /// The provisional route while Routing is not implemented: a straight line sampled every 2 m
+        /// over the terrain. It does not avoid hazard; it only measures it. Walking times are
+        /// <c>length / v0</c> at the three speeds of cost_params.json.
+        /// </summary>
+        private Route StraightRoute(Vector2 a, Vector2 b, CostParams costParams, float originHeight)
+        {
+            var distance = Vector2.Distance(a, b);
+            var steps = Mathf.Max(1, Mathf.CeilToInt(distance / 2f));
+            var points = new EnuPoint3[steps + 1];
+            double length = 0, ascent = 0, amber = 0;
+            byte maxHazard = 0;
+            var amberMin = costParams.HazardAmberMin;
+            var redMin = costParams.HazardRedMin;
+            for (var k = 0; k <= steps; k++)
+            {
+                var p = Vector2.Lerp(a, b, k / (float)steps);
+                var u = map.TryElevationAt(p, out var h) ? h - originHeight : 0f;
+                points[k] = new EnuPoint3(p.x, p.y, u);
+                map.TryHazardAt(p, out var hazard);
+                maxHazard = (byte)Mathf.Max(maxHazard, hazard);
+                if (k == 0)
+                {
+                    continue;
+                }
+
+                var prev = points[k - 1];
+                var du = u - prev.U;
+                var segment = Math.Sqrt(Math.Pow(p.x - prev.E, 2) + Math.Pow(p.y - prev.N, 2) + du * du);
+                length += segment;
+                ascent += Math.Abs(du);
+                if (hazard >= amberMin && hazard < redMin)
+                {
+                    amber += segment;
+                }
+            }
+
+            var v0 = costParams.V0Mps;
+            var eta = new Percentiles(length / v0.P10, length / v0.P50, length / v0.P90);
+            return new Route(true, Array.Empty<int>(), points, length, ascent, amber, eta, maxHazard);
+        }
+
         private static void EmitSelected(IReadOnlyList<Plan> plans, Alternative alternative)
         {
             var index = (int)alternative;

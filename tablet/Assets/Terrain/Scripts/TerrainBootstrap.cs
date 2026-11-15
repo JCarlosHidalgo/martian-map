@@ -70,6 +70,7 @@ namespace MartianMap.Terrain
             EnsureComponent<RouteOrchestrator>();
             EnsureComponent<EditOrchestrator>();
             EnsureComponent<HabitatClient>();
+            EnsureComponent<RoutePointsTool>();
 
             // Keyboard shortcuts in every scene with Terrain (Main included), once: the sandbox scene
             // already carries its own shortcuts object.
