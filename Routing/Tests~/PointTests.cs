@@ -59,7 +59,7 @@ namespace MartianMap.Routing.Tests
             Assert.Throws<ArgumentException>(() => Router.OrderStops(G, In, With(new EnuPoint(double.NaN, 21)), field, budget, c, T, StopMode.Tsp, P));
             Assert.Throws<ArgumentNullException>(() => Router.OrderStops(G, In, null, field, budget, c, T, StopMode.Tsp, P));
             Assert.Throws<ArgumentException>(() => Router.OrderStops(G, In, new Stop[] { null }, field, budget, c, T, StopMode.Tsp, P));
-            Assert.Throws<NotImplementedException>(() => Router.OrderStops(G, In, With(new EnuPoint(14, 22)), field, budget, c, T, StopMode.Tsp, P));
+            Assert.DoesNotThrow(() => Router.OrderStops(G, In, With(new EnuPoint(14, 22)), field, budget, c, T, StopMode.Tsp, P));
         }
 
         [Test]

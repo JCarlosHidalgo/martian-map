@@ -299,6 +299,21 @@ namespace MartianMap.Routing
         /// <see cref="Alternative"/>, in that order, all with the order of the fastest.
         /// <paramref name="homeField"/> is the <see cref="ReturnField"/> already computed for the
         /// heatmap, used again for <c>return_ok</c>; it throws if it was computed on another grid.
+        /// <para>TSP (docs/guide/chapters/tablet.md, "API de Routing"): the order minimises the sum of
+        /// the fastest legs' costs (time P50 plus the amber penalty, what A* minimises), the return
+        /// to home included; the legs are <see cref="PlanRoute"/>'s, both ways. Held-Karp gives the
+        /// optimum exactly, and of the orders within 1e-9 of it the lexicographically smallest by
+        /// index in <paramref name="stops"/> wins, so a tie keeps the input order. A stop that cannot
+        /// be reached from <paramref name="start"/> goes last, in input order, and its legs are not
+        /// found; if home cannot be reached, the open path is ordered. With a leg not found,
+        /// <c>total_s</c> and <c>dose_uGy</c> are +∞ and <c>return_ok</c> is false. Otherwise
+        /// <c>return_ok</c> says whether, on leaving each stop, the walk at P90 plus every
+        /// <c>dwell_s</c> so far plus the field's time back fits (<see cref="ReturnFits"/>). Each
+        /// alternative has its own legs, totals, dose and <c>return_ok</c>.</para>
+        /// It throws <see cref="ArgumentException"/> for two stops with the same id, and
+        /// <see cref="NotImplementedException"/> in <see cref="StopMode.Op"/> or with more than
+        /// <see cref="StopOrder.MaxExact"/> stops (greedy + 2-opt and orienteering come later).
+        /// It runs one A* per ordered pair of stops: call it off the main thread.
         /// </summary>
         public static IReadOnlyList<Plan> OrderStops(
             CostGrid grid,
@@ -334,7 +349,164 @@ namespace MartianMap.Routing
             }
 
             Conditions.RequireUtc(tUtc, nameof(tUtc));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            var ids = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Stop stop in stops)
+            {
+                if (!ids.Add(stop.Id))
+                {
+                    throw new ArgumentException($"Two stops have the id '{stop.Id}'.", nameof(stops));
+                }
+            }
+
+            if (mode != StopMode.Tsp)
+            {
+                throw new NotImplementedException("Orienteering (OP) comes with greedy + 2-opt, in H24–36.");
+            }
+
+            if (stops.Length > StopOrder.MaxExact)
+            {
+                throw new NotImplementedException($"More than {StopOrder.MaxExact} stops need greedy + 2-opt, in H24–36.");
+            }
+
+            int k = stops.Length;
+            int startNode = NearestNode(grid, start);
+            int homeNode = NearestNode(grid, homeField.Home);
+            var node = new int[k];
+            for (int i = 0; i < k; i++)
+            {
+                node[i] = NearestNode(grid, stops[i].EnuM);
+            }
+
+            // The fastest legs, kept by (from, to) with the start as k and home as k + 1.
+            var fastest = new Route[k + 2, k + 2];
+            var reachable = new List<int>();
+            var fromStart = new double[k];
+            for (int i = 0; i < k; i++)
+            {
+                fastest[k, i] = Leg(grid, startNode, node[i], p, Weights.Fastest, out fromStart[i]);
+                if (fastest[k, i].Found)
+                {
+                    reachable.Add(i);
+                }
+            }
+
+            int m = reachable.Count;
+            var between = new double[m, m];
+            var toHome = new double[m];
+            bool homeReached = true;
+            for (int a = 0; a < m; a++)
+            {
+                int ia = reachable[a];
+                fastest[ia, k + 1] = Leg(grid, node[ia], homeNode, p, Weights.Fastest, out toHome[a]);
+                homeReached &= fastest[ia, k + 1].Found;
+                for (int b = 0; b < m; b++)
+                {
+                    if (a != b)
+                    {
+                        fastest[ia, reachable[b]] = Leg(grid, node[ia], node[reachable[b]], p, Weights.Fastest, out between[a, b]);
+                    }
+                }
+            }
+
+            var reachedFromStart = new double[m];
+            for (int a = 0; a < m; a++)
+            {
+                reachedFromStart[a] = fromStart[reachable[a]];
+            }
+
+            int[] best = StopOrder.Order(reachedFromStart, between, homeReached ? toHome : null);
+            var order = new int[k];
+            for (int a = 0; a < m; a++)
+            {
+                order[a] = reachable[best[a]];
+            }
+
+            int at = m;
+            for (int i = 0; i < k; i++)
+            {
+                if (!reachable.Contains(i))
+                {
+                    order[at++] = i;
+                }
+            }
+
+            double limitS = DurationLimit(conditions, tUtc, budget.DoseUGy);
+            double availableS = Math.Min(budget.TS, limitS);
+            var ordered = new string[k];
+            for (int i = 0; i < k; i++)
+            {
+                ordered[i] = stops[order[i]].Id;
+            }
+
+            var plans = new Plan[3];
+            for (int alt = 0; alt < plans.Length; alt++)
+            {
+                plans[alt] = PlanOf(grid, stops, order, ordered, node, startNode, homeNode, homeField, fastest, Weights.For((Alternative)alt, p), alt == (int)Alternative.Fastest, availableS, limitS, conditions, tUtc, p);
+            }
+
+            return Array.AsReadOnly(plans);
+        }
+
+        /// <summary>
+        /// The plan of one alternative over a fixed <paramref name="order"/>: its legs (reusing the
+        /// fastest legs of the matrix for the fastest alternative), totals, dose and
+        /// <c>return_ok</c>, as <see cref="OrderStops"/> says.
+        /// </summary>
+        private static Plan PlanOf(
+            CostGrid grid,
+            Stop[] stops,
+            int[] order,
+            string[] ordered,
+            int[] node,
+            int startNode,
+            int homeNode,
+            Field homeField,
+            Route[,] fastest,
+            Weights w,
+            bool isFastest,
+            double availableS,
+            double limitS,
+            Conditions conditions,
+            DateTime tUtc,
+            CostParams p)
+        {
+            int k = order.Length;
+            var legs = new Route[k + 1];
+            double t10 = 0, t50 = 0, t90 = 0;
+            bool found = true, fits = true;
+            int from = startNode, fromKey = k;
+            for (int leg = 0; leg <= k; leg++)
+            {
+                bool toHome = leg == k;
+                int to = toHome ? homeNode : node[order[leg]];
+                int toKey = toHome ? k + 1 : order[leg];
+                Route r = isFastest ? fastest[fromKey, toKey] : null;
+                legs[leg] = r ?? Leg(grid, from, to, p, w, out _);
+                found &= legs[leg].Found;
+                double dwell = toHome ? 0 : stops[order[leg]].DwellS;
+                t10 += legs[leg].EtaS.P10 + dwell;
+                t50 += legs[leg].EtaS.P50 + dwell;
+                t90 += legs[leg].EtaS.P90 + dwell;
+                if (!toHome)
+                {
+                    fits &= ReturnFits(t90, homeField.TimeSArray[to], availableS);
+                }
+
+                from = to;
+                fromKey = toKey;
+            }
+
+            if (!found)
+            {
+                return new Plan(ordered, Array.Empty<string>(), legs, new Percentiles(double.PositiveInfinity, double.PositiveInfinity, double.PositiveInfinity), double.PositiveInfinity, limitS, false);
+            }
+
+            return new Plan(ordered, Array.Empty<string>(), legs, new Percentiles(t10, t50, t90), DoseUGy(conditions, tUtc, t50), limitS, fits);
         }
 
         /// <summary>
