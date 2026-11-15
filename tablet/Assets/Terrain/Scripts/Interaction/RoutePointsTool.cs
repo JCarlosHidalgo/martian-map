@@ -34,6 +34,12 @@ namespace MartianMap.Terrain
         private int _maxTouches;
 
         private Texture2D _disc;
+        private string _toast;
+        private float _toastUntil;
+
+        /// <summary>Shown when B cannot be reached from A (English, like all UI text).</summary>
+        public const string UnreachableMessage = "Destination unreachable: no safe route from A to B.";
+        private const float ToastSeconds = 4f;
 
         private void Awake()
         {
@@ -165,13 +171,35 @@ namespace MartianMap.Terrain
             Debug.Log($"[Terrain] route point B=({enu.x:F0},{enu.y:F0}); planning");
             if (orchestrator != null)
             {
-                orchestrator.PlanBetween(_a.Value, _b.Value);
+                PlanAsync(_a.Value, _b.Value);
             }
+        }
+
+        private async void PlanAsync(Vector2 a, Vector2 b)
+        {
+            var found = await orchestrator.PlanBetween(a, b);
+            if (found == false)
+            {
+                Debug.LogWarning($"[Terrain] destination unreachable from=({a.x:F0},{a.y:F0}) to=({b.x:F0},{b.y:F0})");
+                ShowToast(UnreachableMessage);
+            }
+        }
+
+        private void ShowToast(string message)
+        {
+            _toast = message;
+            _toastUntil = Time.unscaledTime + ToastSeconds;
         }
 
         private void OnGUI()
         {
-            if (Event.current.type != EventType.Repaint || (_a == null && _b == null))
+            if (Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
+
+            DrawToast();
+            if (_a == null && _b == null)
             {
                 return;
             }
@@ -192,6 +220,35 @@ namespace MartianMap.Terrain
             {
                 DrawMarker(camera, _b.Value, new Color(1f, 0.55f, 0.15f), "B", scale);
             }
+        }
+
+        /// <summary>A banner at the top centre of the map while the toast lasts.</summary>
+        private void DrawToast()
+        {
+            if (string.IsNullOrEmpty(_toast) || Time.unscaledTime > _toastUntil)
+            {
+                return;
+            }
+
+            var scale = Mathf.Clamp((Screen.dpi > 0 ? Screen.dpi : 96f) / 160f, 1f, 3f);
+            var style = new GUIStyle(GUI.skin.box)
+            {
+                alignment = TextAnchor.MiddleCenter,
+                fontStyle = FontStyle.Bold,
+                fontSize = Mathf.RoundToInt(15 * scale),
+                wordWrap = true,
+                padding = new RectOffset(12, 12, 8, 8),
+            };
+            style.normal.textColor = Color.white;
+            var width = Mathf.Min(Screen.width * 0.4f, 420f * scale);
+            var height = 48f * scale;
+            var rect = new Rect((Screen.width - width) * 0.5f, Screen.height * 0.16f, width, height);
+            var previous = GUI.color;
+            GUI.color = new Color(0.85f, 0.18f, 0.12f, 0.95f);
+            GUI.DrawTexture(rect, Texture2D.whiteTexture);
+            GUI.color = Color.white;
+            GUI.Label(rect, _toast, style);
+            GUI.color = previous;
         }
 
         private void DrawMarker(Camera camera, Vector2 enu, Color color, string label, float scale)

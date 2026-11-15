@@ -219,12 +219,13 @@ namespace MartianMap.Terrain
         /// (P3) the answer is a provisional straight line from A to B over the terrain, with its
         /// length, ascent, amber metres, highest hazard and walking times; it is logged as such.
         /// </summary>
-        public async void PlanBetween(Vector2 aEnuM, Vector2 bEnuM)
+        /// <returns>True if a route was found, false if B is unreachable from A, null if nothing was planned.</returns>
+        public async Task<bool?> PlanBetween(Vector2 aEnuM, Vector2 bEnuM)
         {
             var zone = map != null ? map.Current : null;
             if (zone == null || _busy)
             {
-                return;
+                return null;
             }
 
             _busy = true;
@@ -259,7 +260,7 @@ namespace MartianMap.Terrain
 
                 if (map.Current == null || map.Current.Zone.ZoneId != zoneId)
                 {
-                    return;
+                    return null;
                 }
 
                 var rate = (zone.Conditions != null && zone.Conditions.Value > 0) ? zone.Conditions.Value : FallbackDoseRateUGyH;
@@ -275,12 +276,16 @@ namespace MartianMap.Terrain
                 _plans = plans;
                 _plansZone = zoneId;
                 _last = null; // a point-to-point route is not a mission: the next mission request plans anew
+                // Emitted even when nothing is found: the route line clears and the HUD shows "unreachable".
                 EmitSelected(plans, Alternative.Fastest);
-                Debug.Log($"[Terrain] point route zone_id={zoneId} from=({aEnuM.x:F0},{aEnuM.y:F0}) to=({bEnuM.x:F0},{bEnuM.y:F0}) found={routes[0].Found}");
+                var found = routes.Any(r => r.Found);
+                Debug.Log($"[Terrain] point route zone_id={zoneId} from=({aEnuM.x:F0},{aEnuM.y:F0}) to=({bEnuM.x:F0},{bEnuM.y:F0}) found={found}");
+                return found;
             }
             catch (Exception exception)
             {
                 Debug.LogError($"[Terrain] point route failed error={exception.Message}");
+                return null;
             }
             finally
             {
