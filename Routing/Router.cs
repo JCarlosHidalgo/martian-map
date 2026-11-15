@@ -481,7 +481,8 @@ namespace MartianMap.Routing
                         fromKey = i;
                     }
 
-                    return true;
+                    // The leg home must be found too, or the plan has no return.
+                    return chosen.Length == 0 || (fastest[fromKey, k + 1] != null && fastest[fromKey, k + 1].Found);
                 }
 
                 best = StopOrder.Choose(reachedFromStart, between, back, direct, value, dwell, Fits);

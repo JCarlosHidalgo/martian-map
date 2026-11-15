@@ -27,8 +27,7 @@ namespace MartianMap.Routing
         /// text of <c>Routing/BENCHMARK.md</c>. <paramref name="log"/> receives each line as it comes.
         /// Per size, ascending (1000² and 2000²): an A* row of 500 m routes for each terrain (1 warm-up
         /// + 5 runs), then a field row (1 + 1); after every terrain's E5 rows, the rows outside E5's
-        /// criterion: an
-        /// <see cref="Router.Alternatives"/> row on the A* pairs and, on 1000², an
+        /// criterion: an <see cref="Router.Alternatives"/> row on the A* pairs and, on 1000², an
         /// <see cref="Router.OrderStops"/> row of 12 stops (1 run). It runs on the laptop; the tablet is
         /// not tested. The memory is the managed heap with the grid and the search's workspace alive.
         /// </summary>

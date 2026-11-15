@@ -155,6 +155,16 @@ namespace MartianMap.Routing
             double[] g = Table(between, toHome, m);
             int full = (1 << m) - 1;
 
+            // A stop of value 0 is never taken: a subset that holds one is not a candidate.
+            int zeroMask = 0;
+            for (int j = 0; j < m; j++)
+            {
+                if (value[j] == 0)
+                {
+                    zeroMask |= 1 << j;
+                }
+            }
+
             // The value of each subset that fits (0 if it does not) and its cost.
             var setValue = new int[full + 1];
             var setCost = new double[full + 1];
@@ -172,7 +182,7 @@ namespace MartianMap.Routing
                     }
                 }
 
-                if (v == 0 || v < bestValue)
+                if (v == 0 || v < bestValue || (set & zeroMask) != 0)
                 {
                     continue;
                 }
@@ -252,8 +262,15 @@ namespace MartianMap.Routing
                             bool better = best == null;
                             if (!better)
                             {
-                                // value[j] / den against value[bestJ] / bestDen, without dividing by 0.
+                                // value[j] / den against value[bestJ] / bestDen, without dividing by 0;
+                                // two infinite ratios compare by value.
                                 double mine = value[j] * bestDen, theirs = value[bestJ] * den;
+                                if (den == 0 && bestDen == 0)
+                                {
+                                    mine = value[j];
+                                    theirs = value[bestJ];
+                                }
+
                                 better = mine > theirs || (mine == theirs && delta < bestDelta);
                             }
 
