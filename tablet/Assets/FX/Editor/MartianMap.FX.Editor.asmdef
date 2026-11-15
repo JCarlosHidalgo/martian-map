@@ -1,0 +1,14 @@
+{
+  "name": "MartianMap.FX.Editor",
+  "rootNamespace": "MartianMap.FX.Editor",
+  "references": ["MartianMap.FX", "MartianMap.Terrain"],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

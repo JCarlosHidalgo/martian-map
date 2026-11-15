@@ -2,43 +2,49 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "conditions.schema.json",
   "title": "conditions",
-  "description": "C6 radiation source data for one zone. The containing bundle or API response identifies the zone. Routing owns dose integration and the Forbush duration rule.",
+  "description": "C6 radiation conditions for one zone. The effective dose rate is value multiplied by factors active in [valid_from, valid_to).",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "source_id", "t_utc", "t_valid_utc", "quantity", "value", "unit", "uncertainty", "basis", "modifiers"],
+  "required": [
+    "schema_version", "source_id", "t_utc", "t_valid_utc", "quantity",
+    "value", "unit", "uncertainty", "basis", "modifiers"
+  ],
   "properties": {
     "schema_version": {"type": "integer", "const": 1},
-    "source_id": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+){2,}(?![\\s\\S])"},
-    "t_utc": {"$ref": "#/$defs/utc_time"},
-    "t_valid_utc": {"$ref": "#/$defs/utc_time"},
-    "sol": {"type": "integer", "minimum": 0, "maximum": 2147483647, "description": "Optional source mission sol; never a replacement for UTC."},
+    "source_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+){2,}$(?![\\s\\S])"
+    },
+    "t_utc": {"$ref": "#/$defs/utc"},
+    "sol": {"type": "integer", "minimum": 0, "maximum": 2147483647},
+    "t_valid_utc": {"$ref": "#/$defs/utc"},
     "quantity": {"const": "dose_rate"},
-    "value": {"type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308, "description": "Finite positive source dose rate, compatible with C4 Conditions."},
+    "value": {"type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308},
     "unit": {"const": "uGy/h"},
-    "uncertainty": {"type": "number", "minimum": 0, "maximum": 1.7976931348623157e306, "description": "Nonnegative relative uncertainty: 0.2 means plus or minus 20 percent. Its percentage must fit a finite double."},
+    "uncertainty": {"description": "Fractional uncertainty, from 0 to 1.", "type": "number", "minimum": 0, "maximum": 1},
     "basis": {"enum": ["measured", "modelled"]},
     "derived_from": {"type": "string", "minLength": 1},
-    "modifiers": {"type": "array", "items": {"$ref": "#/$defs/modifier"}}
+    "modifiers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "factor", "valid_from", "valid_to"],
+        "properties": {
+          "donki_activity_id": {"type": "string", "minLength": 1},
+          "type": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "factor": {"type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308},
+          "valid_from": {"$ref": "#/$defs/utc"},
+          "valid_to": {"$ref": "#/$defs/utc"}
+        }
+      }
+    }
   },
   "$defs": {
-    "utc_time": {
+    "utc": {
       "type": "string",
       "format": "date-time",
-      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-5][0-9](?:\\.[0-9]{1,7})?(?:Z|\\+00:00)(?![\\s\\S])",
-      "description": "ISO-8601 UTC with up to seven fractional digits, compatible with C4 DateTime precision. Z and +00:00 are accepted."
-    },
-    "modifier": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["type", "factor", "valid_from", "valid_to"],
-      "properties": {
-        "donki_activity_id": {"type": "string", "minLength": 1},
-        "type": {"type": "string", "minLength": 1, "pattern": "\\S", "description": "A free DONKI activity type or SEP; not a closed enumeration."},
-        "factor": {"type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308},
-        "valid_from": {"$ref": "#/$defs/utc_time"},
-        "valid_to": {"$ref": "#/$defs/utc_time"}
-      },
-      "description": "Applies in [valid_from, valid_to). The contract validator and consumers must check valid_from < valid_to."
+      "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])-[0-3][0-9]T([01][0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]Z$(?![\\s\\S])"
     }
   }
 }
