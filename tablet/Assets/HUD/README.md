@@ -39,6 +39,21 @@ and dose-unit formats. The sandbox supplies clearly labelled modelled demonstrat
 conditions only when no conditions fixture was loaded. It does not add a production C6
 fixture or enable SEP from the tablet.
 
+## Settings and author registration
+
+The SETTINGS button opens the habitat URL, tile-files URL, and tablet author form.
+Empty URLs keep cache-only operation available. Addresses are validated and saved by
+Terrain's `AppConfig`; the HUD does not read or write configuration files.
+
+On first use, the form opens automatically and requires an author before it can close.
+Choose a unique team identifier with 2-16 lowercase letters, digits, or hyphens.
+After saving, the author field is locked; server addresses remain editable. Cancelled
+address changes are discarded on reopening. Save failures preserve input and show an
+English message. `ConfigChanged` refreshes saved values in the form.
+
+`SettingsHud.CanEdit` exposes the registration state for the forthcoming HUD edit tools.
+Those tools must check it before entering edit mode or emitting an edit request.
+
 ## Regenerate the sandbox
 
 Use **MartianMap > HUD > Create mission sandbox**. This updates only the HUD prefab,
@@ -55,7 +70,10 @@ package's Unity Companion License. Avoid importing another copy of those same re
 
 In **Window > General > Test Runner > PlayMode**, run `MartianMap.HUD` tests. They read the
 actual mission asset, cover the habitat fallback and invalid input, and exercise the live
-Canvas/button/event flow with a matching and mismatching zone.
+Canvas/button/event flow with a matching and mismatching zone. Settings tests use an
+isolated configuration double to cover first registration, immutable authors, cache-only
+settings, rejected addresses, storage failures, cancellation, and configuration events
+without changing the developer's saved configuration.
 
 From PowerShell at the repository root:
 
@@ -72,9 +90,10 @@ Close the editor first when running batch tests against the same project.
 ## Integration
 
 P4 can keep the existing HUD prefab instance in `Main.unity`: it retains its original GUID.
-The prefab now has `MissionHud`, an assigned mission asset, and a font. Its Canvas and
+The prefab has `MissionHud`, `ScienceHud`, `SettingsHud`, an assigned mission asset, and a font. Its Canvas and
 controls are created at runtime. There must be only one active EventSystem; the HUD creates
 one only when the scene does not already have one.
 
 This increment covers the mission panel, route handoff, layer controls, and source-rate
-presentation. POV media, settings, astronaut relocation, and edit tools remain separate work.
+presentation, settings, and author registration. POV media, astronaut relocation, and edit
+tools remain separate work.
