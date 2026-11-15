@@ -351,7 +351,8 @@ C3 tiene dos mocks, porque **Prism no sirve binarios**: Prism 5.16.0 contesta a 
   P2 en H0 y es el mock de tiles desde entonces. Sirve el tile de
   `contracts/fixtures/tile_synth_0_0_0/` como el tile `0/0/0` de la zona `synth` *(equipo)*.
 - La app lee de su configuración dos URL, `habitat_url` y `files_url` *(equipo)*: con los mocks
-  apuntan a 4010 y 4011; con el hábitat real valen lo mismo.
+  apuntan a 4010 y 4011; con el hábitat real, las dos apuntan al puerto 8000, porque el servidor
+  sirve en el mismo puerto el JSON y los archivos. `config.default.json` trae las del hábitat real.
 - Validación de la implementación real: `prism proxy` para los endpoints JSON; los de archivos se
   comparan por `sha256` con el fixture *(equipo)*.
 - Prism 5.16.0 solo sirve `text/*` estático, sin streaming (leído en
@@ -622,7 +623,8 @@ parte de la fórmula: sería una segunda implementación ([Tablet](./tablet.md),
 | Unidad | 1 unidad = 1 m |
 | Origen | el origen de la escena es el origen ENU de la zona |
 | Y | altura sobre el areoide menos la altura del origen de la zona |
-| Exageración vertical | 1 en los datos; si se exagera, es un parámetro visual del material |
+| Exageración vertical | 1 en los datos; el sombreado del relieve la exagera con un parámetro visual del material |
+| Mapa 2D | el terreno se dibuja en el plano Y = 0; la altura solo sombrea, colorea y traza curvas *(equipo)* |
 
 ### Nombres y bus de eventos
 
@@ -700,20 +702,20 @@ Qué muestra el HUD: [Tablet](./tablet.md), sección "HUD e indicadores (D10)".
 
 ### Navegación del mapa
 
-La navegación es tan libre como la de un mapa 3D de videojuego (U6, sin copiar recursos ni
-apariencia). P4 ajusta los gestos en la tablet.
+El mapa es 2D y cenital, con el norte siempre arriba *(equipo)*. P4 ajusta los gestos en la
+tablet.
 
 | Gesto | Efecto |
 |---|---|
-| un dedo arrastra | desplaza |
+| un dedo arrastra | desplaza; el punto bajo el dedo se queda bajo el dedo |
 | pellizco | acerca y aleja, de la zona entera al detalle, sin saltos |
-| giro con dos dedos | rota |
-| dos dedos en vertical | inclina, de cenital a rasante |
-| doble toque | vuela al punto |
-| botones | recentrar en el astronauta; norte arriba |
+| ratón (PC) | arrastrar desplaza; la rueda acerca y aleja hacia el cursor |
+| doble toque | vuela al punto *(por hacer)* |
+| botones | recentrar en el astronauta *(por hacer, del `HUD`)* |
 
-- El movimiento tiene inercia y la cámara nunca atraviesa el terreno.
-- Los gestos de edición solo valen en modo edición.
+- No hay giro ni inclinación: en un mapa 2D con el norte arriba no aportan.
+- La cámara no sale de la zona más un margen.
+- Los gestos de edición solo valen en modo edición: un dedo queda para el `HUD`.
 
 ## Valores fijados
 

@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zone_response.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["zone_version", "zone", "conditions"],
+  "properties": {
+    "zone_version": {"type": "integer", "minimum": 1},
+    "zone": {"type": "object", "description": "Unmodified C1 zone.json. Constrain with zone.schema.json when P1 publishes C1 zone."},
+    "conditions": {"$ref": "conditions.schema.json"}
+  }
+}

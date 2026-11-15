@@ -65,5 +65,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: MartianMap.Terrain::MartianMap.Terrain.TerrainBootstrap
   map: {fileID: 3046657529997906558}
   source: 0
-  streamingAssetsFolder: zones/gale
+  streamingAssetsFolder: zones/gale/data
   targetFrameRate: 60

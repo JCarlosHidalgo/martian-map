@@ -1,0 +1,43 @@
+name: Contracts
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts.yml"
+  push:
+    branches: [main]
+    paths:
+      - "contracts/**"
+      - ".github/workflows/contracts.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository without LFS downloads
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Set up uv and Python 3.12
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.13.8"
+          python-version: "3.12"
+
+      - name: Check Python lint
+        run: uvx --from ruff==0.14.14 ruff check contracts/
+
+      - name: Check Python formatting
+        run: uvx --from ruff==0.14.14 ruff format --check contracts/
+
+      - name: Validate contracts
+        run: uv run --locked contracts/validate.py
+
+      - name: Test contract validation
+        run: uv run --locked contracts/test_validate.py

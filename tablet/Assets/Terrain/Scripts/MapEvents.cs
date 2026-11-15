@@ -1,19 +1,25 @@
 using System;
 using System.Collections.Generic;
+using MartianMap.Edits;
+using MartianMap.Routing;
 using UnityEngine;
 
 namespace MartianMap.Terrain
 {
     /// <summary>
     /// The scene event bus (C5, "Eventos"). One <c>event Action&lt;T&gt;</c> per event; emit only on
-    /// the main thread. RouteRequested, RouteSelected, EditRequested, EditRejected and
-    /// EntitiesChanged carry C4 types and are added when the Routing/Edits signature is in main.
+    /// the main thread. The route and edit events carry the C4 types of Routing and Edits.
     /// </summary>
     public static class MapEvents
     {
         public static event Action<TileLoaded> TileLoaded;
         public static event Action<ZoneLoaded> ZoneLoaded;
         public static event Action<ConditionsChanged> ConditionsChanged;
+        public static event Action<RouteRequested> RouteRequested;
+        public static event Action<RouteSelected> RouteSelected;
+        public static event Action<EditRequested> EditRequested;
+        public static event Action<EditRejected> EditRejected;
+        public static event Action<EntitiesChanged> EntitiesChanged;
         public static event Action<StopHovered> StopHovered;
         public static event Action<LayerToggled> LayerToggled;
         public static event Action<AstronautMoved> AstronautMoved;
@@ -25,6 +31,11 @@ namespace MartianMap.Terrain
         public static void Emit(TileLoaded e) => Raise(TileLoaded, e);
         public static void Emit(ZoneLoaded e) => Raise(ZoneLoaded, e);
         public static void Emit(ConditionsChanged e) => Raise(ConditionsChanged, e);
+        public static void Emit(RouteRequested e) => Raise(RouteRequested, e);
+        public static void Emit(RouteSelected e) => Raise(RouteSelected, e);
+        public static void Emit(EditRequested e) => Raise(EditRequested, e);
+        public static void Emit(EditRejected e) => Raise(EditRejected, e);
+        public static void Emit(EntitiesChanged e) => Raise(EntitiesChanged, e);
         public static void Emit(StopHovered e) => Raise(StopHovered, e);
         public static void Emit(LayerToggled e) => Raise(LayerToggled, e);
         public static void Emit(AstronautMoved e) => Raise(AstronautMoved, e);
@@ -89,6 +100,124 @@ namespace MartianMap.Terrain
         {
             ZoneId = zoneId;
             Conditions = conditions;
+        }
+    }
+
+    /// <summary>HUD → Terrain: plan a mission, or pick another alternative of it.</summary>
+    public readonly struct RouteRequested
+    {
+        public readonly IReadOnlyList<Stop> Stops;
+        public readonly EnuPoint Home;
+        public readonly Budget Budget;
+        public readonly StopMode Mode;
+        public readonly EnuPoint Start;
+        public readonly Alternative Alternative;
+
+        public RouteRequested(IReadOnlyList<Stop> stops, EnuPoint home, Budget budget, StopMode mode, EnuPoint start, Alternative alternative)
+        {
+            Stops = stops ?? throw new ArgumentNullException(nameof(stops));
+            Home = home;
+            Budget = budget;
+            Mode = mode;
+            Start = start;
+            Alternative = alternative;
+        }
+    }
+
+    /// <summary>
+    /// Terrain → FX, HUD: one <see cref="Plan"/> per <see cref="Alternative"/> (in that order), the
+    /// chosen one, and its polyline in scene coordinates. In the 2D map the polyline lies on the
+    /// map plane (Y = 0); the height of each vertex stays in the plan's routes.
+    /// </summary>
+    public readonly struct RouteSelected
+    {
+        public readonly IReadOnlyList<Plan> Plans;
+        public readonly Alternative Selected;
+        public readonly Vector3[] Polyline;
+
+        public RouteSelected(IReadOnlyList<Plan> plans, Alternative selected, Vector3[] polyline)
+        {
+            Plans = plans ?? throw new ArgumentNullException(nameof(plans));
+            Selected = selected;
+            Polyline = polyline ?? throw new ArgumentNullException(nameof(polyline));
+        }
+
+        /// <summary>The scene polyline of a plan: its legs joined, on the map plane (Y = 0), without repeated joints.</summary>
+        public static Vector3[] ScenePolyline(Plan plan)
+        {
+            var points = new List<Vector3>();
+            foreach (var leg in plan.Legs)
+            {
+                if (!leg.Found)
+                {
+                    continue;
+                }
+
+                foreach (var p in leg.PolylineEnuM)
+                {
+                    var v = new Vector3((float)p.E, 0f, (float)p.N);
+                    if (points.Count == 0 || points[points.Count - 1] != v)
+                    {
+                        points.Add(v);
+                    }
+                }
+            }
+
+            return points.ToArray();
+        }
+
+        /// <summary>The scene polyline of one route, on the map plane (Y = 0).</summary>
+        public static Vector3[] ScenePolyline(Route route)
+        {
+            var points = new Vector3[route.PolylineEnuM.Count];
+            for (var i = 0; i < points.Length; i++)
+            {
+                var p = route.PolylineEnuM[i];
+                points[i] = new Vector3((float)p.E, 0f, (float)p.N);
+            }
+
+            return points;
+        }
+    }
+
+    /// <summary>HUD → Terrain: the astronaut created, changed or deleted an entity. Terrain completes the edit.</summary>
+    public readonly struct EditRequested
+    {
+        public readonly EditOp Op;
+        public readonly string EntityId;
+        public readonly EditPayload Payload;
+        public readonly bool Tombstone;
+
+        public EditRequested(EditOp op, string entityId, EditPayload payload, bool tombstone)
+        {
+            Op = op;
+            EntityId = entityId ?? throw new ArgumentNullException(nameof(entityId));
+            Payload = payload ?? throw new ArgumentNullException(nameof(payload));
+            Tombstone = tombstone;
+        }
+    }
+
+    /// <summary>Terrain → HUD: the habitat rejected an edit (e.g. <c>confirmation_required</c>).</summary>
+    public readonly struct EditRejected
+    {
+        public readonly string EntityId;
+        public readonly string Code;
+
+        public EditRejected(string entityId, string code)
+        {
+            EntityId = entityId ?? throw new ArgumentNullException(nameof(entityId));
+            Code = code ?? string.Empty;
+        }
+    }
+
+    /// <summary>Terrain → HUD, FX: the live entities of the zone after a local edit or <c>changes</c>.</summary>
+    public readonly struct EntitiesChanged
+    {
+        public readonly IReadOnlyList<LiveEntity> Entities;
+
+        public EntitiesChanged(IReadOnlyList<LiveEntity> entities)
+        {
+            Entities = entities ?? throw new ArgumentNullException(nameof(entities));
         }
     }
 

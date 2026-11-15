@@ -1,0 +1,197 @@
+openapi: 3.1.0
+info:
+  title: Martian Map habitat API
+  version: 1.0.0
+  description: Local habitat API. All examples use synthetic zone synth.
+servers:
+  - url: http://localhost:4010
+paths:
+  /zones:
+    get:
+      operationId: listZones
+      summary: Poll for new or updated zones
+      parameters:
+        - name: since
+          in: query
+          required: false
+          schema: {type: integer, minimum: 0, default: 0}
+          description: Global habitat sequence cursor; zero returns all zones.
+      responses:
+        '200':
+          description: Zones whose zone version changed since the cursor.
+          content:
+            application/json:
+              schema: {$ref: schemas/zones_response.schema.json}
+              examples:
+                synth:
+                  value:
+                    next_since: 1
+                    zones:
+                      - {zone_id: synth, name: Synthetic zone, zone_version: 1}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /zones/{id}:
+    get:
+      operationId: getZone
+      summary: Get the current zone and conditions
+      parameters:
+        - $ref: '#/components/parameters/ZoneId'
+      responses:
+        '200':
+          description: Original zone.json and current conditions.json.
+          content:
+            application/json:
+              schema: {$ref: schemas/zone_response.schema.json}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /tiles/{zone}/{z}/{x}/{y}/{file}:
+    get:
+      operationId: getTileFile
+      summary: Get a file of the current tile version
+      parameters:
+        - {name: zone, in: path, required: true, schema: {type: string, pattern: '^[a-z][a-z0-9-]{1,31}$'}}
+        - {name: z, in: path, required: true, schema: {type: integer, minimum: 0}}
+        - {name: x, in: path, required: true, schema: {type: integer, minimum: 0}}
+        - {name: y, in: path, required: true, schema: {type: integer, minimum: 0}}
+        - {name: file, in: path, required: true, schema: {type: string, minLength: 1}}
+        - {name: v, in: query, required: true, schema: {type: integer, minimum: 1}, description: Current tile version from zone.json.}
+      responses:
+        '200':
+          description: Tile JSON manifest or binary raster.
+          content:
+            application/json; charset=utf-8:
+              schema: {$ref: schemas/tile.schema.json}
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /zones/{id}/pov/{file}:
+    get:
+      operationId: getPovImage
+      summary: Get the JPEG image of a POV pin
+      parameters:
+        - $ref: '#/components/parameters/ZoneId'
+        - {name: file, in: path, required: true, schema: {type: string, minLength: 1}}
+        - {name: v, in: query, required: true, schema: {type: integer, minimum: 1}, description: Current POV version from zone.json.}
+      responses:
+        '200':
+          description: JPEG image listed in zone.json.
+          content:
+            image/jpeg:
+              schema: {type: string, format: binary}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /edits:
+    post:
+      operationId: postEdits
+      summary: Accept an idempotent batch of edits
+      description: Maximum 200 edits and 1 MiB per request. Each UUID receives one acknowledgement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [edits]
+              properties:
+                edits: {type: array, maxItems: 200, items: {$ref: schemas/edit.schema.json}}
+      responses:
+        '200':
+          description: One acknowledgement per edit, in request order.
+          content:
+            application/json:
+              schema: {$ref: schemas/edits_ack.schema.json}
+              examples:
+                synth:
+                  value:
+                    acks:
+                      - {uuid: '11111111-1111-4111-8111-111111111111', status: accepted, code: null}
+                      - {uuid: '22222222-2222-4222-8222-222222222222', status: duplicate, code: null}
+                      - {uuid: '33333333-3333-4333-8333-333333333333', status: rejected, code: confirmation_required}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '413': {$ref: '#/components/responses/TooLarge'}
+        '422': {$ref: '#/components/responses/InvalidBody'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+  /zones/{id}/changes:
+    get:
+      operationId: getZoneChanges
+      summary: Poll for winning edits, changed tiles and conditions
+      description: Repeat with next_since until has_more is false. Tiles and conditions appear only on the final page.
+      parameters:
+        - $ref: '#/components/parameters/ZoneId'
+        - {name: since, in: query, required: true, schema: {type: integer, minimum: 0}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 1000, default: 500}}
+      responses:
+        '200':
+          description: Changes after the global sequence cursor.
+          content:
+            application/json:
+              schema: {$ref: schemas/changes_response.schema.json}
+              examples:
+                synth:
+                  value:
+                    next_since: 3
+                    has_more: false
+                    edits:
+                      - uuid: '99999999-9999-4999-8999-999999999999'
+                        lamport: 2
+                        author: ev2
+                        creator: ev1
+                        zone_id: synth
+                        entity_id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+                        op: note.set
+                        payload: {point: [0, -5120], text: Inspect ridge first}
+                        tombstone: false
+                    tiles: []
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/Unavailable'}
+components:
+  parameters:
+    ZoneId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, pattern: '^[a-z][a-z0-9-]{1,31}$'}
+  schemas:
+    Problem:
+      type: object
+      additionalProperties: false
+      required: [title, status, detail, code]
+      properties:
+        title: {type: string}
+        status: {type: integer, enum: [400, 404, 413, 422, 503]}
+        detail: {type: string}
+        code:
+          type: string
+          enum: [bad_parameter, not_found, payload_too_large, invalid_body, habitat_unavailable]
+  responses:
+    BadRequest:
+      description: Invalid path or query parameter.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    NotFound:
+      description: Zone, file or requested version does not exist.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    TooLarge:
+      description: More than 200 edits or more than 1 MiB.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    InvalidBody:
+      description: Request body does not satisfy the schema.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
+    Unavailable:
+      description: Habitat is not ready.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}

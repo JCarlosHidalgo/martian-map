@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "changes_response.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["next_since", "has_more", "edits", "tiles"],
+  "properties": {
+    "next_since": {"type": "integer", "minimum": 0},
+    "has_more": {"type": "boolean"},
+    "edits": {"type": "array", "maxItems": 1000, "items": {"$ref": "edit.schema.json"}},
+    "tiles": {
+      "description": "Complete tile references from zone.json; populated only on the final page.",
+      "type": "array",
+      "items": {"$ref": "#/$defs/tile_ref"}
+    },
+    "conditions": {"$ref": "conditions.schema.json"}
+  },
+  "allOf": [
+    {"if": {"properties": {"has_more": {"const": true}}}, "then": {"properties": {"tiles": {"maxItems": 0}}, "not": {"required": ["conditions"]}}}
+  ],
+  "$defs": {
+    "tile_ref": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["z", "x", "y", "version", "sha256"],
+      "properties": {
+        "z": {"type": "integer", "minimum": 0},
+        "x": {"type": "integer", "minimum": 0},
+        "y": {"type": "integer", "minimum": 0},
+        "version": {"type": "integer", "minimum": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

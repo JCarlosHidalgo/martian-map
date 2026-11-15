@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "zones_response.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["next_since", "zones"],
+  "properties": {
+    "next_since": {"type": "integer", "minimum": 0},
+    "zones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["zone_id", "name", "zone_version"],
+        "properties": {
+          "zone_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$"},
+          "name": {"type": "string"},
+          "zone_version": {"type": "integer", "minimum": 1}
+        }
+      }
+    }
+  }
+}

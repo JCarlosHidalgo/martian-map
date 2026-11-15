@@ -4,8 +4,8 @@
 > página lo enuncia en presente; lo que falta medir lleva la marca **NO VERIFICADO** y el
 > experimento que lo cierra.
 
-Martian Map es una app de tablet para un astronauta en la superficie de Marte: un mapa 3D que
-crece solo con datos de NASA, se puede editar y calcula la ruta más rápida y segura. Esta página
+Martian Map es una app de tablet para un astronauta en la superficie de Marte: un mapa 2D, visto
+desde arriba con el relieve sombreado, que crece solo con datos de NASA, se puede editar y calcula la ruta más rápida y segura. Esta página
 dice qué pide el reto, qué queda fuera, qué zona se eligió y qué indicadores muestra el mapa.
 
 ## Orden de lectura
@@ -20,6 +20,7 @@ dice qué pide el reto, qué queda fuera, qué zona se eligió y qué indicadore
 | [Tablet](./tablet.md) | cómo la app dibuja el terreno, calcula rutas, aplica ediciones y muestra indicadores |
 | [Reparto del trabajo en 6 personas](./reparto.md) | quién construye qué, con qué mocks, en qué orden y qué mide |
 | [Fuentes](./fuentes.md) | de dónde sale cada afirmación con fuente, y qué URL se sondean en H0 |
+| [El reto](./reto.md) | qué dice el enunciado, qué recursos incluye y de dónde procede la copia aportada por P6 |
 
 ## Cómo leer las fuentes
 
@@ -44,9 +45,9 @@ en Marte. Debe ser una vista **hiperlocal**, por capas e integrada, de un lugar 
 datos de **varias misiones de NASA** para planear y ejecutar una Marswalk segura con ciencia en el
 camino.
 
-El texto completo del reto y su pestaña *Resources* aún no están en la guía. P6 los copia el
-Antes de H0 a una página nueva, "El reto", que entra por `guide.json` al final del orden de lectura
-*(equipo)*: es una tarea de la checklist de [Reparto del trabajo](./reparto.md).
+El enunciado aportado por P6, traducido íntegramente al español, y la lista de recursos
+están en [El reto](./reto.md), al final del orden de lectura. Su sección "Fuente y estado de
+verificación" documenta la procedencia y el alcance del cotejo.
 
 ## Requisitos del reto
 

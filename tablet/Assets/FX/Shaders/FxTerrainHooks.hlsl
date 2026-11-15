@@ -28,10 +28,22 @@ float3 FxApplyHeat(float3 color, float heatRaw)
     return lerp(heated, color * 0.35, noReturn);
 }
 
-// Final look of the map (the holographic style lives here). Default: unchanged.
+// The 2D terrain is seen from above, so its hologram uses scanlines and an anti-aliased grid.
+// P4 already draws the height contours in the same terrain pass; no extra transparent overlay.
+float _FxHologramStrength;
+float _FxScanDensity;
+float _FxWireStrength;
+
 float3 FxApplyMapStyle(float3 color, float2 enuM, float2 uv)
 {
-    return color;
+    float2 cells = uv * 256.0;
+    float2 edge = abs(frac(cells + 0.5) - 0.5);
+    float2 width = max(fwidth(cells), float2(1e-4, 1e-4));
+    float grid = 1.0 - min(edge.x / width.x, edge.y / width.y);
+    grid = saturate(grid) * saturate(1.0 - max(width.x, width.y) / 2.0);
+    float scan = 0.5 + 0.5 * sin(enuM.y * max(_FxScanDensity, 0.01) - _Time.y * 1.8);
+    float glow = _FxHologramStrength * (scan * 0.06 + grid * _FxWireStrength * 0.22);
+    return saturate(color + glow * float3(0.10, 0.75, 1.0));
 }
 
 #endif

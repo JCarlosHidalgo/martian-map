@@ -4,13 +4,13 @@ using UnityEngine.InputSystem;
 namespace MartianMap.Terrain
 {
     /// <summary>
-    /// Keyboard shortcuts to test Terrain in <c>TerrainSandbox.unity</c> only, with nothing drawn on
-    /// screen: the HUD and its toggles are P6's. Layers go through <see cref="MapEvents.LayerToggled"/>,
+    /// Keyboard shortcuts to test Terrain in any scene with the Terrain prefab (TerrainBootstrap
+    /// adds them when the scene has none): the HUD and its toggles are P6's. Layers go through <see cref="MapEvents.LayerToggled"/>,
     /// as the HUD will send them.
     /// <list type="bullet">
     /// <item>1 topo · 2 hazard · 3 heat · 4 ortho · 5 thermal · 6 thermal_ir</item>
-    /// <item>H: fake heat field from the habitat (straight line at 1 m/s, a stand-in for ReturnField)</item>
-    /// <item>Z: demo zone · X: fixture-like tile</item>
+    /// <item>H: toggles a fake heat field from the habitat (straight line at 1 m/s, a stand-in for ReturnField)</item>
+    /// <item>C: local cache (preloaded zones) · N: next cached zone · Z: demo zone · X: contract tile (P1's tile_synth_0_0_0)</item>
     /// </list>
     /// </summary>
     public sealed class TerrainSandboxKeys : MonoBehaviour
@@ -40,7 +40,7 @@ namespace MartianMap.Terrain
                 bootstrap = FindAnyObjectByType<TerrainBootstrap>();
             }
 
-            Debug.Log("[Terrain] sandbox keys: 1-6 layers, H fake heat, Z demo zone, X fixture tile");
+            Debug.Log("[Terrain] sandbox keys: 1-6 layers, H fake heat, C cache, N next zone, Z demo zone, X contract tile");
         }
 
         private void Update()
@@ -60,9 +60,19 @@ namespace MartianMap.Terrain
                 }
             }
 
-            if (keyboard.hKey.wasPressedThisFrame && map.Current != null)
+            if (keyboard.hKey.wasPressedThisFrame)
             {
-                FakeHeatField(map.Current.Zone);
+                ToggleFakeHeat();
+            }
+
+            if (bootstrap != null && keyboard.cKey.wasPressedThisFrame)
+            {
+                _ = bootstrap.LoadAsync(TerrainBootstrap.ZoneSource.Cache);
+            }
+
+            if (bootstrap != null && keyboard.nKey.wasPressedThisFrame && bootstrap.Cache != null)
+            {
+                RequestNextZone();
             }
 
             if (bootstrap != null && keyboard.zKey.wasPressedThisFrame)
@@ -72,8 +82,48 @@ namespace MartianMap.Terrain
 
             if (bootstrap != null && keyboard.xKey.wasPressedThisFrame)
             {
-                _ = bootstrap.LoadAsync(TerrainBootstrap.ZoneSource.FixtureLike);
+                _ = bootstrap.LoadAsync(TerrainBootstrap.ZoneSource.ContractFixture);
             }
+        }
+
+        /// <summary>Turns the fake heat field on (built from the habitat) or off.</summary>
+        public void ToggleFakeHeat()
+        {
+            if (map == null || map.Current == null)
+            {
+                return;
+            }
+
+            var heatOn = map.LayerStates.TryGetValue(LayerIds.Heat, out var on) && on;
+            if (heatOn)
+            {
+                MapEvents.Emit(new LayerToggled(LayerIds.Heat, false));
+            }
+            else
+            {
+                FakeHeatField(map.Current.Zone);
+            }
+        }
+
+        private void RequestNextZone()
+        {
+            var zones = bootstrap.Cache.Zones;
+            if (zones.Count == 0)
+            {
+                return;
+            }
+
+            var current = map.Current?.Zone.ZoneId;
+            var index = 0;
+            for (var i = 0; i < zones.Count; i++)
+            {
+                if (zones[i].ZoneId == current)
+                {
+                    index = (i + 1) % zones.Count;
+                }
+            }
+
+            MapEvents.Emit(new ZoneRequested(zones[index].ZoneId));
         }
 
         private void FakeHeatField(ZoneInfo zone)

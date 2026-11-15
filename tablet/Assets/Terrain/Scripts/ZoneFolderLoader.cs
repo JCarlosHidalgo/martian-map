@@ -37,7 +37,15 @@ namespace MartianMap.Terrain
                 }
 
                 var tileFolder = Combine(folder, "tiles", reference.Z.ToString(), reference.X.ToString(), reference.Y.ToString());
-                tiles.Add(await LoadTileAsync(tileFolder));
+                try
+                {
+                    tiles.Add(await LoadTileAsync(tileFolder));
+                }
+                catch (FileNotFoundException missing)
+                {
+                    // A tile not downloaded yet: show the rest of the zone.
+                    Debug.LogWarning($"[Terrain] tile skipped zone_id={zone.ZoneId} z={reference.Z} x={reference.X} y={reference.Y} missing={missing.FileName}");
+                }
             }
 
             Debug.Log($"[Terrain] zone loaded zone_id={zone.ZoneId} tiles={tiles.Count} z={level} folder={folder}");
@@ -57,7 +65,10 @@ namespace MartianMap.Terrain
                 layers[layer.Id] = await ReadBytesAsync(Combine(tileFolder, layer.File));
             }
 
-            return new TileData(info, height, hazard, layers);
+            // slope and roughness feed Routing only; a tile without them reads as flat and smooth.
+            var slope = await LocalFiles.TryReadBytesAsync(Combine(tileFolder, "slope.r8"));
+            var roughness = await LocalFiles.TryReadBytesAsync(Combine(tileFolder, "roughness.r8"));
+            return new TileData(info, height, hazard, layers, slope, roughness);
         }
 
         private static ushort[] ToUInt16(byte[] littleEndian)

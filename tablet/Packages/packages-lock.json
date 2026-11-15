@@ -1,5 +1,17 @@
 {
   "dependencies": {
+    "com.martianmap.edits": {
+      "version": "file:../../Edits",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
+    "com.martianmap.routing": {
+      "version": "file:../../Routing",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.16",
       "depth": 0,
