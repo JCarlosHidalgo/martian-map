@@ -263,6 +263,9 @@ namespace MartianMap.HUD
             layout.childForceExpandHeight = false;
             _zoneLabel = FixedLabel("Zone", body, HudStrings.NoZone, 19, 32);
             _zoneLabel.color = new Color(1, 0.67f, 0.39f);
+            // Hidden at the team's request: the "ZONE / <id>" line is not shown. It is still updated,
+            // so other code keeps working; the vertical layout skips inactive children.
+            _zoneLabel.gameObject.SetActive(false);
             _title = FixedLabel("Mission title", body, HudStrings.WaitingForMission, 32, 85);
             _budget = FixedLabel("Budget", body, string.Empty, 21, 72);
             FixedLabel("Objectives heading", body, HudStrings.Objectives, 19, 30);
