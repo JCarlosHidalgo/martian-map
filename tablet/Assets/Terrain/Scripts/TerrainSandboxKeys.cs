@@ -10,7 +10,7 @@ namespace MartianMap.Terrain
     /// <list type="bullet">
     /// <item>1 topo · 2 hazard · 3 heat · 4 ortho · 5 thermal · 6 thermal_ir</item>
     /// <item>H: fake heat field from the habitat (straight line at 1 m/s, a stand-in for ReturnField)</item>
-    /// <item>C: local cache (preloaded zones) · N: next cached zone · Z: demo zone · X: fixture-like tile</item>
+    /// <item>C: local cache (preloaded zones) · N: next cached zone · Z: demo zone · X: contract tile (P1's tile_synth_0_0_0)</item>
     /// </list>
     /// </summary>
     public sealed class TerrainSandboxKeys : MonoBehaviour
@@ -40,7 +40,7 @@ namespace MartianMap.Terrain
                 bootstrap = FindAnyObjectByType<TerrainBootstrap>();
             }
 
-            Debug.Log("[Terrain] sandbox keys: 1-6 layers, H fake heat, C cache, N next zone, Z demo zone, X fixture tile");
+            Debug.Log("[Terrain] sandbox keys: 1-6 layers, H fake heat, C cache, N next zone, Z demo zone, X contract tile");
         }
 
         private void Update()
@@ -82,7 +82,7 @@ namespace MartianMap.Terrain
 
             if (bootstrap != null && keyboard.xKey.wasPressedThisFrame)
             {
-                _ = bootstrap.LoadAsync(TerrainBootstrap.ZoneSource.FixtureLike);
+                _ = bootstrap.LoadAsync(TerrainBootstrap.ZoneSource.ContractFixture);
             }
         }
 

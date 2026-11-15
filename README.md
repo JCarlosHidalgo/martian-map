@@ -60,7 +60,7 @@ The map is 2D: a top-down orthographic camera over the plane Y = 0 (X = east, Z 
 on a PC, open `TerrainSandbox`, set the Game view to 2304 × 1440 (Samsung Galaxy Tab S9 FE) and
 press Play. Mouse: drag pans, wheel zooms. Tablet: one finger pans, two fingers zoom. Sandbox keys:
 `1`–`6` layers (topo, hazard, heat, ortho, thermal, thermal_ir), `H` fake heat field, `Z` demo
-zone, `X` fixture-like tile.
+zone, `X` the C1 contract tile (`contracts/fixtures/tile_synth_0_0_0`, zone `synth`).
 
 Hazard areas from P5 go in `tablet/Assets/StreamingAssets/hazard_shapes/{zone_id}.shp` (+ `.dbf`,
 optional `.prj`): polygons in zone ENU metres, or lon/lat with a geographic `.prj`; value from the
