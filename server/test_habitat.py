@@ -21,18 +21,20 @@ def stage_synthetic_zone(data_root: Path) -> bytes:
     tile_root = root / "tiles" / "0" / "0" / "0"
     shutil.copytree(FIXTURE_TILE, tile_root)
     tile_hash = hashlib.sha256((tile_root / "tile.json").read_bytes()).hexdigest()
+    image = b"\xff\xd8\xff\xd9"
     zone = {
         "zone_id": "synth",
         "name": "Synthetic test zone",
         "tiles": [{"z": 0, "x": 0, "y": 0, "version": 1, "sha256": tile_hash}],
-        "pov": [{"file": "synthetic.jpg", "version": 1}],
+        "pov": [
+            {"file": "synthetic.jpg", "version": 1, "sha256": hashlib.sha256(image).hexdigest()}
+        ],
     }
     (root / "zone.json").write_text(json.dumps(zone), encoding="utf-8")
     (root / "conditions.json").write_text(
         json.dumps({"schema_version": 1, "basis": "modelled", "value": 6.0}), encoding="utf-8"
     )
     (root / "pov").mkdir()
-    image = b"\xff\xd8\xff\xd9"
     (root / "pov" / "synthetic.jpg").write_bytes(image)
     return image
 

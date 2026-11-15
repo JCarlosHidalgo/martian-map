@@ -31,6 +31,7 @@ class ZoneStore:
                 "zone_id TEXT PRIMARY KEY, name TEXT NOT NULL, zone_version INTEGER NOT NULL, "
                 "catalog_seq INTEGER NOT NULL)"
             )
+            db.execute("CREATE TABLE IF NOT EXISTS bundles (bundle_id TEXT PRIMARY KEY)")
 
     @contextmanager
     def connect(self) -> Iterator[sqlite3.Connection]:
@@ -43,7 +44,7 @@ class ZoneStore:
         finally:
             db.close()
 
-    def publish_zone(self, zone_id: str, version: int) -> int:
+    def publish_zone(self, zone_id: str, version: int, bundle_id: str | None = None) -> int:
         """Publish a complete on-disk zone; called only after the importer installs its files."""
         if re.fullmatch(r"[a-z][a-z0-9-]{1,31}", zone_id) is None:
             raise ValueError("invalid zone_id")
@@ -69,7 +70,17 @@ class ZoneStore:
                 "zone_version=excluded.zone_version, catalog_seq=excluded.catalog_seq",
                 (zone_id, zone["name"], version, sequence),
             )
+            if bundle_id is not None:
+                db.execute("INSERT INTO bundles (bundle_id) VALUES (?)", (bundle_id,))
             return sequence
+
+    def has_bundle(self, bundle_id: str) -> bool:
+        """Report whether the bundle has already been committed with a zone version."""
+        with self.connect() as db:
+            return (
+                db.execute("SELECT 1 FROM bundles WHERE bundle_id = ?", (bundle_id,)).fetchone()
+                is not None
+            )
 
     def list_zones(self, since: int) -> dict:
         """Return changed zone metadata and the latest global cursor."""

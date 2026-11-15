@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import asyncio
 import json
+import logging
 import os
 import re
 from contextlib import asynccontextmanager
@@ -15,10 +17,12 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from store import ZoneStore
+from importer import BundleImporter
 
 ZONE_ID = re.compile(r"[a-z][a-z0-9-]{1,31}\Z")
 FILE_NAME = re.compile(r"[a-zA-Z0-9_.-]+\Z")
 DEFAULT_DATA = Path(__file__).resolve().parent / "data"
+LOG = logging.getLogger("habitat")
 
 
 def problem(status: int, code: str, detail: str) -> JSONResponse:
@@ -61,18 +65,40 @@ def serve_file(path: Path, media_type: str) -> FileResponse:
     return response
 
 
-def create_app(data_root: Path | None = None) -> FastAPI:
+def create_app(data_root: Path | None = None, spool_root: Path | None = None) -> FastAPI:
     """Build the service with a configurable on-disk catalogue and zone directory."""
     root = data_root or Path(os.environ.get("MM_DATA_DIR", DEFAULT_DATA))
     store = ZoneStore(root)
+    spool = spool_root or Path(os.environ.get("MM_SPOOL", root / "spool"))
+    importer = BundleImporter(store, spool)
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
         store.initialize()
-        yield
+        importer.initialize()
+        stop = asyncio.Event()
+
+        async def scan() -> None:
+            while not stop.is_set():
+                try:
+                    await asyncio.to_thread(importer.poll_once)
+                except Exception:
+                    LOG.exception("spool scan failed")
+                try:
+                    await asyncio.wait_for(stop.wait(), timeout=1)
+                except TimeoutError:
+                    pass
+
+        task = asyncio.create_task(scan())
+        try:
+            yield
+        finally:
+            stop.set()
+            await task
 
     app = FastAPI(title="Martian Map habitat", lifespan=lifespan)
     app.state.store = store
+    app.state.importer = importer
 
     @app.exception_handler(RequestValidationError)
     async def invalid_request(_: Request, error: RequestValidationError) -> JSONResponse:
