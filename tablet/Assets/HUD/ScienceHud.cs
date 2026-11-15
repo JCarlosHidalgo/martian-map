@@ -235,6 +235,7 @@ namespace MartianMap.HUD
             panel.offsetMin = new Vector2(-520, 20);
             panel.offsetMax = new Vector2(-20, -110);
             panel.gameObject.AddComponent<Image>().color = new Color(0.045f, 0.065f, 0.085f, 0.96f);
+            CollapsiblePanel.Attach(panel, leftSide: false, _font); // collapsible at the team's request
             var scroll = panel.gameObject.AddComponent<ScrollRect>();
             RectTransform viewport = Rect("Viewport", panel);
             Stretch(viewport, new Vector2(12, 12), new Vector2(-12, -12));

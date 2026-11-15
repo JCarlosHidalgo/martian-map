@@ -162,6 +162,8 @@ namespace MartianMap.HUD
             launcher.anchorMin = launcher.anchorMax = new Vector2(0.5f, 0);
             launcher.anchoredPosition = new Vector2(0, 110);
             launcher.sizeDelta = new Vector2(330, 60);
+            // Hidden at the team's request: the mission panel lists the route options instead.
+            _launcher.gameObject.SetActive(false);
             _modal = new GameObject("Route alternatives modal", typeof(RectTransform), typeof(Image));
             _modal.transform.SetParent(canvas, false);
             Stretch((RectTransform)_modal.transform, 0);

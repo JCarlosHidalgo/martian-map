@@ -262,6 +262,7 @@ namespace MartianMap.HUD
             _send = EditButton("Send edit", actions, HudStrings.EditSend, () => Submit(), 54, out _);
             _delete = EditButton("Delete entity", actions, HudStrings.EditDelete, () => DeleteSelected(), 54, out _);
             EditButton("Exit editing", panel, HudStrings.EditExit, ExitEditMode, 54, out _);
+            CollapsiblePanel.Attach(panel, leftSide: true, _font); // last child: collapsible at the team's request
             _panel.SetActive(false);
 
             RectTransform shade = EditPanel("Edit confirmation modal", canvas);

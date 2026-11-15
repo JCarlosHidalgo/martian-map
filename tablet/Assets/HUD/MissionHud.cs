@@ -428,6 +428,7 @@ namespace MartianMap.HUD
             buttonLabel.alignment = TextAlignmentOptions.Center;
             Stretch(buttonLabel.rectTransform, Vector2.zero, Vector2.zero);
             FixedLabel("Units", body, HudStrings.Units, 17, 40).gameObject.SetActive(false);
+            CollapsiblePanel.Attach(body, leftSide: true, _font); // last child: collapsible at the team's request
 
             if (EventSystem.current == null)
             {
