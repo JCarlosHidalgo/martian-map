@@ -33,6 +33,10 @@ namespace MartianMap.HUD
                 data.FindProperty("_font").objectReferenceValue = font;
                 data.FindProperty("_missionAsset").objectReferenceValue = AssetDatabase.LoadAssetAtPath<TextAsset>(MissionPath);
                 data.ApplyModifiedPropertiesWithoutUndo();
+                var science = root.GetComponent<ScienceHud>() ?? root.AddComponent<ScienceHud>();
+                var scienceData = new SerializedObject(science);
+                scienceData.FindProperty("_font").objectReferenceValue = font;
+                scienceData.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             }
             finally

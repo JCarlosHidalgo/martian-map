@@ -37,6 +37,16 @@ namespace MartianMap.HUD
                 TerrainMap2D map = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<TerrainMap2D>()).Single();
                 Assert.That(map.Current.Zone.ZoneId, Is.EqualTo("synth"));
                 Assert.That(map.Current.Tiles.Count, Is.EqualTo(1));
+                ScienceHud science = hud.GetComponent<ScienceHud>();
+                Assert.That(science, Is.Not.Null);
+                science.ToggleLayer(LayerIds.Ortho);
+                Assert.That(map.LayerStates[LayerIds.Ortho], Is.True);
+                science.ToggleLayer(LayerIds.Thermal);
+                Assert.That(map.LayerStates[LayerIds.Ortho], Is.False);
+                Assert.That(map.LayerStates[LayerIds.Thermal], Is.True);
+                science.ToggleLayer(LayerIds.Topo);
+                Assert.That(map.LayerStates[LayerIds.Topo], Is.False);
+                Assert.That(map.LayerStates[LayerIds.Thermal], Is.True);
             }
             finally
             {
