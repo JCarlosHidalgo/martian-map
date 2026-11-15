@@ -18,6 +18,27 @@ home/stop coordinates outside the zone bounds. When `base_enu_m` is omitted, it 
 `ZoneInfo.HabitatEnuM`. Bounds checks do not establish terrain walkability: that requires
 the actual tile/routing integration. Unknown fields are ignored when reading.
 
+## Layers and radiation
+
+The science panel controls topographic contours independently of the mutually exclusive
+optical, thermal inertia, and thermal infrared base layers through `LayerToggled`. Missing
+zone layers disable their controls. Qualitative layers have no calibrated numeric legend.
+Thermal inertia carries the guide's 100 m/px limitation and units from the active zone.
+
+Radiation is a source-rate indicator, not a map layer. It consumes `ConditionsChanged` only
+for the active zone and displays the source `value` with one decimal in microgray/hour,
+uncertainty, UTC timestamps, source id, and an explicit MEASURED or MODELLED label. Modifiers
+are listed separately; this panel does not multiply them into the source rate or calculate
+routing duration limits. Forbush factors are identified without extending mission budgets.
+Active SEP windows carry SCENARIO; future conditions carry PENDING. Windows are half-open.
+Modelled cards use a dashed outline and a button to reveal `derived_from`. Missing or invalid
+data stay unavailable. Changing zone clears the previous zone's radiation data.
+
+All UI text is centralized in `HudStrings.cs`; `HudFormatting` implements the agreed time
+and dose-unit formats. The sandbox supplies clearly labelled modelled demonstration
+conditions only when no conditions fixture was loaded. It does not add a production C6
+fixture or enable SEP from the tablet.
+
 ## Regenerate the sandbox
 
 Use **MartianMap > HUD > Create mission sandbox**. This updates only the HUD prefab,
@@ -55,5 +76,5 @@ The prefab now has `MissionHud`, an assigned mission asset, and a font. Its Canv
 controls are created at runtime. There must be only one active EventSystem; the HUD creates
 one only when the scene does not already have one.
 
-This first increment covers the mission panel and route handoff. Layer controls, radiation
-indicators, POV media, settings, astronaut relocation, and edit tools remain separate work.
+This increment covers the mission panel, route handoff, layer controls, and source-rate
+presentation. POV media, settings, astronaut relocation, and edit tools remain separate work.

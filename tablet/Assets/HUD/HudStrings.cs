@@ -1,0 +1,77 @@
+namespace MartianMap.HUD
+{
+    /// <summary>The English UI string table required by the presentation contract.</summary>
+    public static class HudStrings
+    {
+        public const string Brand = "MARTIAN MAP  /  SCIENCE OPERATIONS";
+        public const string WaitingForMission = "Waiting for mission.";
+        public const string MissionDataUnavailable = "Mission data is unavailable.";
+        public const string MissionUnavailable = "Mission unavailable";
+        public const string MissionLoadFailed = "Mission data could not be loaded.";
+        public const string NoRoute = "No route received.";
+        public const string RouteRequested = "Route requested. Waiting for a result.";
+        public const string RouteReceived = "Route result received.";
+        public const string NoZone = "NO ACTIVE ZONE";
+        public const string ZonePrefix = "ZONE / ";
+        public const string SyntheticSuffix = " / SYNTHETIC DATA";
+        public const string WaitingForZone = "Waiting for the matching zone: {0}.";
+        public const string ZoneMismatch = "Mission targets {0}; active zone is {1}.";
+        public const string InvalidMissionPoints = "Mission base or stops cannot be used in this zone.";
+        public const string Ready = "Ready. Return base E {0:0.#} m, N {1:0.#} m.";
+        public const string MissionBudget = "{0} stops  |  {1}\nTime budget {2}  |  Dose budget {3}";
+        public const string MissionStop = "{0} / {1}\n{2}\nE {3:0.#} m · N {4:0.#} m  |  Science {5}/10  |  {6}";
+        public const string Objectives = "SCIENCE OBJECTIVES";
+        public const string PlanRoute = "PLAN ROUTE";
+        public const string Units = "ENU coordinates in metres · Absorbed dose in µGy";
+        public const string Tsp = "TSP";
+        public const string Op = "OP";
+        public const string Fastest = "Fastest";
+        public const string Safest = "Safest";
+        public const string Gentlest = "Gentlest";
+        public const string Available = "available";
+        public const string Unavailable = "unavailable";
+        public const string RouteSummary = "{0}\nETA {1}  (P10–P90 {2}–{3})\nDose {4}  |  Return {5}";
+        public const string Minutes = "{0:0} min";
+        public const string Hours = "{0:0} h";
+        public const string HoursMinutes = "{0:0} h {1:0} min";
+        public const string Microgray = "{0:0.#} µGy";
+        public const string Milligray = "{0:0.##} mGy";
+        public const string LayersHeading = "MAP LAYERS";
+        public const string Topography = "TOPOGRAPHY";
+        public const string Optical = "OPTICAL";
+        public const string Thermal = "THERMAL INERTIA";
+        public const string Infrared = "THERMAL INFRARED";
+        public const string LayerOn = "[ON] {0}";
+        public const string LayerOff = "[OFF] {0}";
+        public const string LayerMissing = "{0} — UNAVAILABLE";
+        public const string NoLayerData = "Load a zone to inspect its available layers.";
+        public const string LayersOff = "Base imagery and contours are off.";
+        public const string TopographyLegend = "Topography: contour elevation in metres above the Martian areoid.";
+        public const string OpticalLegend = "Optical imagery: visible surface context.";
+        public const string ThermalLegend = "Thermal inertia (100 m/px): low = fine or loose material; high = consolidated or rocky. Does not resolve individual rocks.";
+        public const string InfraredLegend = "Thermal infrared imagery. Calibration and units come from the active zone.";
+        public const string QualitativeLegend = "QUALITATIVE — relative appearance only; no calibrated numeric scale.";
+        public const string LayerUnits = "Unit: {0}";
+        public const string RadiationHeading = "RADIATION";
+        public const string SourceDoseRate = "SOURCE DOSE RATE";
+        public const string RadiationUnavailable = "Radiation data unavailable.";
+        public const string NoData = "NO DATA";
+        public const string Measured = "MEASURED";
+        public const string Modelled = "MODELLED";
+        public const string Scenario = "SCENARIO";
+        public const string Pending = "PENDING";
+        public const string RadiationValue = "{0:0.0} µGy/h ± {1:0.#} %";
+        public const string RadiationSource = "Source: {0}\nSource time: {1}{2}\nApplies: {3}";
+        public const string Sol = " · Sol {0}";
+        public const string NoModifiers = "No active modifiers.";
+        public const string ActiveModifiers = "Active modifiers:\n{0}";
+        public const string Modifier = "{0} ×{1:0.##}";
+        public const string ForbushRule = "Forbush factors below one do not extend the planning duration limit.";
+        public const string ShowDerivation = "SHOW DERIVATION";
+        public const string HideDerivation = "HIDE DERIVATION";
+        public const string DerivedFrom = "Derived from: {0}";
+        public const string DerivationMissing = "Derivation not supplied by the source.";
+        public const string SyntheticConditions = "SYNTHETIC DEMONSTRATION — simulated values, not live science readings.";
+        public const string Timestamp = "yyyy-MM-dd HH:mm 'UTC'";
+    }
+}
