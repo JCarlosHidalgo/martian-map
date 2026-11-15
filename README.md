@@ -60,7 +60,7 @@ The map is 2D: a top-down orthographic camera over the plane Y = 0 (X = east, Z 
 on a PC, open `TerrainSandbox`, set the Game view to 2304 × 1440 (Samsung Galaxy Tab S9 FE) and
 press Play. Mouse: drag pans, wheel zooms. Tablet: one finger pans, two fingers zoom. Sandbox keys:
 `1`–`6` layers (topo, hazard, heat, ortho, thermal, thermal_ir), `H` fake heat field, `Z` demo
-zone, `X` fixture-like tile.
+zone, `X` the C1 contract tile (`contracts/fixtures/tile_synth_0_0_0`, zone `synth`).
 
 Hazard areas from P5 go in `tablet/Assets/StreamingAssets/hazard_shapes/{zone_id}.shp` (+ `.dbf`,
 optional `.prj`): polygons in zone ENU metres, or lon/lat with a geographic `.prj`; value from the
@@ -68,8 +68,28 @@ optional `.prj`): polygons in zone ENU metres, or lon/lat with a geographic `.pr
 
 P6 works in `tablet/Assets/HUD/` (assembly `MartianMap.HUD`, prefab `HUD.prefab`).
 
-`Assets/StreamingAssets/config.default.json` holds the habitat URLs (Prism on port 4010, file stub
-on 4011). Replace the placeholder IP with the habitat laptop's IP on the team router.
+### Tablet authors
+
+Every device that edits the map has a fixed `author` (`^[a-z0-9-]{2,16}$`), written once on first
+launch and never changed: it identifies the device, not the person, and breaks ties byte by byte
+in the edit merge. Never reuse a value on two devices.
+
+| `author` | Device |
+|---|---|
+| `ev1` | Samsung Galaxy Tab S9 FE (the demo tablet) |
+| `ev2` | Unity editor on a laptop: the second "tablet" of the merge demo |
+| `ev3` | spare Android phone or tablet, if one is used |
+| `ev4` | reserved |
+| `ev5` | reserved |
+| `ev6` | reserved |
+
+The author is entered on the HUD's author screen and saved by `AppConfig.Save`.
+
+`Assets/StreamingAssets/config.default.json` holds the habitat URLs. The real habitat serves JSON
+and files on the same port, so both point to **port 8000**: `habitat_url` = `files_url` =
+`http://<habitat laptop IP>:8000`. Replace the placeholder IP with the habitat laptop's IP on the
+team router, or set it on the tablet in the HUD's settings screen. To test against the mocks
+instead, use Prism on 4010 for `habitat_url` and the file stub on 4011 for `files_url`.
 
 ## Read the guide
 

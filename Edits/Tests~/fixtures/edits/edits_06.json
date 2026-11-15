@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "edits": [
+    {
+      "uuid": "f0fc1b00-a7a6-4afc-be2a-4b0d407eef96",
+      "lamport": 1,
+      "author": "ev1",
+      "creator": "ev1",
+      "zone_id": "synth",
+      "entity_id": "411ba5d4-fa77-49af-932e-672dcb630b35",
+      "op": "note.set",
+      "payload": {
+        "point": [2560, 2560],
+        "text": "rocas sueltas"
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "315c158c-2700-493c-9e74-89fb4929154e",
+      "lamport": 2,
+      "author": "ev2",
+      "creator": "ev2",
+      "zone_id": "synth",
+      "entity_id": "b21d4ed7-7437-4381-bb1b-6b16f1e7adf5",
+      "op": "hazard.set",
+      "payload": {
+        "polygon": [
+          [25600, -2560],
+          [51200, -2560],
+          [51200, 2560],
+          [25600, 2560]
+        ],
+        "level": 120
+      },
+      "tombstone": false
+    },
+    {
+      "uuid": "dbd627bd-a6d1-422b-93c2-da12db482bb0",
+      "lamport": 3,
+      "author": "ev3",
+      "creator": "ev3",
+      "zone_id": "synth",
+      "entity_id": "5d2e150c-6e06-43f2-8dea-ce57d83176f9",
+      "op": "obstacle.set",
+      "payload": {
+        "polygon": [
+          [76800, -2560],
+          [102400, -2560],
+          [102400, 2560],
+          [76800, 2560]
+        ]
+      },
+      "tombstone": false
+    }
+  ]
+}

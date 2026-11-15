@@ -45,3 +45,8 @@ tablet/Assets/StreamingAssets/fixtures.meta
 # Demo zone exported as a preloaded bundle for local cache tests (MartianMap menu); never shipped.
 tablet/Assets/StreamingAssets/zones/demo/
 tablet/Assets/StreamingAssets/zones/demo.meta
+
+# Left by Android builds: Unity's temp folder and the performance test package's run files.
+tablet/.utmp/
+tablet/Assets/Resources/
+tablet/Assets/Resources.meta

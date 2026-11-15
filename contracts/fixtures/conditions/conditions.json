@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "source_id": "msl-rad-dose-rate",
+  "t_utc": "2025-11-05T12:00:00Z",
+  "sol": 4710,
+  "t_valid_utc": "2025-11-05T12:00:00Z",
+  "quantity": "dose_rate",
+  "value": 6.0,
+  "unit": "uGy/h",
+  "uncertainty": 0.2,
+  "basis": "measured",
+  "derived_from": "Synthetic example based on RAD Gale release 42",
+  "modifiers": [
+    {
+      "type": "WSAEnlilSimulations",
+      "factor": 0.95,
+      "valid_from": "2025-11-05T12:00:00Z",
+      "valid_to": "2025-11-07T12:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,44 @@
+{
+  "checked_at_utc": "2026-11-15T14:37:05Z",
+  "window": {
+    "start": "2026-10-16",
+    "end": "2026-11-15"
+  },
+  "rad_sis": "https://pds-ppi.igpp.ucla.edu/data/MSL-M-RAD-3-RDR-V1.0/DOCUMENT/RAD_RDR_SIS.HTM",
+  "detector_selection": "B is silicon and E is plastic; the SIS does not establish a human-representative detector. Use the larger valid rate until E14 resolves this.",
+  "donki": {
+    "WSAEnlilSimulations": {
+      "url": "https://ccmc.gsfc.nasa.gov/DONKI-API/get/WSAEnlilSimulations?startDate=2026-10-16&endDate=2026-11-15",
+      "status": 200,
+      "count": 60,
+      "mars_impacts": 13
+    },
+    "SEP": {
+      "url": "https://ccmc.gsfc.nasa.gov/DONKI-API/get/SEP?startDate=2026-10-16&endDate=2026-11-15",
+      "status": 200,
+      "count": 0
+    },
+    "FLR": {
+      "url": "https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR?startDate=2026-10-16&endDate=2026-11-15",
+      "status": 200,
+      "count": 14
+    }
+  },
+  "rad": {
+    "directory": "https://pds-ppi.igpp.ucla.edu/data/MSL-M-RAD-3-RDR-V1.0/DATA/SOL_04710_04843/",
+    "label_url": "https://pds-ppi.igpp.ucla.edu/data/MSL-M-RAD-3-RDR-V1.0/DATA/SOL_04710_04843/RAD_RDR_2026_080_17_18_4843_V00.LBL",
+    "label_status": 200,
+    "data_url": "https://pds-ppi.igpp.ucla.edu/data/MSL-M-RAD-3-RDR-V1.0/DATA/SOL_04710_04843/RAD_RDR_2026_080_17_18_4843_V00.TXT",
+    "sample_status": 206,
+    "content_range": "bytes 0-131071/71560066",
+    "sample_bytes": 131072,
+    "dose_b_blocks_in_sample": 1,
+    "dose_e_blocks_in_sample": 1,
+    "first_observation_dose_uGy_h": {
+      "B": 6.84128,
+      "E": 6.58689
+    },
+    "first_observation_within_4_10_uGy_h": true,
+    "note": "These are the first observation's detector rates, not the daily mean or a human dose estimate."
+  }
+}

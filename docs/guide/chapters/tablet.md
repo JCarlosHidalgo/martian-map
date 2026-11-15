@@ -62,40 +62,58 @@ frente D §19).
 ## Mundo y tiles (D2)
 
 **Cada zona es un mundo ENU/equirectangular local, con su origen en `zone.json`. El terreno son
-tiles 257² `uint16` con offset y escala por tile, borde compartido y skirts.**
+tiles 257² `uint16` con offset y escala por tile y borde compartido. El mapa es 2D** *(equipo)*: no
+hay datos suficientes para un terreno 3D creíble, así que el terreno es un plano visto desde
+arriba.
 
+- El mapa es el plano Y = 0 (X = este, Z = norte): un quad por tile de `z = 0`, visto por una
+  cámara ortográfica cenital, con el norte arriba.
+- La altura no se pierde: el shader del terreno la dibuja como sombreado del relieve, color por
+  altitud y curvas de nivel, y sigue entrando entera en el costo y en las rutas.
 - El heightmap regular comparte celdas con el costo y con las ediciones (U3).
 - float32 en coordenadas planetocéntricas da pasos de ~0,25 m; a 10 km de un origen local, ~1 mm.
 - `uint16` con escala por tile cuantiza < 1 cm.
 - `zone.json` lleva el CRS IAU_2015:49900, la lat/lon del origen y la proyección; sus campos están
   en [Tierra](./tierra.md), sección "Tiles (C1)".
-- El LOD es un quadtree propio; CDLOD es una mejora.
+- Se dibujan solo los tiles de `z = 0`: una zona de 3 × 3 km son 144 quads, que la tablet dibuja
+  sin LOD *(inferencia)*. Los niveles `z > 0` siguen en C1 para quien los necesite.
+- **Cámara** *(equipo)*: un dedo desplaza y dos dedos hacen zoom con pellizco; en el PC, arrastrar
+  desplaza y la rueda hace zoom hacia el cursor. El punto bajo el dedo se queda bajo el dedo. En
+  modo edición un dedo queda para el `HUD`.
 
 El formato del tile es C1, en [Tierra](./tierra.md), sección "Tiles (C1)".
 
-**Vista de contexto global:** una esfera MOLA propia de baja resolución (opcional). Cesium Mars
-solo se usa con conexión y **fuera del build de la tablet**: los ToS de ion §2.2.2 prohíben copiar
-o almacenar su contenido para uso offline; el plugin es Apache-2.0
+**Vista de contexto global:** fuera del MVP. Cesium Mars solo se usaría con conexión y **fuera del
+build de la tablet**: los ToS de ion §2.2.2 prohíben copiar o almacenar su contenido para uso
+offline; el plugin es Apache-2.0
 ([Cesium ToS](https://cesium.com/legal/terms-of-service/), S11; frente D §18).
 
-Factibilidad en 48 h: media-alta (los skirts son ≈ ½ día).
+Factibilidad en 48 h: alta.
 
 Pendientes y riesgos:
 
-- Bugs de costura y de LOD.
-- Cesium 1.26.1 en Unity 6.3 es **NO VERIFICADO**, e irrelevante: el terreno no depende de Cesium.
-  Si se usa en el video, el logo "Cesium ion" va visible.
+- El rendimiento con todos los tiles de Gale en la tablet → **E1**, en la tablet.
+- Si se usa Cesium en el video, el logo "Cesium ion" va visible.
 
 ## Caché local
 
-La tablet guarda **los tiles C1 como archivos** en `persistentDataPath/zones/…` y **el catálogo y
-el log de ediciones en un SQLite local** (`gilzoide/unity-sqlite-net` 1.3.3).
+La tablet guarda **los tiles C1 como archivos** en `persistentDataPath/zones/{zone_id}/`, con la
+misma estructura que el `data/` de un bundle, y **el catálogo y el log de ediciones en archivos
+JSON**: es el plan C de **E8** *(equipo)*, porque E8 no se puede correr sin la tablet.
+
+- El catálogo es `persistentDataPath/catalog.json`: cada zona con su `zone_version`, cada tile e
+  imagen POV con su versión y su `sha256`, y los cursores `since` de C3. Se escribe en un archivo
+  temporal y se sustituye. Está detrás de una interfaz, así que SQLite
+  (`gilzoide/unity-sqlite-net` 1.3.3) lo reemplaza sin tocar nada más si E8 pasa.
+- El log de ediciones de cada zona es `{zone_id}/edits.jsonl`: una edición por línea, con el `Edit`
+  de C3 más dos campos locales que no viajan, `_from_habitat` y `_acked`.
+- Un tile se escribe en una carpeta temporal y se mueve a su sitio cuando todos sus archivos pasan
+  su `sha256`; una zona solo aparece en el catálogo cuando todos sus tiles están.
 
 - Un tile se vuelve a descargar cuando su `?v=` difiere del cacheado, y se verifica su `sha256`.
 - Al recibir `changes`, `Terrain` llama a `apply()` y refresca `_HazardTex`.
-- `apply()` trabaja sobre los tiles de `z = 0`. Para que una edición se vea de lejos, `Terrain`
-  recalcula el `_HazardTex` de los tiles de `z > 0` que la cubren, con la regla de reducción de
-  [Convenciones](./convenciones.md), sección "Datos (C0)" *(equipo)*.
+- `apply()` trabaja sobre los tiles de `z = 0`, que son los únicos que el mapa 2D dibuja: no hay
+  `_HazardTex` de `z > 0` que recalcular.
 - **Solo `Terrain` habla HTTP con el hábitat.** `HUD` y `Routing` reciben de `Terrain` lo que
   necesitan (sección "Orquestación").
 - Las imágenes POV se guardan en `persistentDataPath/zones/{zone}/pov/`, con la misma regla de
@@ -189,10 +207,10 @@ Límites que se declaran:
 
 | Qué | Algoritmo |
 |---|---|
-| Tramo | **A\* 16-conexo + suavizado**: string-pulling que solo acepta un atajo si no empeora el costo integrado, que es el de la regla de los tramos aplicada al atajo entero *(propuesta)* |
+| Tramo | **A\* 16-conexo + suavizado**: string-pulling que solo acepta un atajo si no empeora el costo integrado, que es el de la regla de los tramos aplicada al atajo entero *(propuesta)*. El atajo de un ancla a un nodo posterior del camino de A\* se acepta si su costo (tiempo P50 más la penalización ámbar, el mismo que minimiza A\*) no pasa de la suma de las aristas que sustituye, con un margen relativo de 10⁻⁹ para los empates de redondeo de un atajo colineal; desde cada ancla se alarga nodo a nodo y para en el primer rechazo, y el último aceptado es el ancla siguiente. Así la ruta suavizada nunca cuesta más que la de A\* *(propuesta de P3)* |
 | Regreso | **campo Dijkstra inverso al hábitat**: da radio de regreso, punto de no-retorno y heatmap en una corrida |
-| Alternativas | 3, por suma ponderada |
-| Orden de paradas | **Held-Karp (k ≤ 12) o greedy + 2-opt**, en modos TSP con depósito y orienteering |
+| Alternativas | 3, por suma ponderada: cada una es el A\* y el suavizado del tramo con sus propios pesos, que entran en la regla de los tramos; un atajo solo se acepta si no empeora el costo de su alternativa *(propuesta de P3)* |
+| Orden de paradas | **Held-Karp (k ≤ 12) o greedy + 2-opt**, en modos TSP con depósito y orienteering. El umbral cuenta las paradas a las que se llega desde `start`; por encima, en TSP, vecino más cercano desde `start` y 2-opt, y en OP, inserción greedy por valor/costo y 2-opt *(propuesta de P3)* |
 | Opcionales | HPA\*, D\* Lite y OR-Tools |
 
 - Theta\* básico no garantiza el óptimo y cruza zonas de peligro si se implementa mal (contra R4).
@@ -210,6 +228,10 @@ Cómo:
 - Arrays planos (SoA), sin `class Node`, sin LINQ.
 - Llamadas thread-safe; el campo corre en un hilo de fondo.
 - Planificación a 2 m: hasta 4 M de celdas (zona de 4×4 km; la de 3×3 km son 2,25 M).
+- La memoria de trabajo de la búsqueda, una por hilo, guarda lo que es de un valor por nodo; la
+  lista de nodos tocados no pasa de un octavo de la grilla (más allá, se reinicia la grilla entera)
+  y el heap se recorta al devolverla, así que una búsqueda larga no la deja grande *(propuesta de
+  P3)*.
 - Un CI compila la librería **solo** contra netstandard2.1.
 
 Esfuerzo estimado: ~4–6 h el tramo, ~1–2 h el campo, ~3–4 h las paradas. En qué orden se
@@ -269,9 +291,9 @@ dentro de un método síncrono.
 |---|---|
 | `TileRasters` | un tile de `z = 0`: `origin_enu_m` (su esquina suroeste, de `tile.json`), `height` (`ushort[]`), `scale`, `offset`, y `slope`, `roughness` y `hazard` (`byte[]`), tal como vienen en C1 |
 | `CostGrid` | la grilla de planificación: `width` y `height` en nodos, `cell_m` (2), `origin_enu_m` (el nodo `(0, 0)`, la esquina suroeste) y cuatro arrays planos de `width × height`: `height_m` (`float32`), `slope_deg`, `roughness_cm` y `hazard` (`uint8`). El nodo `(i, j)` está en el índice `j · width + i`; `i` crece al este y `j` al norte |
-| punto: `start`, `goal`, `home`, `enu_m` de una parada | `(e, n)` en metros ENU de la zona, `float64`. Tiene que ser finito y caer en la caja de los nodos de la `CostGrid`, bordes incluidos; si no, la llamada lanza *(propuesta de P3)*. `Routing` lo lleva al nodo más cercano; si ese nodo está bloqueado, el resultado es "no hay ruta" |
+| punto: `start`, `goal`, `home`, `enu_m` de una parada | `(e, n)` en metros ENU de la zona, `float64`. Tiene que ser finito y caer en la caja de los nodos de la `CostGrid`, bordes incluidos; si no, la llamada lanza *(propuesta de P3)*. `Routing` lo lleva al nodo más cercano, `i = floor((e − origin_e) / cell_m + 0,5)` e ídem `j`: el punto medio entre dos nodos va al de índice mayor, al este o al norte *(propuesta de P3)*; si ese nodo está bloqueado, el resultado es "no hay ruta". Si `start` y `goal` caen en el mismo nodo libre, la ruta se encuentra y se queda en él: `cells` = ese nodo, un punto, y todo lo demás a 0 *(propuesta de P3)* |
 | `Route` | `{found (bool), cells[] (índices de nodo), polyline_enu_m[] ([e, n, u]), length_m, ascent_m, amber_m, eta_s{p10,p50,p90}, max_hazard (uint8)}` |
-| `Field` | `{grid, home, time_s[]}`: un `float32` por nodo, el tiempo de regreso a `home` con v₀ P90; `+∞` donde no hay regreso. Solo lo crea `ReturnField`, y lleva la `CostGrid` y el `home` con que se calculó *(propuesta)* |
+| `Field` | `{grid, home, time_s[]}`: un `float32` por nodo, el tiempo de regreso a `home` con v₀ P90; `+∞` donde no hay regreso. El regreso se elige como la ruta, con la penalización ámbar, y `time_s` guarda su tiempo P90 sin ella, igual que `eta_s` *(propuesta de P3)*. Solo lo crea `ReturnField`, y lleva la `CostGrid` y el `home` con que se calculó *(propuesta)*: el punto tal como se pasó, aunque el campo sale de su nodo más cercano. Si ese nodo está bloqueado, todo el campo es `+∞`, sin excepción *(propuesta de P3)* |
 | `Alternative` | un enum: `Fastest`, `Safest`, `Gentlest`, con los valores 0, 1 y 2 *(propuesta)*. Toda lista de `Route` o de `Plan` de alternativas trae siempre las tres, en ese orden, aunque dos coincidan |
 | `CostParams` | los campos de `cost_params.json`, uno a uno: es el `params` de todas las llamadas *(propuesta)* |
 | `Stop` | `{id, enu_m, science_value, dwell_s}`; `science_value` es un entero de 0 a 10 |
@@ -328,9 +350,25 @@ dentro de un método síncrono.
   - Una muestra compartida que dos tiles traen distinta: `slope`, `roughness` y `hazard` toman
     el máximo; `height` es `nodata` si lo es en alguno y, si no, la del tile más al suroeste
     (menor `n`, luego menor `e`). El resultado no depende del orden de `tiles`.
+  - `BuildGrid` lanza *(propuesta de P3)*: `ArgumentNullException` con `tiles`, un tile o `params`
+    nulos; `ArgumentException` con `tiles` vacío, `origin_height_m` o el origen de un tile no
+    finitos, un tile repetido, un origen fuera de la retícula de 256 m, o una caja con más nodos de
+    los que cuenta un `int`. `params` no cambia la grilla: guarda los rasters sin aplicar el costo.
 - **`Benchmark.Run`** *(equipo)* es C# puro, dentro del paquete `Routing` y no en `Tests~/`, para
   que lo llamen igual `dotnet` en el portátil y la escena de benchmark de la tablet. Entra en la
-  firma de H0:45, con el cuerpo vacío, y P3 lo rellena en H2–4, con el núcleo. Quién escribe la
+  firma de H0:45, con el cuerpo vacío, y P3 lo rellena en H2–4, con el núcleo. Se corre solo en
+  el portátil, con `dotnet run -c Release --project "Routing/Tests~/BenchmarkRunner"`: la tablet no
+  se prueba *(decisión de P3, 2026-11-14)*. Corre, de menor a mayor tamaño, los 5 terrenos en 1000²
+  y 2000²: tramos de A\* de 500 m con 1 corrida de calentamiento y 5 medidas, y el campo con 1 + 1. La fila de
+  A\* cronometra `PlanRoute` entero (A\*, suavizado y trazado) y su columna `smooth ms` da el p50 del
+  suavizado solo; la del campo cronometra `ReturnField` *(propuesta de P3)*. Fuera del criterio de E5
+  (su veredicto es `outside E5`), y después de todas las filas de E5 de su tamaño, porque buscan
+  más lejos y agrandan la memoria de trabajo de la búsqueda, cada caso de A\* tiene una fila
+  `Alternatives` sobre los mismos pares, y en 1000² cada terreno una fila `OrderStops k=12`: 12
+  paradas libres a ≤ 100 m del `home` de la fila del campo, que es también el `start`, con el campo
+  de ese `home`; su columna `order ms` da el tiempo de Held-Karp solo *(propuesta de P3)*.
+  La memoria que da es el heap gestionado, con la grilla y la memoria de trabajo de la búsqueda
+  vivas (`GC.GetTotalMemory(true)`) *(propuesta de P3)*. Quién escribe la
   escena y el APK: [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones".
 - **`DurationLimit`** *(equipo)*: `limit_s` es el primer `t` en que la dosis absorbida desde
   `t_utc` llega a `dose_uGy`; con una tasa constante, `dose_uGy / tasa · 3600`. La tasa es
@@ -347,6 +385,39 @@ dentro de un método síncrono.
   el resto en `dropped`. El orden se decide con la alternativa más rápida y es el mismo en las tres
   `Plan`. En TSP, una parada a la que no se llega sigue en `order`: su tramo es un `Route` con
   `found` falso, `total_s` es +∞ y `return_ok` es falso *(propuesta de P3)*.
+- **El orden en TSP** *(propuesta de P3)*: minimiza la suma de los costos de los tramos de la más
+  rápida (tiempo P50 más la penalización ámbar, lo que minimiza A\*), con el regreso a
+  `home_field.home`; `dwell_s` no entra, porque en TSP es constante. Los tramos son los de
+  `PlanRoute` entre cada par de paradas, en los dos sentidos (con `c ≠ 0` no son simétricos), y
+  Held-Karp da el óptimo exacto hasta 12 paradas. De los órdenes que no pasan del óptimo
+  × (1 + 10⁻⁹), gana el lexicográficamente menor por posición en `stops`: en un empate de redondeo
+  se queda el orden de entrada. Las paradas a las que no se llega desde `start` van al final, en el
+  orden de entrada; si `home` no se alcanza, se ordena el camino abierto. Con algún tramo no
+  encontrado, `total_s` y `dose_uGy` son +∞ y `return_ok` es falso. Sin paradas, la `Plan` es un
+  solo tramo de `start` a `home`, y `return_ok` solo dice si ese tramo se encuentra: la regla de
+  `return_ok` se mira al salir de cada parada, y sin paradas no se compara con el presupuesto
+  *(decisión de P3, 2026-11-15)*. Cada alternativa tiene sus tramos, totales, dosis y `return_ok`.
+  Con más de 12 paradas a las que se llega desde `start`, el orden es el vecino más cercano desde
+  `start` (por costo; en un empate, la de menor posición en `stops`) y después 2-opt de mejor
+  mejora sobre los mismos costos en sus dos sentidos: un cambio entra si baja el costo más de
+  10⁻⁹ relativo, y en un empate gana el par de posiciones menor. Es determinista, pero no siempre el
+  óptimo *(decisión de P3, 2026-11-15)*.
+- **OP** *(decisión de P3, 2026-11-15)*: de las paradas a las que se llega desde `start`, se queda el
+  subconjunto de más `science_value` cuya `Plan` más rápida cumple la regla de `return_ok` al salir
+  de cada parada; así la `Plan` de `fastest` tiene `return_ok` verdadero siempre que lleve alguna
+  parada. Cada subconjunto se ordena como en TSP y la regla se mira sobre ese orden. Las demás,
+  también las inalcanzables, van a `dropped`, en el orden de entrada; una parada con
+  `science_value` 0 no se elige. Hasta 12 paradas alcanzables es exacto: la tabla de Held-Karp da el
+  costo óptimo de cada subconjunto, y en un empate de valor gana el de menor costo (tramos más
+  `dwell_s`, con el mismo margen de 10⁻⁹) y después el que incluye la parada de menor posición en
+  `stops` donde difieren. Por encima, inserción greedy: se inserta la parada y la posición de mayor
+  `science_value / (Δcosto + dwell_s)` que sigue cumpliendo la regla, y cuando ninguna cabe, 2-opt
+  que solo acepta órdenes que la cumplen; se repite mientras el 2-opt mejore. `order` y `dropped`
+  son los mismos en las tres `Plan`.
+- **El tiempo de `OrderStops`** crece con el cuadrado de las paradas: un A\* por cada par ordenado
+  de paradas alcanzables y uno desde `start` a cada parada. No hay un máximo de paradas. Lo dominan
+  los tramos largos y las paradas inalcanzables: cada una cuesta una búsqueda de toda la parte
+  conexa de la grilla alrededor de `start` (en TSP, otra en cada alternativa) *(propuesta de P3)*.
 - `Plan.dose_uGy` es la integral de esa misma tasa de `t_utc` a `t_utc + total_s.p50` *(propuesta)*. `return_ok` es falso si,
   al salir de alguna parada, lo transcurrido a P90 (la caminata P90 acumulada más los `dwell_s`)
   más el regreso a `home` con P90 del `home_field` supera `min(budget.t_s, limit_s)`; la igualdad
@@ -358,8 +429,8 @@ Lo que lanza `ArgumentException` en `Routing` (un argumento inválido,
 - **Cualquier número que no es finito** (NaN o ±∞): en los puntos, en `TileRasters`, `CostGrid`
   (`cell_m`, `origin_enu_m` y cada `height_m`), `Conditions`, `Stop`, `Budget` y
   `DurationLimit`. `nodata` es `height_m` = 0, nunca NaN. Así no entra ningún NaN en el cálculo,
-  y el único +∞ que sale significa "no hay camino": `Field.time_s` donde no hay regreso y el
-  `total_s` de un plan con una parada inalcanzable.
+  y el único +∞ que sale significa "no hay camino": `Field.time_s` donde no hay regreso, y el
+  `total_s` y la `dose_uGy` de un plan con un tramo no encontrado.
 - **Un punto fuera de la grilla** (`ArgumentOutOfRangeException`), también una parada en modo OP.
 - **Una fecha que no es UTC**: `ConditionModifier`, `DurationLimit` y `OrderStops`.
   `DateTime.Parse` devuelve hora local; se lee con `DateTimeStyles.AdjustToUniversal`.
@@ -373,7 +444,7 @@ Lo que lanza `ArgumentException` en `Routing` (un argumento inválido,
   `f_terreno` y `f_rug_min` en (0, 1]…), más lo que el esquema no puede comparar:
   `v0.p90` ≤ `p50` ≤ `p10` ≤ `walk_ceiling_mps`, `relief_penalty_from_cm` < `relief_block_cm` y
   `hazard_amber_min` < `hazard_red_min`.
-- `OrderStops`: un `home_field` de otra `CostGrid`, unas `conditions` nulas, o un `stops` nulo o con una parada nula.
+- `OrderStops`: un `home_field` de otra `CostGrid`, unas `conditions` nulas, un `stops` nulo o con una parada nula, o dos paradas con el mismo `id`, porque `order` y `dropped` son listas de `id` *(propuesta de P3)*; y un `mode` que no es TSP ni OP (`ArgumentOutOfRangeException`) *(propuesta de P3)*.
 
 Las tres alternativas *(equipo)*:
 
@@ -386,6 +457,12 @@ Las tres alternativas *(equipo)*:
 La tercera mide desnivel y no esfuerzo: el costo metabólico está fuera de alcance
 ([Contexto del reto](./contexto.md), sección "Fuera de alcance"). Dos alternativas pueden dar la
 misma ruta.
+
+Cómo entran los pesos *(propuesta de P3)*: en la regla de los tramos de "Costo de caminata (D6)",
+pieza a pieza, como la penalización ámbar. El desnivel es el de `ascent_m`, subido más bajado: cada
+pieza suma `alt_gentlest_s_per_m` por su `|desnivel|`. Las tres van a v₀ P50, y cada una se suaviza
+con sus pesos. `eta_s` sigue sin penalizaciones, así que `safest` y `gentlest` salen más lentas o
+iguales que `fastest`.
 
 ### `Edits.Apply`
 
@@ -400,6 +477,31 @@ ensamblados no se referencian.
 `entity_id`, su ganadora, con `entity_id`, `op`, `creator`, `level` y `payload`. Aplica las mismas
 reglas que `Apply`, en el mismo recorrido, así que la regla de merge tiene una sola implementación
 en C#. `Terrain` la llama para emitir `EntitiesChanged`; no calcula ganadoras por su cuenta.
+
+Cómo se fusiona y qué lanza *(propuesta de P3)*:
+
+- Las ediciones se recorren en orden `(lamport, author, uuid)`, con `author` y `uuid` comparados
+  byte a byte; por cada `entity_id` queda una ganadora, y cada edición la reemplaza (LWW) salvo
+  que la regla la ignore entera.
+- Una edición se ignora si la entidad está viva y la edición la baja (un tombstone, o un nivel
+  menor en `hazard.set`/`obstacle.set`), su `author` no es su `creator`, su `confirmed` no es
+  verdadero y no es `from_habitat`. `note.set` siempre es LWW.
+- Una entidad borrada no tiene nivel: la edición siguiente del mismo `op` la recrea, la escriba
+  quien la escriba.
+- Una edición con otro `op` que la ganadora vigente de su entidad se ignora, también si la
+  ganadora es un tombstone: una entidad no cambia de `op`.
+- `LiveEntities` devuelve las ganadoras sin tombstone en el orden `(lamport, author, uuid)` de la
+  ganadora, el de `log_merged.json`; `creator` es el de la ganadora y `level` el de su `payload`,
+  255 o nulo.
+- `Apply` copia `baseHazard` y, por cada entidad viva con polígono, escribe `max(muestra, level)`
+  en las muestras de dentro. La muestra `(r, c)` está en `(256 · (origin.E + c),
+  256 · (origin.N + 256 − r))`, en punto fijo; dentro es en el borde (vértices incluidos) o en el
+  interior por par-impar, con productos exactos de 128 bits, así que ningún vértice `int`
+  desborda. `zone_id` no se mira: `Terrain` pasa las ediciones de la zona.
+- Lanzan `ArgumentNullException` con `edits` nulo o con un elemento nulo, y `ArgumentException`
+  con dos ediciones del mismo `uuid`; `Apply`, además, `ArgumentNullException` con `baseHazard`
+  nulo y `ArgumentException` si no tiene 257 × 257 muestras. Una edición que la regla ignora no
+  lanza.
 
 El tipo `Edit` de C# *(equipo)* lleva los campos del esquema de `Edit`, más `from_habitat`
 (bool), que no viaja: `Terrain` lo pone a verdadero en una ganadora recibida por `changes`, y es
@@ -446,10 +548,16 @@ sí dependen entran después *(equipo)*:
 | `cost_params.json` y su esquema | completos | |
 | La firma pública: los tipos y las llamadas de esta sección, en `Routing/` y `Edits/` | compila contra netstandard2.1; cada cuerpo de cálculo lanza `NotImplementedException`, pero los constructores, la comprobación de los argumentos, `DurationLimit` y `EditOpText` ya funcionan | se rellena según el orden de [Reparto del trabajo](./reparto.md), sección "P3: motor de rutas y ediciones" |
 | `routing/costgrid_synth.bin` | completo: lo genera un script | |
-| `routing/expected_route.json` | una `Route` que genera el script de `costgrid_synth.bin`, sin A\* *(equipo)*: una recta sobre la rampa de la grilla sintética, con `eta_s` = longitud_3D / (v₀ · exp(−b · |s + c|) · `f_terreno`), `c` = 0 y s = ±20/256 (+ hacia el este, − hacia el oeste): la función es simétrica, así que la ida y la vuelta sobre la misma recta tardan lo mismo. Su `u` sigue la rampa, así que se dibuja sobre el tile sintético. Fija la forma y es el mock de `Terrain`, `FX` y `HUD` | P3 la regenera con el A\* suavizado, por un PR en `contracts/` |
-| `routing/expected_plan.json` | `{schema_version, plans[]}`: las tres `Plan`, en el orden de `Alternative`, que genera el mismo script con las dos paradas de la misión sintética. Sobre la rampa las tres son iguales. Es el mock de `RouteSelected` | P3 la regenera con `OrderStops` |
+| `routing/expected_route.json` | una `Route` que genera el script de `costgrid_synth.bin`, sin A\* *(equipo)*: una recta sobre la rampa de la grilla sintética, con `eta_s` = longitud_3D / (v₀ · exp(−b · |s + c|) · `f_terreno`), `c` = 0 y s = ±20/256 (+ hacia el este, − hacia el oeste): la función es simétrica, así que la ida y la vuelta sobre la misma recta tardan lo mismo. Su `u` sigue la rampa, así que se dibuja sobre el tile sintético. Fija la forma y es el mock de `Terrain`, `FX` y `HUD` | P3 la regenera con el A\* suavizado, por un PR en `contracts/`. Desde H6–12 la genera `PlanRoute`, y también los tramos de `expected_plan.json`: sobre la rampa la ruta suavizada es la misma recta, así que ninguno de los dos cambió ni un byte *(P3, 2026-11-14)* |
+| `routing/expected_plan.json` | `{schema_version, plans[]}`: las tres `Plan`, en el orden de `Alternative`, que genera el mismo script con las dos paradas de la misión sintética. Sobre la rampa las tres son iguales. Es el mock de `RouteSelected` | P3 la regenera con `OrderStops` (desde H12–24 la genera `OrderStops`: sobre la rampa los dos órdenes empatan, gana el de entrada, `s1, s2`, y las tres alternativas son la fila, así que el archivo no cambió ni un byte *(P3, 2026-11-15)*) |
 | `edits/base_tile/` y `edits/edits_NN.json` | completos; `base_tile/` es una copia del tile sintético de C1 | |
 | `edits/expected_NN.sha256` | no existen | entran con `apply()`, antes de H6: los usa E9 |
+
+Los fixtures de E9 viven por ahora en `Edits/Tests~/fixtures/edits/` *(propuesta de P3)*, con el
+mismo layout (`base_tile/` + `edits_NN.json` + `expected_NN.sha256`, N = 6): `base_tile/` es una
+copia del tile sintético de P1 de `origin/p1/ingest`, y `validate.py` no acepta un `edits_NN.json`
+sin el esquema de `edit_log` de P2. Cuando el tile de P1 y el `edit_log` de P2 estén en `main`,
+pasan a `contracts/fixtures/edits/` con `git mv`, y en los tests solo cambia `GoldenTests.Dir`.
 
 - `costgrid_synth.bin` *(equipo)* es una `CostGrid` serializada, little-endian: `width` y `height`
   (`int32`), `cell_m` (`float32`), `origin_e` y `origin_n` (`float64`), y después los cuatro
@@ -488,14 +596,19 @@ sí dependen entran después *(equipo)*:
 - Los datos originales no se tocan.
 
 La equivalencia entre x64-JIT y ARM64-IL2CPP es **NO VERIFICADA** → **E9**.
+P3 no corre E9 en la tablet *(propuesta de P3)*: E9 se cierra con N/N hashes iguales en
+`dotnet test`, y la ejecución en IL2CPP ARM64 queda fuera de alcance por decisión.
 
 ## Efectos visuales (D8)
 
-**El holograma es Shader Graph** (fresnel, scanlines, curvas de nivel por `frac` de la altura,
-wireframe, bloom) **y el heatmap es una textura R8.** La niebla tiene dos partes:
+**El terreno es un shader HLSL de URP de una sola pasada, y `FX` lo estiliza con funciones HLSL
+que el shader incluye** *(equipo)*: el estilo holográfico, el peligro y el heatmap. El heatmap es
+una textura R8. La niebla tiene dos partes:
 
-- **Niebla lejana:** un tinte en el shader del terreno.
+- **Niebla lejana:** un tinte en el shader del terreno, con las bandas ámbar y roja del peligro.
 - **Niebla cercana:** una sola pasada analítica + pocas partículas grandes.
+
+Cómo se reparte ese shader entre P4 y P5: sección "Contrato de escena (C5)".
 
 Por qué:
 
@@ -546,13 +659,13 @@ C5 no tiene fixture en `contracts/`: su entregable es código que compila en `ta
 
 | Entregable | Dónde | Contenido en H2 |
 |---|---|---|
-| `MapEvents` y `MapQuery` | `tablet/Assets/Terrain/` | todos los eventos de la tabla "Eventos", con el struct de su carga, y las dos consultas, que en H2 resuelven contra el plano Y = 0: `TryPick` da el punto de ese plano bajo el toque y `HeightAt` da 0. P4 las sustituye por el terreno real sin cambiar la firma |
+| `MapEvents` y `MapQuery` | `tablet/Assets/Terrain/` | todos los eventos de la tabla "Eventos", con el struct de su carga, y las consultas de la tabla "Eventos". El mapa 2D es el plano Y = 0, así que `TryPick` da el punto de ese plano bajo el toque y `HeightAt` da 0; la altitud real la da `TryElevationAt` |
 | Tipos de datos | `tablet/Assets/Terrain/` | las clases que leen `zone.json` y `conditions.json`, con los campos de sus tablas |
 | `AppConfig` | `tablet/Assets/Terrain/` | completa: es corta y no depende de ningún contrato, así que es lo primero que P4 escribe en H0. Sección "Configuración" |
 | Cargador de fixtures | `tablet/Assets/Terrain/` | lee `expected_route.json`, `expected_plan.json`, `cost_params.json`, el `zone.json` y el `conditions.json` de `contracts/fixtures/` a los tipos de C4 y C5. Lo escribe P4 después de H0:45, cuando la firma de C4 está en `main` |
 | `ShaderIds` | `tablet/Assets/Terrain/` | una constante por propiedad de esta sección |
 | Prefabs `Terrain`, `FX`, `HUD`, `Routes` | la carpeta de cada dueño | vacíos, ya colocados en `Main.unity`. `Terrain` y `HUD` los crea P4 antes de H0, y `FX` y `Routes` los crea P5, con el esqueleto; desde H0 cada uno es de su dueño |
-| Sub Graphs de `FX` | `tablet/Assets/FX/` | los de "Cómo dibuja `FX` sobre el terreno", sin efecto. Los crea P5 antes de H0 *(equipo)*; desde H0 son de P5 |
+| Funciones de `FX` | `tablet/Assets/FX/Shaders/FxTerrainHooks.hlsl` | las de "Cómo dibuja `FX` sobre el terreno", con un cuerpo por defecto que escribió P4 para que el mapa se vea; son de P5 |
 
 - El "bus de eventos falso" de cada dueño es un script de su escena de pruebas que emite los
   eventos de `MapEvents` con los fixtures; lo escribe cada uno, sobre el cargador de fixtures de
@@ -604,8 +717,10 @@ Las pone `Terrain` en cada tile, con un `MaterialPropertyBlock`.
 | Propiedad | Formato | Contenido |
 |---|---|---|
 | `_HeightTex` | **R16_UNORM**, 257² | el `uint16` de C1 tal cual |
-| `_HeightScale`, `_HeightOffset` | float *(equipo)* | Y de la escena en metros = `_HeightOffset + _HeightScale · muestra`, con la muestra leída como 0–1. `_HeightScale` = `height.scale · 65535`; `_HeightOffset` = `height.offset − origin_height_m` |
-| `_HazardTex` | R8, 257² | el `uint8` de C1 leído como 0–1 |
+| `_HeightScale`, `_HeightOffset` | float *(equipo)* | altura en metros relativa al origen de la zona = `_HeightOffset + _HeightScale · muestra`, con la muestra leída como 0–1: la que sombrea el shader. `_HeightScale` = `height.scale · 65535`; `_HeightOffset` = `height.offset − origin_height_m` |
+| `_NodataTex` | R8, 257², sin filtrar *(equipo)* | 1 donde la muestra de `height` es `nodata`; el shader dibuja ahí un rayado gris. En `_HeightTex` esas muestras se rellenan con la vecina válida para que el sombreado no salte |
+| `_MPerPx` | float *(equipo)* | el `m_per_px` del tile, para la pendiente del sombreado |
+| `_HazardTex` | R8, 257² | el peligro efectivo del tile leído como 0–1: `max(base de Tierra, zonas de P5, ediciones)` |
 | `_LayerTex0`, `_LayerTex1`, `_LayerTex2` | R8, 257² | las capas del tile: tabla "Capas" |
 | UV0 | | el tile, de 0 a 1 |
 
@@ -632,6 +747,9 @@ Se ponen con `Shader.SetGlobal…`, así que ningún material necesita una refer
 | `_FogFarColor` | `FX` | el color del tinte lejano |
 | `_FogFarStrength` | `FX` | 0–1: cuánto tiñe |
 | `_FogFarAmberMin`, `_FogFarRedMin` | `Terrain` | 0–1: `hazard_amber_min` y `hazard_red_min` de `cost_params.json`, divididos por 255 |
+| `_ZoneHeightRange` | `Terrain` | `(mín, máx)` de la altura relativa al origen en la zona, para la rampa de color por altitud |
+| `_TopoOn`, `_HazardOn`, `_HeatOn` | `Terrain` | 0 o 1, según `LayerToggled` de `topo`, `hazard` y `heat`, que no tienen textura por tile |
+| `_ContourIntervalM` | `Terrain` | metros entre curvas de nivel; una de cada cinco es maestra |
 
 - **El tinte de niebla lejana vive en el material del terreno** (P4): lee `_HazardTex` y las
   cuatro propiedades `_FogFar…`. El color y la fuerza los fija `FX`; los umbrales, `Terrain`.
@@ -640,27 +758,27 @@ Se ponen con `Shader.SetGlobal…`, así que ningún material necesita una refer
 
 *(equipo)*
 
-**El terreno se dibuja en una sola pasada, con un solo shader, que es de P4.** Ese Shader Graph
-incluye los Sub Graphs de P5, y así `FX` no añade overdraw sobre el terreno.
+**El terreno se dibuja en una sola pasada, con un solo shader, que es de P4**:
+`MartianMap/Terrain/TerrainMap2D`, HLSL de URP, en `tablet/Assets/Terrain/Shaders/`. Incluye
+`tablet/Assets/FX/Shaders/FxTerrainHooks.hlsl`, que es de P5, y así `FX` no añade overdraw sobre el
+terreno. Un Shader Graph no se puede escribir ni revisar como texto, por eso el terreno es HLSL.
 
-| Sub Graph (P5, en `tablet/Assets/FX/`) | Entradas | Salida |
+| Función (P5) | Entradas | Salida |
 |---|---|---|
-| `SG_Hologram` | UV0, posición de mundo, normal, color base | color y emisión: fresnel, scanlines, curvas de nivel y wireframe |
-| `SG_FogFar` | color, muestra de `_HazardTex` | color con el tinte lejano |
-| `SG_Heatmap` | color, posición de mundo | color con el heatmap, leído de `_HeatTex` |
+| `FxApplyHazard` | color, peligro 0–1, `_FogFarAmberMin`, `_FogFarRedMin`, `_FogFarColor`, `_FogFarStrength`, posición ENU | color con el tinte de peligro |
+| `FxApplyHeat` | color, muestra de `_HeatTex` (1 = sin regreso) | color con el heatmap |
+| `FxApplyMapStyle` | color, posición ENU, UV0 | color final: el estilo holográfico |
 
-- P4 escribe el Shader Graph del terreno, en `tablet/Assets/Terrain/`: muestrea las texturas por
-  tile, elige la capa base y encadena los tres Sub Graphs. P5 no toca ese archivo ni el material.
-- En H2 los tres Sub Graphs existen con esas entradas y devuelven el color sin cambiarlo; P5 los
-  rellena después.
+- El shader de P4 muestrea las texturas por tile, sombrea el relieve, elige la capa base, dibuja
+  las curvas de nivel y el `nodata`, y llama a las tres funciones. P5 no toca el shader ni el
+  material; P4 no toca el cuerpo de las funciones.
+- Las firmas son parte de C5: cambiarlas es un cambio de contrato.
 - **Lo que `FX` dibuja con geometría propia** (la niebla cercana, sus partículas y el prefab
   `Routes`) no ve las texturas por tile. Lee el peligro de `_HazardZoneTex`, global: R8, con un
-  texel por nodo de la `CostGrid` y la misma UV que `_HeatTex`. `Terrain` la llena con `CostGrid.hazard`
-  cada vez que rearma la grilla.
-- **Wireframe** *(equipo)*: es una rejilla que sale de UV0, sin atributo de vértice ni
-  coordenadas baricéntricas. Hay línea donde `frac(UV0 · N)` queda cerca de 0 o de 1, con `fwidth`
-  para el grosor; N = 256 da una línea por celda.
-- Las curvas de nivel salen de `frac` de la altura sobre el areoide: Y + `_ZoneOriginHeightM`.
+  texel por nodo de la `CostGrid` y la misma UV que `_HeatTex`. `Terrain` la llena con
+  `CostGrid.hazard` cada vez que planifica.
+- Las curvas de nivel salen de `frac` de la altura sobre el areoide: la altura relativa +
+  `_ZoneOriginHeightM`.
 
 ### Capas
 
@@ -668,12 +786,12 @@ incluye los Sub Graphs de P5, y así `FX` no añade overdraw sobre el terreno.
 
 | `layer_id` | Indicador | En el tile (P1) | En el material (P4) | Quién lo dibuja |
 |---|---|---|---|---|
-| `topo` | topográfico | `height` | `_HeightTex` | `FX`: las curvas de nivel del holograma |
+| `topo` | topográfico | `height` | `_HeightTex` | el material del terreno: sombreado, color por altitud y curvas de nivel (`_TopoOn`) |
 | `ortho` | óptico | `layers[]`, `ortho` | `_LayerTex0` | el material del terreno |
 | `thermal` | térmico | `layers[]`, `thermal` | `_LayerTex1` | el material del terreno, con una rampa de color |
 | `thermal_ir` | térmico, cualitativo | `layers[]`, `thermal_ir` | `_LayerTex2` | el material del terreno |
-| `hazard` | peligro | `rasters.hazard` | `_HazardTex` | el tinte lejano (material) y la niebla cercana (`FX`) |
-| `heat` | regreso al hábitat | | `_HeatTex` | `FX`: el heatmap |
+| `hazard` | peligro | `rasters.hazard` | `_HazardTex` | el tinte lejano (material, con `FxApplyHazard`) y la niebla cercana (`FX`) |
+| `heat` | regreso al hábitat | | `_HeatTex` | el material del terreno, con `FxApplyHeat` (`_HeatOn`) |
 
 - El `HUD` (P6) tiene un toggle por fila y emite `LayerToggled` con ese `layer_id`.
 - `ortho`, `thermal` y `thermal_ir` son excluyentes: el `HUD` apaga una al encender otra.
@@ -682,6 +800,24 @@ incluye los Sub Graphs de P5, y así `FX` no añade overdraw sobre el terreno.
   unidad y el rango de la leyenda.
 - La radiación no es una capa: es un número en el `HUD`.
 - Los archivos de `layers[]`: [Tierra](./tierra.md), sección "Tiles (C1)".
+
+### Zonas de peligro de `FX` (Shapefile)
+
+*(equipo)*
+
+P5 entrega zonas de peligro como un Shapefile, y `Terrain` las funde con el peligro del tile, así
+que la niebla y las rutas las ven igual que el peligro de Tierra.
+
+| Tema | Regla |
+|---|---|
+| Archivos | `tablet/Assets/StreamingAssets/hazard_shapes/{zone_id}.shp`, con su `.dbf` y, opcional, su `.prj` |
+| Geometría | Polygon, PolygonZ o PolygonM; anillos par-impar, con agujeros |
+| Coordenadas | metros ENU de la zona (x = este, y = norte) sin `.prj` o con uno proyectado; longitud y latitud en grados (IAU_2015:49900) con un `.prj` geográfico |
+| Valor | campo numérico `HAZARD` (0–255), o de texto `LEVEL` = `amber` (128) o `red` (255); 255 si no hay ninguno |
+| Fusión | se rasteriza sobre las muestras de cada tile de `z = 0`; el peligro del tile es `max(base, zonas, ediciones)` |
+
+- Un archivo malo se registra y no bloquea la zona.
+- El ejemplo es `hazard_shapes/demo.shp`, de la zona demo que se genera en código.
 
 ### Eventos
 
@@ -711,7 +847,8 @@ usa para situar toques, pines y paradas:
 | Consulta | Devuelve |
 |---|---|
 | `MapQuery.TryPick(screenPosition, out enu_m)` | el punto del terreno bajo un toque, o falso si no toca terreno |
-| `MapQuery.HeightAt(enu_m)` | la Y de la escena en ese punto |
+| `MapQuery.HeightAt(enu_m)` | la Y de la escena en ese punto: 0 en el mapa 2D |
+| `MapQuery.TryElevationAt(enu_m, out m)` *(equipo)* | la altura sobre el areoide en ese punto, o falso donde no hay dato: la que muestra el `HUD` |
 
 - `FX` y el prefab `Routes` no usan los tipos de `Routing`: dibujan `polyline`. De `Edits`, `FX`
   lee `LiveEntity`.
@@ -756,6 +893,26 @@ Una edición:
 El texto del `op` *(propuesta de P3)*: `Terrain` lo escribe con `EditOpText.ToWire` y lo lee, del
 log local o de `changes`, con `EditOpText.TryParse`. Si `TryParse` da falso, descarta esa edición,
 escribe `[Terrain] … op=<texto>` y sigue; no escribe su propia tabla.
+
+Reglas de la orquestación *(equipo)*:
+
+- **Una petición que solo cambia `alternative`** reutiliza las tres `Plan` ya calculadas y emite
+  `RouteSelected` sin volver a llamar a `Routing`.
+- **Sin `conditions.json`** (o con una tasa que `Routing` rechaza), `Terrain` planifica con
+  10 µGy/h, el extremo alto de la tasa base esperada (E14), y lo escribe en el log: el límite de
+  duración se acorta en lugar de ignorarse *(inferencia conservadora)*.
+- **Mientras `Routing` lance `NotImplementedException`**, la zona `synth` responde con
+  `expected_plan.json`, que es la ruta del walking skeleton; las demás zonas escriben en el log que
+  no hay ruta.
+- **Sin `author` guardado**, `Terrain` no acepta la edición y emite `EditRejected` con
+  `code: author_missing`.
+- Con la caché vacía, `Terrain` muestra la zona demo que genera en código *(equipo)*; un ajuste
+  del arranque la cambia por la zona `synth` del contrato, que es la que usa la misión sintética
+  del `HUD`. Si llega una zona del hábitat, la sustituye.
+- **Ruta entre dos puntos** *(equipo)*: un toque corto en el mapa fija A y otro fija B; `Terrain`
+  pide a `Routing` las tres `Alternatives` y emite `RouteSelected` con una `Plan` de un tramo por
+  alternativa. Mientras `Routing` lance `NotImplementedException`, la ruta es una recta
+  provisional sobre el terreno, que mide el peligro pero no lo evita.
 
 ## HUD e indicadores (D10)
 

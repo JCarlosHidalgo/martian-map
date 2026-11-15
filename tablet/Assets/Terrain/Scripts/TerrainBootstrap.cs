@@ -20,8 +20,11 @@ namespace MartianMap.Terrain
             /// <summary>A procedural crater field of several tiles, generated in code.</summary>
             Demo,
 
-            /// <summary>One tile like the C1 synthetic fixture: ramp, asymmetric hazard, nodata corner.</summary>
-            FixtureLike,
+            /// <summary>
+            /// The C1 contract tile <c>tile_synth_0_0_0</c> (P1) as zone <c>synth</c>; falls back to the
+            /// generated look-alike if the fixture is missing.
+            /// </summary>
+            ContractFixture,
 
             /// <summary>A zone folder inside StreamingAssets with zone.json at its root (no bundle.json).</summary>
             StreamingAssetsFolder,
@@ -33,6 +36,9 @@ namespace MartianMap.Terrain
         [Tooltip("Unpacked zone_full bundles under StreamingAssets/zones/ to import on launch. Missing ones are skipped.")]
         [SerializeField] private string[] preloadedZones = { "gale", "demo" };
 
+        [Tooltip("What to show when the cache is empty and no zone ships in the APK: the generated demo zone (default) or the contract zone synth, which P6's synthetic mission targets.")]
+        [SerializeField] private ZoneSource emptyCacheZone = ZoneSource.Demo;
+
         [Tooltip("Folder under StreamingAssets, used when the source is StreamingAssetsFolder.")]
         [SerializeField] private string streamingAssetsFolder = "zones/gale/data";
 
@@ -41,11 +47,16 @@ namespace MartianMap.Terrain
 
         private LocalCache _cache;
         private bool _loading;
+        private bool _costParamsLoaded;
+        private bool _preloadedImported;
 
         public ZoneSource Source => source;
 
         /// <summary>The local cache, or null before <see cref="ZoneSource.Cache"/> was first used.</summary>
         public LocalCache Cache => _cache;
+
+        /// <summary>The <c>cost_params.json</c> in use (C4), or null if it could not be read.</summary>
+        public MartianMap.Routing.CostParams CostParams { get; private set; }
 
         private void Awake()
         {
@@ -56,6 +67,26 @@ namespace MartianMap.Terrain
             {
                 map = GetComponentInChildren<TerrainMap2D>();
             }
+
+            // The orchestration lives next to the map (Tablet, "Orquestación"); added here so the
+            // prefab needs no manual wiring.
+            EnsureComponent<RouteOrchestrator>();
+            EnsureComponent<EditOrchestrator>();
+            EnsureComponent<HabitatClient>();
+            EnsureComponent<RoutePointsTool>();
+
+            // Keyboard shortcuts in every scene with Terrain (Main included), once: the sandbox scene
+            // already carries its own shortcuts object.
+            if (FindAnyObjectByType<TerrainSandboxKeys>() == null)
+            {
+                gameObject.AddComponent<TerrainSandboxKeys>();
+            }
+        }
+
+        private T EnsureComponent<T>() where T : Component
+        {
+            var component = GetComponent<T>();
+            return component != null ? component : gameObject.AddComponent<T>();
         }
 
         private void OnEnable()
@@ -92,14 +123,15 @@ namespace MartianMap.Terrain
         {
             source = from;
             var started = Time.realtimeSinceStartup;
+            await LoadCostParamsOnceAsync();
             LoadedZone zone;
             switch (from)
             {
                 case ZoneSource.Cache:
                     zone = await LoadFromCacheAsync(null);
                     break;
-                case ZoneSource.FixtureLike:
-                    zone = SyntheticZone.CreateFixtureLike();
+                case ZoneSource.ContractFixture:
+                    zone = await LoadContractFixtureAsync();
                     break;
                 case ZoneSource.StreamingAssetsFolder:
                     zone = await ZoneFolderLoader.LoadAsync(LocalFiles.Combine(Application.streamingAssetsPath, streamingAssetsFolder));
@@ -117,13 +149,15 @@ namespace MartianMap.Terrain
         /// <summary>
         /// Opens the cache, imports the preloaded zones, emits ZonesChanged and loads
         /// <paramref name="zoneId"/>, or the last active zone, or the first one. With an empty cache
-        /// it falls back to the generated demo zone.
+        /// it shows <see cref="emptyCacheZone"/>: the generated demo zone by default, or the contract
+        /// zone <c>synth</c> that the HUD's synthetic mission targets.
         /// </summary>
         private async Task<LoadedZone> LoadFromCacheAsync(string zoneId)
         {
-            if (_cache == null)
+            EnsureCache();
+            if (!_preloadedImported)
             {
-                _cache = LocalCache.OpenDefault();
+                _preloadedImported = true;
                 foreach (var preloaded in preloadedZones)
                 {
                     await ImportPreloadedAsync(preloaded);
@@ -134,6 +168,12 @@ namespace MartianMap.Terrain
             MapEvents.Emit(new ZonesChanged(zones));
             if (zones.Count == 0)
             {
+                if (emptyCacheZone == ZoneSource.ContractFixture)
+                {
+                    Debug.LogWarning("[Terrain] cache is empty and no zone ships in the APK; showing the contract zone synth");
+                    return await LoadContractFixtureAsync();
+                }
+
                 Debug.LogWarning("[Terrain] cache is empty and no zone ships in the APK; showing the generated demo zone");
                 return SyntheticZone.CreateDemo();
             }
@@ -147,6 +187,39 @@ namespace MartianMap.Terrain
             var zone = await _cache.LoadZoneAsync(target);
             _cache.SetActiveZone(target);
             return zone;
+        }
+
+        /// <summary>The local cache, opened on first use (the habitat client needs it whatever the source).</summary>
+        public LocalCache EnsureCache()
+        {
+            _cache ??= LocalCache.OpenDefault();
+            return _cache;
+        }
+
+        /// <summary>True when the zone on screen came from the cache (not a fixture or the demo).</summary>
+        public bool ShowsCachedZone =>
+            map != null && map.Current != null && _cache != null && _cache.ZoneVersion(map.Current.Zone.ZoneId) > 0;
+
+        /// <summary>Loads a cached zone and shows it, with P5's shapes; used when the habitat updates it.</summary>
+        public async Task ShowCachedZoneAsync(string zoneId)
+        {
+            if (_loading)
+            {
+                return;
+            }
+
+            _loading = true;
+            try
+            {
+                source = ZoneSource.Cache;
+                var zone = await LoadFromCacheAsync(zoneId);
+                await ApplyHazardShapesAsync(zone);
+                map.Show(zone);
+            }
+            finally
+            {
+                _loading = false;
+            }
         }
 
         private async Task ImportPreloadedAsync(string zoneId)
@@ -184,6 +257,43 @@ namespace MartianMap.Terrain
             finally
             {
                 _loading = false;
+            }
+        }
+
+        private static async Task<LoadedZone> LoadContractFixtureAsync()
+        {
+            try
+            {
+                return await FixtureLoader.LoadSynthZoneAsync();
+            }
+            catch (System.IO.FileNotFoundException missing)
+            {
+                Debug.LogWarning($"[Terrain] contract tile missing file={missing.FileName}; showing the generated demo zone");
+                return SyntheticZone.CreateDemo();
+            }
+        }
+
+        /// <summary>
+        /// Reads <c>cost_params.json</c> from StreamingAssets/fixtures (C6: at run time it is a copy of
+        /// the fixture) and hands its hazard thresholds to the map. Without it the map keeps 96/192.
+        /// </summary>
+        private async Task LoadCostParamsOnceAsync()
+        {
+            if (_costParamsLoaded)
+            {
+                return;
+            }
+
+            _costParamsLoaded = true;
+            try
+            {
+                CostParams = await FixtureLoader.LoadCostParamsAsync();
+                map.ApplyCostParams(CostParams);
+                Debug.Log($"[Terrain] cost params loaded hazard_amber_min={CostParams.HazardAmberMin} hazard_red_min={CostParams.HazardRedMin}");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[Terrain] cost params unavailable error={exception.Message}; keeping default hazard thresholds");
             }
         }
 

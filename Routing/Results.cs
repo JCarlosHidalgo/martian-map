@@ -67,18 +67,44 @@ namespace MartianMap.Routing
     /// <summary>
     /// The return field: one value per node, the time back to <c>home</c> at v₀ P90;
     /// <see cref="float.PositiveInfinity"/> where there is no way back, indexed like
-    /// <see cref="Grid"/>. Only <see cref="Router.ReturnField"/> makes one, and it carries the
+    /// <see cref="Grid"/>. The way back is chosen like a route, with the amber penalty, and the
+    /// value is its P90 time without it, like <c>eta_s</c>. Only <see cref="Router.ReturnField"/> makes one, and it carries the
     /// <see cref="Grid"/> and the <see cref="Home"/> it was computed for, so
     /// <see cref="Router.OrderStops"/> cannot be given a field of another grid or another base.
-    /// It is immutable: the constructor copies the array.
+    /// It is immutable: the constructor copies the array, and <see cref="Router.ReturnField"/> hands
+    /// over through <see cref="Adopt"/> an array of its own that nobody else holds.
     /// </summary>
     public sealed class Field
     {
         internal Field(CostGrid grid, EnuPoint home, float[] timeS)
+            : this(grid ?? throw new ArgumentNullException(nameof(grid)), home, ReadOnly.Array(timeS, grid.Width * grid.Height, nameof(timeS)), adopt: true)
         {
-            Grid = grid ?? throw new ArgumentNullException(nameof(grid));
+        }
+
+        /// <summary>
+        /// Keeps <paramref name="timeS"/> as it is: both callers have checked it and own it.
+        /// <paramref name="adopt"/> only tells this overload apart from the copying one.
+        /// </summary>
+        private Field(CostGrid grid, EnuPoint home, float[] timeS, bool adopt)
+        {
+            Grid = grid;
             Home = home;
-            TimeSArray = ReadOnly.Array(timeS, grid.Width * grid.Height, nameof(timeS));
+            TimeSArray = timeS;
+        }
+
+        /// <summary>
+        /// A field that keeps <paramref name="timeS"/> without copying it: only for an array that
+        /// nobody else holds, as <see cref="Router.ReturnField"/>'s own. It saves a copy of one
+        /// <c>float</c> per node (16 MB at 2000²).
+        /// </summary>
+        internal static Field Adopt(CostGrid grid, EnuPoint home, float[] timeS)
+        {
+            if (grid == null)
+            {
+                throw new ArgumentNullException(nameof(grid));
+            }
+
+            return new Field(grid, home, ReadOnly.Exactly(timeS, grid.Width * grid.Height, nameof(timeS)), adopt: true);
         }
 
         /// <summary>The grid the field was computed on.</summary>
