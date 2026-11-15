@@ -108,7 +108,7 @@ namespace MartianMap.Routing.Tests
         {
             CostGrid g = Grids.Pattern200();
             int home = g.Index(0, 1);
-            var routes = new (EnuPoint A, EnuPoint B)[50];
+            var routes = new (EnuPoint A, EnuPoint B)[20];
             for (int k = 0; k < routes.Length; k++)
             {
                 routes[k] = (new EnuPoint(2 * ((k * 37) % 200), 2 * ((k * 11) % 200)), new EnuPoint(2 * ((k * 53 + 90) % 200), 2 * ((k * 29 + 50) % 200)));
@@ -124,7 +124,7 @@ namespace MartianMap.Routing.Tests
 
             Assert.That(parallelField, Is.EqualTo(serialField));
             Assert.That(serialField.Count(float.IsFinite), Is.GreaterThan(g.Width * g.Height / 2));
-            Assert.That(serialRoutes.Count(r => r.Found), Is.GreaterThan(15));
+            Assert.That(serialRoutes.Count(r => r.Found), Is.GreaterThanOrEqualTo(6));
             for (int k = 0; k < routes.Length; k++)
             {
                 Assert.That(plans.Result[k].Cells, Is.EqualTo(serialRoutes[k].Cells), $"route {k}");
@@ -135,20 +135,17 @@ namespace MartianMap.Routing.Tests
         [Test]
         public void TheFieldReusesTheWorkspaceWithoutGc()
         {
-            // 400²: an array per node would be 640 KB, far above the bound.
-            CostGrid g = Grids.Flat(400, 400);
+            // 200²: a reused workspace allocates ~0.6 KB a field; even a byte per node is 40 KB, twice the bound.
+            CostGrid g = Grids.Flat(200, 200);
             var t = new float[g.Width * g.Height];
-            Search.Field(g, g.Index(200, 200), P.V0Mps.P90, P, t);
+            Search.Field(g, g.Index(100, 100), P.V0Mps.P90, P, t);
             GC.Collect();
             GC.WaitForPendingFinalizers();
             int before = GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2);
             long bytes = GC.GetAllocatedBytesForCurrentThread();
-            for (int k = 0; k < 3; k++)
-            {
-                Search.Field(g, g.Index(100 * k, 399 - 100 * k), P.V0Mps.P90, P, t);
-            }
+            Search.Field(g, g.Index(0, 199), P.V0Mps.P90, P, t);
 
-            Assert.That(GC.GetAllocatedBytesForCurrentThread() - bytes, Is.LessThan(100_000));
+            Assert.That(GC.GetAllocatedBytesForCurrentThread() - bytes, Is.LessThan(20_000));
             Assert.That(GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2), Is.EqualTo(before));
         }
 

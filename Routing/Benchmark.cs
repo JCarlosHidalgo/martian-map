@@ -49,13 +49,14 @@ namespace MartianMap.Routing
             Line($"- Scenario: {c.Label}");
             Line($"- Machine: {RuntimeInformation.FrameworkDescription}, {RuntimeInformation.OSArchitecture}, {Environment.ProcessorCount} logical CPUs");
             Line($"- Config: seed 0x{c.Seed:X}; A* routes of {G(c.RouteM)} m on {Join(c.Sizes)}², {c.RouteWarmUp} warm-up + {c.RouteRuns} runs; "
-                + $"field at v0 P90 on {Join(c.FieldSizes)}², {c.FieldWarmUp} + {c.FieldRuns}"
+                + $"ReturnField (v0 P90) on {Join(c.FieldSizes)}², {c.FieldWarmUp} + {c.FieldRuns}; "
+                + "the A* rows time PlanRoute (A* + smoothing + trace), and 'smooth ms' is the p50 of the smoothing alone on the same pairs"
                 + (c.StressFieldSize > 0 ? $"; stress field on Uniform {c.StressFieldSize}², 1 + 1, outside the criterion" : string.Empty));
             Line($"- E5 (docs/guide/chapters/reparto.md): A* p95 <= {F(RouteP95Ms)} ms, field p95 <= {F(FieldP95Ms)} ms, 0 GC during the measured runs, managed heap <= {F(MaxManagedMb)} MB. "
                 + "Measured on the laptop only: the tablet is not tested.");
             Line(string.Empty);
-            Line("| size | terrain | query | runs | found | p50 ms | p95 ms | max ms | GC | managed MB | E5 |");
-            Line("|---|---|---|---|---|---|---|---|---|---|---|");
+            Line("| size | terrain | query | runs | found | p50 ms | p95 ms | max ms | smooth ms | GC | managed MB | E5 |");
+            Line("|---|---|---|---|---|---|---|---|---|---|---|---|");
 
             Terrain[] terrains = (Terrain[])Enum.GetValues(typeof(Terrain));
             int maxSize = 0;
@@ -118,7 +119,7 @@ namespace MartianMap.Routing
             {
                 if (!Pair(g, c, rng, out starts[k], out goals[k]))
                 {
-                    return $"| {g.Width} | {t} | A* {G(c.RouteM)} m | 0 | 0 | | | | | | no pair |";
+                    return $"| {g.Width} | {t} | A* {G(c.RouteM)} m | 0 | 0 | | | | | | | no pair |";
                 }
             }
 
@@ -143,7 +144,8 @@ namespace MartianMap.Routing
             int gcs = Collections() - gc0;
             double mb = GC.GetTotalMemory(true) / (double)(1 << 20);
             GC.KeepAlive(g);
-            return Row(g.Width, t, $"A* {G(c.RouteM)} m", ms, found, gcs, mb, RouteP95Ms, stress: false);
+            string smooth = F(SmoothP50Ms(g, starts, goals, c));
+            return Row(g.Width, t, $"A* {G(c.RouteM)} m", ms, smooth, found, gcs, mb, RouteP95Ms, stress: false);
         }
 
         private static string FieldRow(CostGrid g, Terrain t, BenchmarkConfig c, bool stress)
@@ -151,16 +153,16 @@ namespace MartianMap.Routing
             int home = HomeNode(g, c.Params);
             int warmUp = stress ? 1 : c.FieldWarmUp;
             int runs = stress ? 1 : c.FieldRuns;
-            var timeS = new float[g.Width * g.Height];
             if (home < 0)
             {
-                return $"| {g.Width} | {t} | field | 0 | 0 | | | | | | no home |";
+                return $"| {g.Width} | {t} | ReturnField | 0 | 0 | | | | | | | no home |";
             }
 
-            double v0 = c.Params.V0Mps.P90;
+            var homePoint = new EnuPoint(g.OriginEnuM.E + (g.CellM * (home % g.Width)), g.OriginEnuM.N + (g.CellM * (home / g.Width)));
+            Field field = null;
             for (int k = 0; k < warmUp; k++)
             {
-                Search.Field(g, home, v0, c.Params, timeS);
+                field = Router.ReturnField(g, homePoint, c.Params);
             }
 
             var ms = new double[runs];
@@ -170,15 +172,43 @@ namespace MartianMap.Routing
             for (int k = 0; k < runs; k++)
             {
                 long t0 = Stopwatch.GetTimestamp();
-                Search.Field(g, home, v0, c.Params, timeS);
+                field = Router.ReturnField(g, homePoint, c.Params);
                 ms[k] = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency;
             }
 
             int gcs = Collections() - gc0;
             double mb = GC.GetTotalMemory(true) / (double)(1 << 20);
-            GC.KeepAlive(timeS);
+            GC.KeepAlive(field);
             GC.KeepAlive(g);
-            return Row(g.Width, t, "field", ms, runs, gcs, mb, FieldP95Ms, stress);
+            return Row(g.Width, t, "ReturnField", ms, "-", runs, gcs, mb, FieldP95Ms, stress);
+        }
+
+        /// <summary>
+        /// The p50 time of <see cref="Smoothing.Smooth"/> alone on the measured pairs: each pair's
+        /// A* path is found again without the clock, and only the smoothing is timed. Pairs with no
+        /// path are skipped; NaN if none has one.
+        /// </summary>
+        private static double SmoothP50Ms(CostGrid g, EnuPoint[] starts, EnuPoint[] goals, BenchmarkConfig c)
+        {
+            double v0 = c.Params.V0Mps.P50;
+            var ms = new double[c.RouteRuns];
+            int n = 0;
+            for (int k = 0; k < c.RouteRuns; k++)
+            {
+                int[] path = Search.AStar(g, Router.NearestNode(g, starts[c.RouteWarmUp + k]), Router.NearestNode(g, goals[c.RouteWarmUp + k]), v0, c.Params, 1.0, out _);
+                if (path == null)
+                {
+                    continue;
+                }
+
+                long t0 = Stopwatch.GetTimestamp();
+                Smoothing.Smooth(g, path, v0, c.Params, 1.0);
+                ms[n++] = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency;
+            }
+
+            Array.Resize(ref ms, n);
+            Array.Sort(ms);
+            return Rank(ms, 0.50);
         }
 
         /// <summary>
@@ -236,7 +266,7 @@ namespace MartianMap.Routing
             return best;
         }
 
-        private static string Row(int size, Terrain t, string query, double[] ms, int found, int gcs, double mb, double p95Limit, bool stress)
+        private static string Row(int size, Terrain t, string query, double[] ms, string smoothMs, int found, int gcs, double mb, double p95Limit, bool stress)
         {
             double[] sorted = (double[])ms.Clone();
             Array.Sort(sorted);
@@ -267,7 +297,7 @@ namespace MartianMap.Routing
                 verdict = fails.Length == 0 ? "ok" : "FAIL:" + fails;
             }
 
-            return $"| {size} | {t} | {query} | {ms.Length} | {found} | {F(p50)} | {F(p95)} | {F(max)} | {gcs} | {F(mb)} | {verdict} |";
+            return $"| {size} | {t} | {query} | {ms.Length} | {found} | {F(p50)} | {F(p95)} | {F(max)} | {smoothMs} | {gcs} | {F(mb)} | {verdict} |";
         }
 
         /// <summary>The nearest-rank percentile: the ceil(q·n)-th smallest.</summary>

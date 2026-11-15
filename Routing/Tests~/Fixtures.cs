@@ -1,4 +1,5 @@
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using MartianMap.Routing.FixtureGen;
 using NUnit.Framework;
@@ -37,6 +38,23 @@ namespace MartianMap.Routing.Tests
         {
             Assert.That(File.ReadAllText(Path.Combine(Fixtures.Dir, "expected_plan.json")), Is.EqualTo(Generated.ExpectedPlan),
                 "Regenerate with: dotnet run --project Routing/Tests~/FixtureGen");
+        }
+
+        [Test]
+        public void TheGoldenRouteIsThePlannedRoute()
+        {
+            // expected_route.json is PlanRoute (A* + smoothing) from the base to s2 on the synthetic
+            // grid; the golden rounds to 1 mm and 1 ms.
+            CostGrid g = SynthFixtures.BuildSynthGrid(Fixtures.CostParams);
+            Route r = Router.PlanRoute(g, new EnuPoint(-100, -20), new EnuPoint(100, -20), Fixtures.CostParams);
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(Fixtures.Dir, "expected_route.json")));
+            JsonElement golden = doc.RootElement;
+            Assert.That(r.Found, Is.True);
+            Assert.That(r.Cells, Is.EqualTo(golden.GetProperty("cells").EnumerateArray().Select(c => c.GetInt32())));
+            Assert.That(r.PolylineEnuM.Count, Is.EqualTo(golden.GetProperty("polyline_enu_m").GetArrayLength()));
+            Assert.That(r.LengthM, Is.EqualTo(golden.GetProperty("length_m").GetDouble()).Within(0.0005));
+            Assert.That(r.EtaS.P50, Is.EqualTo(golden.GetProperty("eta_s").GetProperty("p50").GetDouble()).Within(0.0005));
+            Assert.That(r.EtaS.P90, Is.EqualTo(golden.GetProperty("eta_s").GetProperty("p90").GetDouble()).Within(0.0005));
         }
 
         [Test]

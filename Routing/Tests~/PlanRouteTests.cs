@@ -6,9 +6,11 @@ using NUnit.Framework;
 namespace MartianMap.Routing.Tests
 {
     /// <summary>
-    /// <see cref="Router.PlanRoute"/> v1: A* 16-connected without smoothing. The expected values
-    /// are literals from the oracle (~/scratch/c4-verify/oracle/cases.py, not committed): an
-    /// independent Dijkstra over the segment rule, in exact fractions for the geometry.
+    /// <see cref="Router.PlanRoute"/>: A* 16-connected, then smoothed. The expected values are
+    /// literals from the oracle (~/scratch/c4-verify/oracle/cases.py and cases_smooth.py t2, not
+    /// committed): an independent Dijkstra over the segment rule, in exact fractions for the
+    /// geometry. The v1 literals (wall gap, maze, amber bands) are unchanged by smoothing: their
+    /// shortcuts are collinear with the A* edges or rejected (oracle).
     /// </summary>
     public class PlanRouteTests
     {
@@ -110,6 +112,38 @@ namespace MartianMap.Routing.Tests
         }
 
         [Test]
+        public void ARouteAtAnAngleOnFlatGroundIsTheStraightSegment()
+        {
+            // Oracle (cases_smooth.py t2): the single segment (0,0)→(29,11), 147.69583256448405 s,
+            // against 150.46070358332233 s along an optimal 16-connected path.
+            CostGrid g = Grids.Flat(30, 12);
+            Route r = Router.PlanRoute(g, new EnuPoint(0, 0), new EnuPoint(58, 22), P);
+            Assert.That(r.Cells, Is.EqualTo(new[]
+            {
+                0, 1, 31, 32, 33, 34, 64, 65, 66, 67, 97, 98, 99, 129, 130, 131, 132, 162, 163, 164,
+                195, 196, 197, 227, 228, 229, 230, 260, 261, 262, 292, 293, 294, 295, 325, 326, 327, 328, 358, 359,
+            }));
+            Assert.That(r.EtaS.P50, Is.EqualTo(147.69583256448405).Within(Tol));
+            Assert.That(r.EtaS.P90, Is.EqualTo(184.61979070560486).Within(Tol));
+        }
+
+        [TestCase(0, 0, 11, 8, 101.05200666714978)]
+        [TestCase(3, 7, 9, 0, 62.08150933561341)]
+        [TestCase(0, 4, 11, 4, 123.81667056845235)]
+        [TestCase(2, 2, 6, 6, 37.34127089449969)]
+        public void TheSmoothedRouteIsNeverWorseThanAStar(int si, int sj, int gi, int gj, double expectedEtaP50)
+        {
+            // Oracle: Random12x9, each pair with a unique optimum (optimal_paths = 1), smoothed with
+            // S2-S3; no pair crosses amber, so the cost is eta_s.p50.
+            CostGrid g = Grids.FromMap(Grids.Random12x9, Grids.RandomHeight);
+            Route r = Router.PlanRoute(g, new EnuPoint(2 * si, 2 * sj), new EnuPoint(2 * gi, 2 * gj), P);
+            Search.AStar(g, g.Index(si, sj), g.Index(gi, gj), P.V0Mps.P50, P, 1.0, out double aStarCost);
+            Assert.That(r.Found, Is.True);
+            Assert.That(r.EtaS.P50 + (r.AmberM * P.AmberPenaltySPerM), Is.LessThanOrEqualTo(aStarCost * (1 + 1e-6)));
+            Assert.That(r.EtaS.P50, Is.EqualTo(expectedEtaP50).Within(Tol));
+        }
+
+        [Test]
         public void TheSameNodeIsAFoundRouteThatStaysThere()
         {
             CostGrid g = Grids.FromMap(Grids.WallGap9x7);
@@ -181,26 +215,27 @@ namespace MartianMap.Routing.Tests
         [Test]
         public void ARouteQueryAllocatesNoLargeArraysAfterWarmUp()
         {
-            CostGrid g = Grids.Flat(1000, 1000);
-            for (int k = 0; k < 3; k++)
+            CostGrid g = Grids.Flat(400, 400);
+            for (int k = 0; k < 2; k++)
             {
-                Router.PlanRoute(g, new EnuPoint(100 + k, 1000), new EnuPoint(600 + k, 1000), P);
+                Router.PlanRoute(g, new EnuPoint(100 + k, 400), new EnuPoint(350 + k, 400), P);
             }
 
             // A collection now, so the earlier tests' garbage does not count; then only the route's
-            // own small lists (~40 KB a query) are allocated, never an array per node (4 MB here).
+            // own small lists (~26 KB a query) are allocated, never an array per node: even a byte
+            // per node is 160 KB here, twice the bound.
             GC.Collect();
             GC.WaitForPendingFinalizers();
             int before = GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2);
             long bytes = GC.GetAllocatedBytesForCurrentThread();
-            for (int k = 0; k < 20; k++)
+            for (int k = 0; k < 10; k++)
             {
-                double a = k * Math.PI / 10;
-                Route r = Router.PlanRoute(g, new EnuPoint(1000, 1000), new EnuPoint(1000 + 500 * Math.Cos(a), 1000 + 500 * Math.Sin(a)), P);
+                double a = k * Math.PI / 5;
+                Route r = Router.PlanRoute(g, new EnuPoint(400, 400), new EnuPoint(400 + 250 * Math.Cos(a), 400 + 250 * Math.Sin(a)), P);
                 Assert.That(r.Found, Is.True);
             }
 
-            Assert.That((GC.GetAllocatedBytesForCurrentThread() - bytes) / 20, Is.LessThan(200_000));
+            Assert.That((GC.GetAllocatedBytesForCurrentThread() - bytes) / 10, Is.LessThan(80_000));
             Assert.That(GC.CollectionCount(0) + GC.CollectionCount(1) + GC.CollectionCount(2), Is.EqualTo(before));
         }
     }

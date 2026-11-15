@@ -71,7 +71,10 @@ namespace MartianMap.Routing
 
         /// <summary>
         /// The fastest route from <paramref name="start"/> to <paramref name="goal"/>: A*
-        /// 16-connected over the segment rule, choosing with the amber penalty, at v₀ P50. Each point
+        /// 16-connected over the segment rule, choosing with the amber penalty, at v₀ P50, then
+        /// smoothed by <see cref="Smoothing.Smooth"/> (a shortcut only where it costs no more than
+        /// the A* edges it replaces). <c>cells</c>, <c>polyline_enu_m</c> and every other field come
+        /// from <see cref="Cost.Trace"/> over the smoothed waypoints. Each point
         /// goes to its nearest node (a point midway goes to the east or north one);
         /// <see cref="Route.NotFound"/> if either node is blocked or there is no path. With both points
         /// on the same free node, the route is found and stays there: one cell, one point, all 0.
@@ -91,7 +94,7 @@ namespace MartianMap.Routing
             int s = NearestNode(grid, start);
             int t = NearestNode(grid, goal);
             int[] nodes = Search.AStar(grid, s, t, p.V0Mps.P50, p, 1.0, out _);
-            return nodes == null ? Route.NotFound : Cost.Trace(grid, nodes, p);
+            return nodes == null ? Route.NotFound : Cost.Trace(grid, Smoothing.Smooth(grid, nodes, p.V0Mps.P50, p, 1.0), p);
         }
 
         /// <summary>
@@ -110,12 +113,23 @@ namespace MartianMap.Routing
 
         /// <summary>
         /// The reverse Dijkstra field to <paramref name="home"/>, at v₀ P90: each node's way back is
-        /// chosen with the amber penalty, and its value is that way's time without it.
+        /// chosen with the amber penalty, and its value is that way's time without it. It is
+        /// computed from the node nearest to <paramref name="home"/> (the same rounding as
+        /// <see cref="PlanRoute"/>), and <see cref="Field.Home"/> keeps the point as given. With that
+        /// node blocked every value is +∞: there is no return, which is a result, not an error. It
+        /// visits the whole grid: call it off the main thread.
         /// </summary>
         public static Field ReturnField(CostGrid grid, EnuPoint home, CostParams p)
         {
             RequirePointIn(grid, home, nameof(home));
-            throw new NotImplementedException();
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            var timeS = new float[grid.Width * grid.Height];
+            Search.Field(grid, NearestNode(grid, home), p.V0Mps.P90, p, timeS);
+            return Field.Adopt(grid, home, timeS);
         }
 
         /// <summary>
