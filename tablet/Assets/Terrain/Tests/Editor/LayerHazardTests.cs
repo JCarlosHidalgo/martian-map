@@ -5,7 +5,7 @@ namespace MartianMap.Terrain.Tests
     /// <summary>
     /// The layers reach routing as soft-ground hazard. The fixture-like tile has thermal =
     /// north·255 (TI = 100 + 2·sample, so TI &lt; 150 in the southern ~10 %) and a 230/40
-    /// thermal IR checkerboard.
+    /// thermal IR checkerboard (half dark, so the darkest 10 % is every dark square).
     /// </summary>
     public sealed class LayerHazardTests
     {
@@ -27,7 +27,25 @@ namespace MartianMap.Terrain.Tests
         }
 
         [Test]
-        public void ThermalIrIsTheFallbackWithoutThermalInertia()
+        public void QualitativeThermalInertiaMarksTheLowestTenPercent()
+        {
+            var zone = SyntheticZone.CreateFixtureLike();
+            var layer = zone.Zone.Layers.Find(l => l.Id == LayerIds.Thermal);
+            layer.Qualitative = true;
+            layer.Scale = null;
+            layer.Offset = null;
+            var tile = zone.Tiles[0];
+
+            LayerHazard.Apply(zone);
+
+            // thermal = north·255: the southern rows are the lowest relative inertia.
+            Assert.AreEqual(LayerHazard.SoftGround, tile.Hazard[Index(240, 10)], "lowest relative TI: soft ground");
+            Assert.AreEqual(0, tile.Hazard[Index(128, 10)], "median TI: firm ground");
+            Assert.AreEqual(0, tile.Hazard[Index(10, 10)], "highest TI: firm ground");
+        }
+
+        [Test]
+        public void NightThermalIrIsTheFallbackWithoutThermalInertia()
         {
             var zone = SyntheticZone.CreateFixtureLike();
             zone.Zone.Layers.RemoveAll(l => l.Id == LayerIds.Thermal);
@@ -35,9 +53,9 @@ namespace MartianMap.Terrain.Tests
 
             LayerHazard.Apply(zone);
 
-            // Checkerboard of 32 samples: (0, 0) is bright (230), (0, 32) is dark (40).
-            Assert.AreEqual(LayerHazard.SoftGround, tile.Hazard[Index(0, 0)], "brightest IR: soft ground");
-            Assert.AreEqual(0, tile.Hazard[Index(0, 32)], "dark IR: firm ground");
+            // Checkerboard of 32 samples: (0, 0) is warm (230), (0, 32) is cold (40).
+            Assert.AreEqual(LayerHazard.SoftGround, tile.Hazard[Index(0, 32)], "coldest night IR: soft ground");
+            Assert.AreEqual(0, tile.Hazard[Index(0, 0)], "warm night IR: firm ground");
         }
 
         [Test]

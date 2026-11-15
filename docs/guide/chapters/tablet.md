@@ -910,9 +910,11 @@ Reglas de la orquestación *(equipo)*:
   del arranque la cambia por la zona `synth` del contrato, que es la que usa la misión sintética
   del `HUD`. Si llega una zona del hábitat, la sustituye.
 - **Las capas entran en la ruta como peligro** *(equipo, inferencia de diseño)*: `Terrain`
-  convierte la inercia térmica en peligro ámbar (128) donde baja de 150 J m⁻² K⁻¹ s⁻½, que indica
-  polvo o arena suelta; si la zona no trae inercia térmica, usa el 10 % más brillante del
-  infrarrojo térmico. La óptica no se usa: su brillo sigue a la iluminación y a las sombras, no a
+  convierte la inercia térmica baja en peligro ámbar (128), porque indica polvo o arena suelta.
+  Con inercia cuantitativa (con `scale` y `offset`), el umbral es 150 J m⁻² K⁻¹ s⁻½; con inercia
+  cualitativa (THEMIS qualTI), es el 10 % más bajo de la zona. Si la zona no trae inercia térmica,
+  usa el 10 % más frío (oscuro) del infrarrojo térmico, que se toma como nocturno: el material
+  suelto guarda poco calor y es lo más frío de noche. La óptica no se usa: su brillo sigue a la iluminación y a las sombras, no a
   si el terreno se puede caminar. El peligro de un tile es
   `max(base de Tierra, zonas de P5, ediciones, capas)`; la fórmula del costo no cambia y sigue
   teniendo una sola implementación, en `Routing`.
