@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "bundle_id": "01M7G19RHYPJPM8BSTS8V7PXGZ",
+  "source": "earth",
+  "zone_id": "gale",
+  "zone_version": 1,
+  "kind": "zone_full",
+  "created_utc": "2026-11-15T16:40:27.454078Z",
+  "delay_s": 0,
+  "deliver_at_utc": "2026-11-15T16:40:27.454078Z",
+  "files": [
+    {
+      "path": "data/conditions.json",
+      "size": 506,
+      "sha256": "cf8a4415d60056b1b71ce68bdcbe17db5f9841464db7922063e84ea08b58e7a9",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/pov/synthetic_view.jpg",
+      "size": 14781,
+      "sha256": "ced04a52cc808a6089badc50974fd1eaaf37d2a603d44b5b47af885f37d1a23c",
+      "media_type": "image/jpeg"
+    },
+    {
+      "path": "data/tiles/0/0/0/hazard.r8",
+      "size": 66049,
+      "sha256": "966a39a8da05a55d113ba6e1fd8c82509b51fd0381083bceffc3b4e3e1f11b10",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/0/height.r16",
+      "size": 132098,
+      "sha256": "23e46157b82a07d54cdb94fb46a8185e972c582974a975a098b7d01369046891",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/0/ortho.r8",
+      "size": 66049,
+      "sha256": "ec721081fc7c9483b6ebb03c008ea3b2ccb3eb121046c5b3efeb61375a8755d2",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/0/roughness.r8",
+      "size": 66049,
+      "sha256": "3434048d64829572c06c997e40a20a8494f453e1c84888269a8fb86581f434e6",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/0/slope.r8",
+      "size": 66049,
+      "sha256": "4f8fd640726e55e9437c0f3e7a87b8aca1733cbc2a3e13ea36668addcfdddea9",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/0/thermal.r8",
+      "size": 66049,
+      "sha256": "c1293593dda664cb0a392490344c05a6042a25b78371cdbb91dec24ee291cb80",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/0/thermal_ir.r8",
+      "size": 66049,
+      "sha256": "9d8428aa0cc00fe17a49cd954d7a2ccda9dfe356f7610b4fbc7289069849073b",
+      "media_type": "application/octet-stream"
+    },
+    {
+      "path": "data/tiles/0/0/0/tile.json",
+      "size": 1487,
+      "sha256": "714f6a999f5ee5e23e0424130d32d121a231e77595ba79a681d56eaa08b18866",
+      "media_type": "application/json"
+    },
+    {
+      "path": "data/zone.json",
+      "size": 1948,
+      "sha256": "d3d45f66ab5c2c2f808a246ca58cde483cced25b81f578aba3cd0829490b1f78",
+      "media_type": "application/json"
+    }
+  ],
+  "payload_oxum": "547114.11"
+}
