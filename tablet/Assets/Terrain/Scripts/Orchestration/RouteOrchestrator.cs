@@ -366,7 +366,8 @@ namespace MartianMap.Terrain
             return true;
         }
 
-        private static TileRasters ToRasters(TileData tile)
+        /// <summary>A Terrain tile as Routing reads it (C1 as delivered: north-up rows, scale and offset).</summary>
+        public static TileRasters ToRasters(TileData tile)
         {
             var origin = tile.OriginEnuM;
             return new TileRasters(new EnuPoint(origin.x, origin.y), tile.Height, tile.Info.Height.Scale,
