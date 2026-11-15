@@ -85,8 +85,11 @@ in the edit merge. Never reuse a value on two devices.
 
 The author is entered on the HUD's author screen and saved by `AppConfig.Save`.
 
-`Assets/StreamingAssets/config.default.json` holds the habitat URLs (Prism on port 4010, file stub
-on 4011). Replace the placeholder IP with the habitat laptop's IP on the team router.
+`Assets/StreamingAssets/config.default.json` holds the habitat URLs. The real habitat serves JSON
+and files on the same port, so both point to **port 8000**: `habitat_url` = `files_url` =
+`http://<habitat laptop IP>:8000`. Replace the placeholder IP with the habitat laptop's IP on the
+team router, or set it on the tablet in the HUD's settings screen. To test against the mocks
+instead, use Prism on 4010 for `habitat_url` and the file stub on 4011 for `files_url`.
 
 ## Read the guide
 

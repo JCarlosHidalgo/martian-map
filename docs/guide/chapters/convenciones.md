@@ -351,7 +351,8 @@ C3 tiene dos mocks, porque **Prism no sirve binarios**: Prism 5.16.0 contesta a 
   P2 en H0 y es el mock de tiles desde entonces. Sirve el tile de
   `contracts/fixtures/tile_synth_0_0_0/` como el tile `0/0/0` de la zona `synth` *(equipo)*.
 - La app lee de su configuración dos URL, `habitat_url` y `files_url` *(equipo)*: con los mocks
-  apuntan a 4010 y 4011; con el hábitat real valen lo mismo.
+  apuntan a 4010 y 4011; con el hábitat real, las dos apuntan al puerto 8000, porque el servidor
+  sirve en el mismo puerto el JSON y los archivos. `config.default.json` trae las del hábitat real.
 - Validación de la implementación real: `prism proxy` para los endpoints JSON; los de archivos se
   comparan por `sha256` con el fixture *(equipo)*.
 - Prism 5.16.0 solo sirve `text/*` estático, sin streaming (leído en
