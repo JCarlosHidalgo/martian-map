@@ -369,11 +369,6 @@ namespace MartianMap.Routing
                 throw new NotImplementedException("Orienteering (OP) comes with greedy + 2-opt, in H24–36.");
             }
 
-            if (stops.Length > StopOrder.MaxExact)
-            {
-                throw new NotImplementedException($"More than {StopOrder.MaxExact} stops need greedy + 2-opt, in H24–36.");
-            }
-
             int k = stops.Length;
             int startNode = NearestNode(grid, start);
             int homeNode = NearestNode(grid, homeField.Home);
@@ -420,7 +415,10 @@ namespace MartianMap.Routing
                 reachedFromStart[a] = fromStart[reachable[a]];
             }
 
-            int[] best = StopOrder.Order(reachedFromStart, between, homeReached ? toHome : null);
+            double[] back = homeReached ? toHome : null;
+            int[] best = m <= StopOrder.MaxExact
+                ? StopOrder.Order(reachedFromStart, between, back)
+                : StopOrder.Heuristic(reachedFromStart, between, back);
             var order = new int[k];
             for (int a = 0; a < m; a++)
             {
