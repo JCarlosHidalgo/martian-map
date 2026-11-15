@@ -19,6 +19,35 @@ home/stop coordinates outside the zone bounds. When `base_enu_m` is omitted, it 
 `ZoneInfo.HabitatEnuM`. Bounds checks do not establish terrain walkability: that requires
 the actual tile/routing integration. Unknown fields are ignored when reading.
 
+## Route alternatives
+
+ROUTE OPTIONS opens a comparison of Fastest, Safest, and Gentlest in C4 order. Choosing a
+card sends `RouteRequested` through Terrain with the current astronaut position, unchanged
+return base, mission stops, mode, and budget. PLAN ROUTE keeps that alternative for later
+requests. A received `RouteSelected` marks the returned selection and fills all three cards.
+
+Each result shows P50 ETA with its P10-P90 range, absorbed dose, return availability, amber
+distance, and accumulated height change. Height change includes climbing and descending.
+Amber and height metrics are sums of the existing C4 leg values, including the return leg;
+the HUD does not calculate paths, costs, dose limits, or penalties. Distances use metres
+below 1000 m and kilometres with two decimals thereafter. Unreachable, missing, or invalid
+results show unavailable instead of zero-cost routes.
+
+Starting a new request, moving the astronaut, or loading a zone clears the old comparison.
+Controls wait for a matching mission and zone. Cards show REQUESTED until Terrain returns
+the selection; they do not label a request as a computed result.
+
+The sandbox loads terrain fixtures but does not implement Terrain's route orchestration.
+Without a `RouteRequested` consumer, the panel stays waiting. Tests feed P3's actual
+`expected_plan.json` through C5 to check the result display without inventing a live route.
+In the app, P4's `TerrainBootstrap` installs `RouteOrchestrator` to answer requests and
+return `RouteSelected`. Its current fallback uses the fixed synthetic fixture while P3's
+route methods remain unimplemented. That fallback is not a computed route from a moved
+astronaut. Keep this limitation explicit when demonstrating the synthetic zone.
+
+Alternative-only changes may return synchronously from Terrain's plan cache. The comparison
+enters its pending state before emitting the request, so an immediate result stays visible.
+
 ## Layers and radiation
 
 The science panel controls topographic contours independently of the mutually exclusive
@@ -111,10 +140,12 @@ Close the editor first when running batch tests against the same project.
 ## Integration
 
 P4 can keep the existing HUD prefab instance in `Main.unity`: it retains its original GUID.
-The prefab has `MissionHud`, `ScienceHud`, `SettingsHud`, `AstronautHud`, an assigned mission asset, and a font. Its Canvas and
+The prefab has `MissionHud`, `ScienceHud`, `SettingsHud`, `AstronautHud`, and
+`RouteAlternativesHud`, an assigned mission asset, and a font. Its Canvas and
 controls are created at runtime. There must be only one active EventSystem; the HUD creates
 one only when the scene does not already have one.
 
 This increment covers the mission panel, route handoff, layer controls, and source-rate
-presentation, settings, author registration, and simulated astronaut relocation. POV media
+presentation, settings, author registration, simulated astronaut relocation, and route
+comparison controls. POV media
 and edit tools remain separate work.
