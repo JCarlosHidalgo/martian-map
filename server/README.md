@@ -15,8 +15,14 @@ Imported and duplicate bundles move to `done/`; rejected bundles move to `reject
 
 The C1b, C1 zone and C6 conditions schemas and shared bundle fixture are still pending from their
 producers. `importer.py` marks the exact points where those documents must be validated once they
-arrive. The synthetic tests exercise the documented shape in the meantime. `POST /edits` and
-`GET /zones/{id}/changes` belong to the edit milestone; Prism remains their mock.
+arrive. The synthetic tests exercise the documented shape in the meantime.
+
+`POST /edits` validates against the shared Edit schema and stores accepted edits in SQLite.
+`GET /zones/{id}/changes` sends current winners with a resumable global sequence cursor.
+For now, a zone publication delivers a conservative snapshot of all current tile references and
+conditions on its final page. When C1/C6 fixtures arrive, this must be narrowed to the tile
+versions and conditions that actually changed. The golden merge fixture is tested through HTTP;
+the C# `Edits.Apply` equivalence test remains with P3.
 
 Run `uv run pytest -q` for the synthetic integration tests. They stage temporary zone and
 conditions JSON because the shared C1 zone and C6 conditions fixtures have not arrived yet.
