@@ -384,6 +384,20 @@ class ContractValidator:
             for index, child in enumerate(value):
                 self._openapi_examples(child, f"{pointer}/{index}", owner)
 
+    def _check_conditions(self, path: Path, conditions: dict[str, Any]) -> None:
+        def utc_key(value: str) -> tuple[str, str]:
+            # Schema validation guarantees normalized UTC and at most seven fractional digits.
+            # Compare text components to preserve DateTime ticks beyond Python microseconds.
+            timestamp = value[:-1] if value.endswith("Z") else value[:-6]
+            seconds, _, fraction = timestamp.partition(".")
+            return seconds, fraction.ljust(7, "0")
+
+        for index, modifier in enumerate(conditions.get("modifiers", [])):
+            _require(
+                utc_key(modifier["valid_from"]) < utc_key(modifier["valid_to"]),
+                f"Radiation modifier requires valid_from < valid_to: {path} modifiers[{index}]",
+            )
+
     def _check_openapi(self) -> None:
         path = self.root / "openapi.yaml"
         if not path.exists():
@@ -414,6 +428,8 @@ class ContractValidator:
                 self._check_zone(path, document)
             elif path.name == "bundle.json":
                 self._check_bundle(path, document)
+            elif path.name == "conditions.json" and "conditions.schema.json" in self.schemas:
+                self._check_conditions(path, document)
         self._check_copies()
         self._check_assets(files)
         self._check_openapi()
