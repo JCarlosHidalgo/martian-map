@@ -24,7 +24,7 @@ namespace MartianMap.Routing
         /// <see cref="Cost.SegmentCostS"/> (the time at <paramref name="v0Mps"/> plus the amber penalty
         /// times <paramref name="amberMult"/>) is at most the sum of the path's edges it replaces,
         /// within <see cref="TieRel"/>; a blocked one is +∞ and never accepted. So the smoothed path
-        /// never costs more than <paramref name="path"/>. A path of one or two nodes is returned as a
+        /// never costs more than <paramref name="path"/>, beyond <see cref="TieRel"/> per shortcut. A path of one or two nodes is returned as a
         /// copy.
         /// </summary>
         internal static int[] Smooth(CostGrid g, int[] path, double v0Mps, CostParams p, double amberMult)

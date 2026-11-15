@@ -71,18 +71,23 @@ namespace MartianMap.Routing
     /// value is its P90 time without it, like <c>eta_s</c>. Only <see cref="Router.ReturnField"/> makes one, and it carries the
     /// <see cref="Grid"/> and the <see cref="Home"/> it was computed for, so
     /// <see cref="Router.OrderStops"/> cannot be given a field of another grid or another base.
-    /// It is immutable: the constructor copies the array.
+    /// It is immutable: the constructor copies the array, and <see cref="Router.ReturnField"/> hands
+    /// over through <see cref="Adopt"/> an array of its own that nobody else holds.
     /// </summary>
     public sealed class Field
     {
         internal Field(CostGrid grid, EnuPoint home, float[] timeS)
-            : this(grid ?? throw new ArgumentNullException(nameof(grid)), home, ReadOnly.Array(timeS, grid.Width * grid.Height, nameof(timeS)), true)
+            : this(grid ?? throw new ArgumentNullException(nameof(grid)), home, ReadOnly.Array(timeS, grid.Width * grid.Height, nameof(timeS)), adopt: true)
         {
         }
 
-        private Field(CostGrid grid, EnuPoint home, float[] timeS, bool adopted)
+        /// <summary>
+        /// Keeps <paramref name="timeS"/> as it is: both callers have checked it and own it.
+        /// <paramref name="adopt"/> only tells this overload apart from the copying one.
+        /// </summary>
+        private Field(CostGrid grid, EnuPoint home, float[] timeS, bool adopt)
         {
-            Grid = grid ?? throw new ArgumentNullException(nameof(grid));
+            Grid = grid;
             Home = home;
             TimeSArray = timeS;
         }
@@ -99,17 +104,7 @@ namespace MartianMap.Routing
                 throw new ArgumentNullException(nameof(grid));
             }
 
-            if (timeS == null)
-            {
-                throw new ArgumentNullException(nameof(timeS));
-            }
-
-            if (timeS.Length != grid.Width * grid.Height)
-            {
-                throw new ArgumentException($"Expected {grid.Width * grid.Height} values.", nameof(timeS));
-            }
-
-            return new Field(grid, home, timeS, true);
+            return new Field(grid, home, ReadOnly.Exactly(timeS, grid.Width * grid.Height, nameof(timeS)), adopt: true);
         }
 
         /// <summary>The grid the field was computed on.</summary>
