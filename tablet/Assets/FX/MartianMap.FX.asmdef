@@ -2,6 +2,8 @@
   "name": "MartianMap.FX",
   "rootNamespace": "MartianMap.FX",
   "references": [
+    "MartianMap.Edits",
+    "MartianMap.Routing",
     "MartianMap.Terrain",
     "Unity.RenderPipelines.Core.Runtime",
     "Unity.RenderPipelines.Universal.Runtime"

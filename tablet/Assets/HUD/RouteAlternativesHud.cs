@@ -23,6 +23,7 @@ namespace MartianMap.HUD
         private bool _hasResults;
         private bool _pending;
         private bool _wasReady;
+        private bool _editing;
 
         private void Awake()
         {
@@ -37,6 +38,7 @@ namespace MartianMap.HUD
             _mission.RouteRequesting += OnRouteRequesting;
             MapEvents.ZoneLoaded += OnZoneLoaded;
             MapEvents.AstronautMoved += OnAstronautMoved;
+            MapEvents.EditModeChanged += OnEditModeChanged;
         }
 
         private void OnDisable()
@@ -45,11 +47,12 @@ namespace MartianMap.HUD
             _mission.RouteRequesting -= OnRouteRequesting;
             MapEvents.ZoneLoaded -= OnZoneLoaded;
             MapEvents.AstronautMoved -= OnAstronautMoved;
+            MapEvents.EditModeChanged -= OnEditModeChanged;
         }
 
         private void LateUpdate()
         {
-            bool ready = _mission.AstronautPosition.HasValue;
+            bool ready = _mission.AstronautPosition.HasValue && !_editing;
             if (ready != _wasReady)
             {
                 if (!ready)
@@ -64,11 +67,23 @@ namespace MartianMap.HUD
 
         public void Open()
         {
+            if (_editing)
+            {
+                return;
+            }
+
             Refresh();
             _modal.SetActive(true);
         }
 
         public void Close() => _modal.SetActive(false);
+
+        private void OnEditModeChanged(EditModeChanged message)
+        {
+            _editing = message.On;
+            Close();
+            Refresh();
+        }
 
         private void OnZoneLoaded(ZoneLoaded message) => ResetResults(HudStrings.RouteOptionsEmpty);
         private void OnAstronautMoved(AstronautMoved message) => ResetResults(HudStrings.RoutePositionChanged);
@@ -117,7 +132,7 @@ namespace MartianMap.HUD
 
         private void Refresh()
         {
-            bool ready = _mission.AstronautPosition.HasValue;
+            bool ready = _mission.AstronautPosition.HasValue && !_editing;
             _launcher.interactable = ready;
             for (int index = 0; index < 3; index++)
             {

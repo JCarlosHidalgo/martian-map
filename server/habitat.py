@@ -16,8 +16,9 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from store import ZoneStore
 from importer import BundleImporter
+from edit_validation import valid_edit
+from store import InvalidEditBatch, ZoneStore
 
 ZONE_ID = re.compile(r"[a-z][a-z0-9-]{1,31}\Z")
 FILE_NAME = re.compile(r"[a-zA-Z0-9_.-]+\Z")
@@ -30,6 +31,7 @@ def problem(status: int, code: str, detail: str) -> JSONResponse:
     titles = {
         400: "Bad Request",
         404: "Not Found",
+        413: "Content Too Large",
         422: "Unprocessable Content",
         503: "Service Unavailable",
     }
@@ -52,6 +54,11 @@ def read_json(path: Path) -> dict | None:
 def valid_name(value: str) -> bool:
     """Accept one safe path segment, never a parent directory."""
     return value not in (".", "..") and FILE_NAME.fullmatch(value) is not None
+
+
+def reject_nonfinite(value: str) -> None:
+    """Reject JavaScript number spellings outside JSON, such as NaN."""
+    raise ValueError(f"Non-finite JSON value: {value}")
 
 
 def serve_file(path: Path, media_type: str) -> FileResponse:
@@ -191,6 +198,47 @@ def create_app(data_root: Path | None = None, spool_root: Path | None = None) ->
         if not path.is_file():
             return problem(404, "not_found", "POV image not found")
         return serve_file(path, "image/jpeg")
+
+    @app.post("/edits")
+    async def post_edits(request: Request) -> Response:
+        body = await request.body()
+        if len(body) > 1024 * 1024:
+            return problem(413, "payload_too_large", "Edit batch exceeds 1 MiB")
+        if request.headers.get("content-type", "").split(";")[0].strip() != "application/json":
+            return problem(422, "invalid_body", "Expected application/json")
+        try:
+            document = json.loads(body, parse_constant=reject_nonfinite)
+        except (ValueError, UnicodeError):
+            return problem(422, "invalid_body", "Invalid JSON body")
+        if (
+            not isinstance(document, dict)
+            or set(document) != {"edits"}
+            or not isinstance(document["edits"], list)
+        ):
+            return problem(422, "invalid_body", "Expected an edits array")
+        if len(document["edits"]) > 200:
+            return problem(413, "payload_too_large", "Edit batch exceeds 200 edits")
+        if not all(valid_edit(edit) for edit in document["edits"]):
+            return problem(422, "invalid_body", "Edit does not match the shared schema")
+        try:
+            acks = store.post_edits(document["edits"])
+        except InvalidEditBatch as error:
+            return problem(422, "invalid_body", str(error))
+        return JSONResponse({"acks": acks}, media_type="application/json; charset=utf-8")
+
+    @app.get("/zones/{id}/changes")
+    def get_changes(
+        id: str, since: int = Query(ge=0), limit: int = Query(default=500, ge=1, le=1000)
+    ) -> Response:
+        if ZONE_ID.fullmatch(id) is None:
+            return problem(400, "bad_parameter", "Invalid zone id")
+        if store.zone_version(id) is None:
+            return problem(404, "not_found", "Zone not found")
+        try:
+            changes = store.changes(id, since, limit)
+        except (OSError, UnicodeError, json.JSONDecodeError, KeyError):
+            return problem(503, "habitat_unavailable", "Zone files are not ready")
+        return JSONResponse(changes, media_type="application/json; charset=utf-8")
 
     return app
 

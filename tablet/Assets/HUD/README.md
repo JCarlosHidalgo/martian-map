@@ -102,6 +102,43 @@ English message. `ConfigChanged` refreshes saved values in the form.
 `SettingsHud.CanEdit` exposes the registration state for the forthcoming HUD edit tools.
 Those tools must check it before entering edit mode or emitting an edit request.
 
+## Editing hazards, obstacles, and notes
+
+EDIT MAP opens the editing panel only after a zone is loaded and this tablet has a saved
+author. Settings must be closed. Editing emits `EditModeChanged`; Terrain owns disabling
+one-finger camera panning. Tap vertices for a hazard or obstacle; tap a position and enter
+text for a note. Undo removes the last point, and Redraw clears the geometry without
+changing a selected entity's identity. Two-finger or middle-button panning remains available.
+Drags, long holds, multiple touches, and UI presses do not add vertices. Opening settings,
+disabling the HUD, or changing zone exits editing and discards the draft.
+
+New hazards use level 128 (amber) or 255 (red). Obstacles carry no level field and mean 255;
+notes carry only a point and literal text. PREVIOUS and NEXT ENTITY browse the authoritative
+`EntitiesChanged` list, retaining each entity's operation, id, and creator. Live contours and
+notes remain visible outside editing. Draft geometry is cyan; note markup is never executed.
+Full note text is available in the editor; map labels may ellipsize for readability.
+
+SEND EDIT converts coordinates to signed integer 1/256 metres, with midpoint rounding away
+from zero, and validates a simple ring without duplicate, overlapping, crossing, or zero-area
+edges. The editor accepts 3-128 polygon vertices. This is a HUD input limit, not a change to
+the C3 schema. Existing larger polygons can still be deleted without truncating their payload.
+The HUD emits only `EditRequested`; Terrain completes uuid, Lamport clock, author, creator,
+and zone. Sending does not claim server acceptance or mutate a raster.
+
+Reducing another tablet's hazard, deleting its hazard, or deleting its obstacle requires a
+separate confirmation click. A saved `confirmed` flag is never inherited. Deletion retains
+the last complete payload and operation, ignoring unsaved draft changes. Entity updates
+invalidate stale confirmations. Rejections with `confirmation_required` reopen the exact
+submitted request when its current target is known. If differing requests for the same id
+were sent, C5's entity-only rejection cannot identify which payload failed: the HUD asks for
+manual review instead of confirming an unidentified request. Missing target data also require
+review. No automatic retry sets `confirmed`.
+
+`EditEngine.Apply` and `LiveEntities` are still P3 stubs at this increment. P4 can log and queue
+requests, but the raster and authoritative entity list will not update until P3 delivers them.
+HUDSandbox has no edit orchestrator; tests supply entity lists and acknowledgements through
+C5. The HUD does not replace Edits with an optimistic local implementation.
+
 ## Regenerate the sandbox
 
 Use **MartianMap > HUD > Create mission sandbox**. This updates only the HUD prefab,
@@ -124,6 +161,10 @@ settings, rejected addresses, storage failures, cancellation, and configuration 
 without changing the developer's saved configuration.
 Astronaut tests cover hold timing/cancellation, initial placement, invalid moves, zone
 changes, unchanged return bases, and the real Input System mouse-to-map flow in the sandbox.
+Editing tests cover fixed-point boundaries, simple-ring geometry, every payload type,
+confirmation/cancellation, tombstones, concurrent entity updates, rejection handling,
+registration, rendering, and actual map taps. In the editor they export C3 examples to a
+unique file in the OS temporary directory, logging its path for independent schema checks.
 
 From PowerShell at the repository root:
 
@@ -141,11 +182,10 @@ Close the editor first when running batch tests against the same project.
 
 P4 can keep the existing HUD prefab instance in `Main.unity`: it retains its original GUID.
 The prefab has `MissionHud`, `ScienceHud`, `SettingsHud`, `AstronautHud`, and
-`RouteAlternativesHud`, an assigned mission asset, and a font. Its Canvas and
+`RouteAlternativesHud`, `EditHud`, an assigned mission asset, and a font. Its Canvas and
 controls are created at runtime. There must be only one active EventSystem; the HUD creates
 one only when the scene does not already have one.
 
 This increment covers the mission panel, route handoff, layer controls, and source-rate
 presentation, settings, author registration, simulated astronaut relocation, and route
-comparison controls. POV media
-and edit tools remain separate work.
+comparison controls, and edit tools. POV media remain separate work.
