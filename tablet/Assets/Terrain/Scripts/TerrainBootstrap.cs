@@ -70,6 +70,18 @@ namespace MartianMap.Terrain
             EnsureComponent<RouteOrchestrator>();
             EnsureComponent<EditOrchestrator>();
             EnsureComponent<HabitatClient>();
+
+            // Developer tools in every scene with Terrain (Main included), once: keyboard shortcuts
+            // and the F1 panel. The sandbox scene already carries its own shortcuts object.
+            if (FindAnyObjectByType<TerrainSandboxKeys>() == null)
+            {
+                gameObject.AddComponent<TerrainSandboxKeys>();
+            }
+
+            if (FindAnyObjectByType<TerrainDebugPanel>() == null)
+            {
+                gameObject.AddComponent<TerrainDebugPanel>();
+            }
         }
 
         private T EnsureComponent<T>() where T : Component
