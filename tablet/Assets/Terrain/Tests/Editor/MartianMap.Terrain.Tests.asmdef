@@ -3,6 +3,8 @@
   "rootNamespace": "MartianMap.Terrain.Tests",
   "references": [
     "MartianMap.Terrain",
+    "MartianMap.Edits",
+    "MartianMap.Routing",
     "UnityEngine.TestRunner",
     "UnityEditor.TestRunner"
   ],

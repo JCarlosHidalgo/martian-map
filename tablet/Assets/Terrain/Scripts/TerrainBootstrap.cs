@@ -41,11 +41,15 @@ namespace MartianMap.Terrain
 
         private LocalCache _cache;
         private bool _loading;
+        private bool _costParamsLoaded;
 
         public ZoneSource Source => source;
 
         /// <summary>The local cache, or null before <see cref="ZoneSource.Cache"/> was first used.</summary>
         public LocalCache Cache => _cache;
+
+        /// <summary>The <c>cost_params.json</c> in use (C4), or null if it could not be read.</summary>
+        public MartianMap.Routing.CostParams CostParams { get; private set; }
 
         private void Awake()
         {
@@ -92,6 +96,7 @@ namespace MartianMap.Terrain
         {
             source = from;
             var started = Time.realtimeSinceStartup;
+            await LoadCostParamsOnceAsync();
             LoadedZone zone;
             switch (from)
             {
@@ -184,6 +189,30 @@ namespace MartianMap.Terrain
             finally
             {
                 _loading = false;
+            }
+        }
+
+        /// <summary>
+        /// Reads <c>cost_params.json</c> from StreamingAssets/fixtures (C6: at run time it is a copy of
+        /// the fixture) and hands its hazard thresholds to the map. Without it the map keeps 96/192.
+        /// </summary>
+        private async Task LoadCostParamsOnceAsync()
+        {
+            if (_costParamsLoaded)
+            {
+                return;
+            }
+
+            _costParamsLoaded = true;
+            try
+            {
+                CostParams = await FixtureLoader.LoadCostParamsAsync();
+                map.ApplyCostParams(CostParams);
+                Debug.Log($"[Terrain] cost params loaded hazard_amber_min={CostParams.HazardAmberMin} hazard_red_min={CostParams.HazardRedMin}");
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning($"[Terrain] cost params unavailable error={exception.Message}; keeping default hazard thresholds");
             }
         }
 
