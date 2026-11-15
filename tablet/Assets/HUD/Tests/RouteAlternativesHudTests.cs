@@ -114,8 +114,9 @@ namespace MartianMap.HUD
                     Does.Contain(HudStrings.RouteOptionSelected).And.Contain("Amber 12 m").And.Contain("Height change 3 m"));
                 Assert.That(buttons.Single(button => button.name == "Alternative Safest").GetComponentInChildren<TMP_Text>().text,
                     Does.Contain("Return unavailable"));
-                Assert.That(root.GetComponentsInChildren<TMP_Text>().Single(text => text.name == "Route").text,
-                    Does.Contain("Gentlest").And.Contain("Height change 3 m"));
+                // The mission panel now lists one button per alternative (distance, time) instead of a summary.
+                Assert.That(root.GetComponentsInChildren<Button>().Single(button => button.name == "Route option 2")
+                    .GetComponentInChildren<TMP_Text>().text, Does.Contain("Gentlest"));
                 mission.RequestRoute();
                 Assert.That(observed.Value.Alternative, Is.EqualTo(Alternative.Gentlest));
                 Assert.That(root.GetComponentsInChildren<TMP_Text>().Single(text => text.name == "Route").text,
@@ -206,8 +207,9 @@ namespace MartianMap.HUD
                 Assert.That(root.GetComponentsInChildren<TMP_Text>().Any(text => text.text.Contains(HudStrings.RouteOptionsInvalid)), Is.True);
                 MapEvents.Emit(new RouteSelected(plans, (Alternative)99, Array.Empty<Vector3>()));
                 MapEvents.Emit(new RouteSelected(new Plan[] { null, Plan(), Plan() }, Alternative.Fastest, Array.Empty<Vector3>()));
-                Assert.That(root.GetComponentsInChildren<TMP_Text>().Single(text => text.name == "Route").text,
-                    Does.Contain(HudStrings.RouteUnavailable));
+                // A plan without usable legs is listed as unreachable on its option button.
+                Assert.That(root.GetComponentsInChildren<Button>().Single(button => button.name == "Route option 0")
+                    .GetComponentInChildren<TMP_Text>().text, Does.Contain("unreachable"));
             }
             finally
             {

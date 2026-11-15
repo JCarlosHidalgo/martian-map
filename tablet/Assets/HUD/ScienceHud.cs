@@ -105,12 +105,12 @@ namespace MartianMap.HUD
             _flags.gameObject.SetActive(_flags.text.Length > 0);
             _forbush.gameObject.SetActive(Reading?.HasForbush == true);
             _dashedOutline.SetActive(Reading?.IsModelled == true);
-            _derivationButton.gameObject.SetActive(Reading?.IsModelled == true);
+            _derivationButton.gameObject.SetActive(false); // hidden at the team's request
             _derivationButton.GetComponentInChildren<TMP_Text>(true).text = _showDerivation ? HudStrings.HideDerivation : HudStrings.ShowDerivation;
             _derivation.text = Reading?.DerivationText ?? string.Empty;
-            _derivation.gameObject.SetActive(Reading?.IsModelled == true && _showDerivation);
-            _synthetic.gameObject.SetActive(_conditions != null &&
-                (_zone?.ZoneId == "synth" || _conditions.SourceId.StartsWith("synthetic-", StringComparison.Ordinal)));
+            _derivation.gameObject.SetActive(false); // hidden at the team's request
+            // No "synthetic" text on screen at the team's request.
+            _synthetic.gameObject.SetActive(false);
         }
 
         private void OnZoneLoaded(ZoneLoaded message)
@@ -271,6 +271,8 @@ namespace MartianMap.HUD
             Label("Rate heading", card, HudStrings.SourceDoseRate, 17);
             _rate = Label("Dose rate", card, HudStrings.RadiationUnavailable, 24);
             _source = Label("Radiation source", card, string.Empty, 17);
+            // Hidden at the team's request: the card shows no source line nor derivation.
+            _source.gameObject.SetActive(false);
             _modifiers = Label("Active modifiers", card, string.Empty, 19);
             _forbush = Label("Forbush rule", card, HudStrings.ForbushRule, 17);
             _forbush.gameObject.SetActive(false);
@@ -278,7 +280,7 @@ namespace MartianMap.HUD
             {
                 _showDerivation = !_showDerivation;
                 _derivationButton.GetComponentInChildren<TMP_Text>().text = _showDerivation ? HudStrings.HideDerivation : HudStrings.ShowDerivation;
-                _derivation.gameObject.SetActive(_showDerivation);
+                _derivation.gameObject.SetActive(false); // derivation hidden at the team's request
             });
             _derivationButton.gameObject.SetActive(false);
             _derivation = Label("Derivation text", card, string.Empty, 18);
