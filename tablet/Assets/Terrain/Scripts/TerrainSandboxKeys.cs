@@ -9,7 +9,7 @@ namespace MartianMap.Terrain
     /// as the HUD will send them.
     /// <list type="bullet">
     /// <item>1 topo · 2 hazard · 3 heat · 4 ortho · 5 thermal · 6 thermal_ir</item>
-    /// <item>H: fake heat field from the habitat (straight line at 1 m/s, a stand-in for ReturnField)</item>
+    /// <item>H: toggles a fake heat field from the habitat (straight line at 1 m/s, a stand-in for ReturnField)</item>
     /// <item>C: local cache (preloaded zones) · N: next cached zone · Z: demo zone · X: contract tile (P1's tile_synth_0_0_0)</item>
     /// </list>
     /// </summary>
@@ -62,7 +62,15 @@ namespace MartianMap.Terrain
 
             if (keyboard.hKey.wasPressedThisFrame && map.Current != null)
             {
-                FakeHeatField(map.Current.Zone);
+                var heatOn = map.LayerStates.TryGetValue(LayerIds.Heat, out var on) && on;
+                if (heatOn)
+                {
+                    MapEvents.Emit(new LayerToggled(LayerIds.Heat, false));
+                }
+                else
+                {
+                    FakeHeatField(map.Current.Zone);
+                }
             }
 
             if (bootstrap != null && keyboard.cKey.wasPressedThisFrame)

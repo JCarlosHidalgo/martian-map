@@ -85,6 +85,8 @@ namespace MartianMap.Terrain
             var ortho = new byte[S * S];
             var thermal = new byte[S * S];
             var thermalIr = new byte[S * S];
+            var slope = new byte[S * S];
+            var roughness = new byte[S * S];
             var e0 = tx * TileData.Cells;
             var n0 = ty * TileData.Cells;
 
@@ -103,6 +105,8 @@ namespace MartianMap.Terrain
                     var albedo = field.Albedo(e, n);
                     var sun = field.SunFacing(e, n);
                     hazard[i] = slopeDeg > 15f || rough > 0.85f ? (byte)255 : slopeDeg > 11f ? (byte)110 : (byte)0;
+                    slope[i] = (byte)Mathf.Clamp(Mathf.RoundToInt(slopeDeg), 0, 255);
+                    roughness[i] = (byte)Mathf.Clamp(Mathf.RoundToInt(rough * 70f), 0, 255);
 
                     var shade = Mathf.Clamp01(0.55f + sun * 0.6f);
                     ortho[i] = (byte)(Mathf.Clamp01(shade * (0.75f + 0.25f * albedo)) * 255f);
@@ -116,7 +120,7 @@ namespace MartianMap.Terrain
                 [LayerIds.Ortho] = ortho,
                 [LayerIds.Thermal] = thermal,
                 [LayerIds.ThermalIr] = thermalIr,
-            });
+            }, slope, roughness);
         }
 
         private static ZoneInfo NewZone(string id, string name, int tilesX, int tilesY, bool layers)
@@ -159,7 +163,7 @@ namespace MartianMap.Terrain
         }
 
         private static TileData NewTile(ZoneInfo zone, int x, int y, double scale, double offset,
-            ushort[] height, byte[] hazard, Dictionary<string, byte[]> layers)
+            ushort[] height, byte[] hazard, Dictionary<string, byte[]> layers, byte[] slope = null, byte[] roughness = null)
         {
             var info = new TileInfo
             {
@@ -179,7 +183,7 @@ namespace MartianMap.Terrain
                 info.Layers.Add(new TileLayerRef { Id = id, File = $"{id}.r8" });
             }
 
-            return new TileData(info, height, hazard, layers);
+            return new TileData(info, height, hazard, layers, slope, roughness);
         }
 
         private static ConditionsInfo DemoConditions()

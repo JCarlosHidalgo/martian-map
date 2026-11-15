@@ -10,16 +10,16 @@
     "value", "unit", "uncertainty", "basis", "modifiers"
   ],
   "properties": {
-    "schema_version": {"const": 1},
+    "schema_version": {"type": "integer", "const": 1},
     "source_id": {
       "type": "string",
       "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+){2,}$(?![\\s\\S])"
     },
     "t_utc": {"$ref": "#/$defs/utc"},
-    "sol": {"type": "integer", "minimum": 0},
+    "sol": {"type": "integer", "minimum": 0, "maximum": 2147483647},
     "t_valid_utc": {"$ref": "#/$defs/utc"},
     "quantity": {"const": "dose_rate"},
-    "value": {"type": "number", "minimum": 0},
+    "value": {"type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308},
     "unit": {"const": "uGy/h"},
     "uncertainty": {"description": "Fractional uncertainty, from 0 to 1.", "type": "number", "minimum": 0, "maximum": 1},
     "basis": {"enum": ["measured", "modelled"]},
@@ -32,8 +32,8 @@
         "required": ["type", "factor", "valid_from", "valid_to"],
         "properties": {
           "donki_activity_id": {"type": "string", "minLength": 1},
-          "type": {"type": "string", "minLength": 1},
-          "factor": {"type": "number", "exclusiveMinimum": 0},
+          "type": {"type": "string", "minLength": 1, "pattern": "\\S"},
+          "factor": {"type": "number", "exclusiveMinimum": 0, "maximum": 1.7976931348623157e308},
           "valid_from": {"$ref": "#/$defs/utc"},
           "valid_to": {"$ref": "#/$defs/utc"}
         }

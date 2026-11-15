@@ -35,7 +35,7 @@ flowchart TB
     importa --> api
   end
   subgraph tablet["TABLET: Unity 6.3 + URP, Android"]
-    cache["Caché local: tiles C1 como archivos<br/>+ catálogo y log en SQLite"]
+    cache["Caché local: tiles C1 como archivos<br/>+ catálogo y log en JSON"]
     libs["Routing + Edits/apply()<br/>C# puro"]
     escena["Terrain/Main, FX, HUD"]
     cache --> libs --> escena
@@ -98,7 +98,7 @@ Cada cálculo tiene un solo ambiente. Quién es su dueño está en
 | Caché local (archivos + SQLite), llamar a `apply()` al recibir `changes`, refrescar `_HazardTex` | Tablet, `Terrain` | C3, C5 |
 | Orquestar rutas y ediciones: entregar los rasters a `Routing`, llamarlo en un hilo de fondo, completar y guardar cada edición, emitir los eventos | Tablet, `Terrain` | C4, C5 |
 | Modo edición: gestos, polígono en punto fijo y diálogo de confirmación | Tablet, `HUD` | C3, C5 |
-| LOD, skirts, material del terreno (incluye el tinte de niebla lejana), cámara orbital | Tablet, `Terrain` | C5 |
+| Mapa 2D: tiles, shader del terreno (incluye el tinte de niebla lejana) y cámara cenital | Tablet, `Terrain` | C5 |
 | Niebla cercana, holograma, heatmap (shaders) y dibujo de la ruta (prefab `Routes`) | Tablet, `FX` | C5 |
 | Indicadores topográfico, óptico, térmico y radiación (dosis); pines POV con crédito | Tablet, `HUD` | C4, C5, C6 |
 
