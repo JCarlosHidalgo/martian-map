@@ -60,19 +60,20 @@ namespace MartianMap.Routing
         /// </summary>
         internal static double SegmentTimeS(CostGrid g, int a, int b, double v0Mps, CostParams p, bool withAmberPenalty)
         {
-            Segment m = Walk(g, a, b, v0Mps, p, 1.0, null);
+            Segment m = Walk(g, a, b, v0Mps, p, Weights.Fastest, null);
             return withAmberPenalty ? m.ChoiceS : m.TimeS;
         }
 
         /// <summary>
         /// The cost a search minimises on the segment from <paramref name="a"/> to
-        /// <paramref name="b"/>: its time plus the amber penalty times <paramref name="amberMult"/>.
-        /// <paramref name="timeS"/> gets the time without penalty, from the same walk. Both are
-        /// <see cref="double.PositiveInfinity"/> if it is blocked.
+        /// <paramref name="b"/> with the weights <paramref name="w"/>: its time plus the amber
+        /// penalty times <see cref="Weights.AmberMult"/> plus <see cref="Weights.AscentSPerM"/> per
+        /// metre of height change. <paramref name="timeS"/> gets the time without penalty, from the
+        /// same walk. Both are <see cref="double.PositiveInfinity"/> if it is blocked.
         /// </summary>
-        internal static double SegmentCostS(CostGrid g, int a, int b, double v0Mps, CostParams p, double amberMult, out double timeS)
+        internal static double SegmentCostS(CostGrid g, int a, int b, double v0Mps, CostParams p, Weights w, out double timeS)
         {
-            Segment m = Walk(g, a, b, v0Mps, p, amberMult, null);
+            Segment m = Walk(g, a, b, v0Mps, p, w, null);
             timeS = m.TimeS;
             return m.ChoiceS;
         }
@@ -82,7 +83,7 @@ namespace MartianMap.Routing
         /// <see cref="SegmentTimeS"/>; <see cref="double.PositiveInfinity"/> if it is blocked.
         /// </summary>
         internal static double SegmentAmberM(CostGrid g, int a, int b, CostParams p) =>
-            Walk(g, a, b, p.V0Mps.P50, p, 1.0, null).AmberM;
+            Walk(g, a, b, p.V0Mps.P50, p, Weights.Fastest, null).AmberM;
 
         internal static bool IsBlockedNode(CostGrid g, int node, CostParams p) =>
             IsBlocked(g.SlopeDegArray[node], g.RoughnessCmArray[node], g.HazardArray[node], p);
@@ -131,15 +132,15 @@ namespace MartianMap.Routing
             {
                 int a = waypoints[k - 1];
                 int b = waypoints[k];
-                Segment m50 = Walk(g, a, b, p.V0Mps.P50, p, 1.0, tracer);
+                Segment m50 = Walk(g, a, b, p.V0Mps.P50, p, Weights.Fastest, tracer);
                 if (double.IsPositiveInfinity(m50.TimeS))
                 {
                     return Route.NotFound;
                 }
 
-                t10 += Walk(g, a, b, p.V0Mps.P10, p, 1.0, null).TimeS;
+                t10 += Walk(g, a, b, p.V0Mps.P10, p, Weights.Fastest, null).TimeS;
                 t50 += m50.TimeS;
-                t90 += Walk(g, a, b, p.V0Mps.P90, p, 1.0, null).TimeS;
+                t90 += Walk(g, a, b, p.V0Mps.P90, p, Weights.Fastest, null).TimeS;
                 length += m50.LengthM;
                 ascent += m50.AscentM;
                 amber += m50.AmberM;
@@ -171,12 +172,13 @@ namespace MartianMap.Routing
         /// </list>
         /// The cuts are found in exact integer arithmetic. Along one row or column this is the
         /// half-edge rule: half the edge per node, with the grade of the whole edge. The time and the
-        /// choice cost (the time plus the amber penalty times <paramref name="amberMult"/>) are
-        /// summed piece by piece in the same walk. With a
+        /// choice cost (the time, plus the amber penalty times <see cref="Weights.AmberMult"/>, plus
+        /// the piece's height change times <see cref="Weights.AscentSPerM"/>) are summed piece by
+        /// piece in the same walk. With a
         /// <paramref name="tracer"/>, it also records the cells and the points of
         /// <see cref="Trace"/>; the segment's first point is not recorded, it is the previous end.
         /// </summary>
-        private static Segment Walk(CostGrid g, int a, int b, double v0Mps, CostParams p, double amberMult, Tracer tracer)
+        private static Segment Walk(CostGrid g, int a, int b, double v0Mps, CostParams p, Weights w, Tracer tracer)
         {
             int count = g.Width * g.Height;
             if ((uint)a >= (uint)count || (uint)b >= (uint)count)
@@ -236,7 +238,13 @@ namespace MartianMap.Routing
                 m.ChoiceS += pieceS;
                 if (amber)
                 {
-                    m.ChoiceS += pieceM * p.AmberPenaltySPerM * amberMult;
+                    m.ChoiceS += pieceM * p.AmberPenaltySPerM * w.AmberMult;
+                }
+
+                if (w.AscentSPerM != 0)
+                {
+                    // Only when it weighs something: the other alternatives keep their bits.
+                    m.ChoiceS += Math.Abs(rise) * w.AscentSPerM;
                 }
 
                 m.LengthM += pieceM;
@@ -358,6 +366,52 @@ namespace MartianMap.Routing
                 }
 
                 MaxHazard = Math.Max(MaxHazard, hazard);
+            }
+        }
+    }
+
+    /// <summary>
+    /// What a search adds to the time of a segment to choose (docs/guide/chapters/tablet.md, "Las
+    /// tres alternativas"): the amber penalty times <see cref="AmberMult"/>, and
+    /// <see cref="AscentSPerM"/> seconds per metre of height change, climbed plus descended (the
+    /// measure of <c>ascent_m</c>). Both are at least 0, so the A* heuristic stays admissible.
+    /// </summary>
+    internal readonly struct Weights
+    {
+        /// <summary>The fastest alternative, and the weights of every search but the alternatives': the formula as it is.</summary>
+        internal static readonly Weights Fastest = new Weights(1, 0);
+
+        internal Weights(double amberMult, double ascentSPerM)
+        {
+            AmberMult = amberMult;
+            AscentSPerM = ascentSPerM;
+        }
+
+        internal double AmberMult { get; }
+
+        internal double AscentSPerM { get; }
+
+        /// <summary>
+        /// The weights of <paramref name="a"/>: fastest (1, 0); safest
+        /// (<c>alt_safest_amber_mult</c>, 0); gentlest (1, <c>alt_gentlest_s_per_m</c>).
+        /// </summary>
+        internal static Weights For(Alternative a, CostParams p)
+        {
+            if (p == null)
+            {
+                throw new ArgumentNullException(nameof(p));
+            }
+
+            switch (a)
+            {
+                case Alternative.Fastest:
+                    return Fastest;
+                case Alternative.Safest:
+                    return new Weights(p.AltSafestAmberMult, 0);
+                case Alternative.Gentlest:
+                    return new Weights(1, p.AltGentlestSPerM);
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(a));
             }
         }
     }

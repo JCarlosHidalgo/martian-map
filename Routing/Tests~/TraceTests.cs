@@ -36,7 +36,7 @@ namespace MartianMap.Routing.Tests
 
         private static CostParams P => Fixtures.CostParams;
 
-        private static CostGrid G { get; } =
+        internal static CostGrid G { get; } =
             new CostGrid(5, 3, 2f, new EnuPoint(0, 0), HeightM, new byte[15], Relief, Hazard);
 
         [Test]

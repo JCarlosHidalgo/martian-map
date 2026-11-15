@@ -195,14 +195,14 @@ namespace MartianMap.Routing
             int n = 0;
             for (int k = 0; k < c.RouteRuns; k++)
             {
-                int[] path = Search.AStar(g, Router.NearestNode(g, starts[c.RouteWarmUp + k]), Router.NearestNode(g, goals[c.RouteWarmUp + k]), v0, c.Params, 1.0, out _);
+                int[] path = Search.AStar(g, Router.NearestNode(g, starts[c.RouteWarmUp + k]), Router.NearestNode(g, goals[c.RouteWarmUp + k]), v0, c.Params, Weights.Fastest, out _);
                 if (path == null)
                 {
                     continue;
                 }
 
                 long t0 = Stopwatch.GetTimestamp();
-                Smoothing.Smooth(g, path, v0, c.Params, 1.0);
+                Smoothing.Smooth(g, path, v0, c.Params, Weights.Fastest);
                 ms[n++] = (Stopwatch.GetTimestamp() - t0) * 1000.0 / Stopwatch.Frequency;
             }
 

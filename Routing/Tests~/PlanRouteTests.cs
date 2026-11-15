@@ -64,7 +64,7 @@ namespace MartianMap.Routing.Tests
         {
             // Oracle: corner (1, 9) to corner (9, 1), heights 0.1·i + 0.05·j; a unique optimum of 21 nodes.
             CostGrid g = Grids.FromMap(Grids.Maze11x11, Grids.MazeHeight);
-            int[] nodes = Search.AStar(g, g.Index(1, 9), g.Index(9, 1), P.V0Mps.P50, P, 1.0, out double cost);
+            int[] nodes = Search.AStar(g, g.Index(1, 9), g.Index(9, 1), P.V0Mps.P50, P, Weights.Fastest, out double cost);
             Assert.That(nodes, Is.Not.Null);
             Assert.That(nodes.First(), Is.EqualTo(g.Index(1, 9)));
             Assert.That(nodes.Last(), Is.EqualTo(g.Index(9, 1)));
@@ -99,7 +99,7 @@ namespace MartianMap.Routing.Tests
         {
             // Oracle: Random12x9 with heights 0.2 · ((7i + 3j) mod 5); (10, 4) is blocked.
             CostGrid g = Grids.FromMap(Grids.Random12x9, Grids.RandomHeight);
-            int[] nodes = Search.AStar(g, g.Index(si, sj), g.Index(gi, gj), P.V0Mps.P50, P, 1.0, out double cost);
+            int[] nodes = Search.AStar(g, g.Index(si, sj), g.Index(gi, gj), P.V0Mps.P50, P, Weights.Fastest, out double cost);
             if (double.IsPositiveInfinity(expected))
             {
                 Assert.That(nodes, Is.Null);
@@ -137,7 +137,7 @@ namespace MartianMap.Routing.Tests
             // S2-S3; no pair crosses amber, so the cost is eta_s.p50.
             CostGrid g = Grids.FromMap(Grids.Random12x9, Grids.RandomHeight);
             Route r = Router.PlanRoute(g, new EnuPoint(2 * si, 2 * sj), new EnuPoint(2 * gi, 2 * gj), P);
-            Search.AStar(g, g.Index(si, sj), g.Index(gi, gj), P.V0Mps.P50, P, 1.0, out double aStarCost);
+            Search.AStar(g, g.Index(si, sj), g.Index(gi, gj), P.V0Mps.P50, P, Weights.Fastest, out double aStarCost);
             Assert.That(r.Found, Is.True);
             Assert.That(r.EtaS.P50 + (r.AmberM * P.AmberPenaltySPerM), Is.LessThanOrEqualTo(aStarCost * (1 + 1e-6)));
             Assert.That(r.EtaS.P50, Is.EqualTo(expectedEtaP50).Within(Tol));
@@ -154,7 +154,7 @@ namespace MartianMap.Routing.Tests
             Assert.That((r.PolylineEnuM[0].E, r.PolylineEnuM[0].N), Is.EqualTo((4.0, 6.0)));
             Assert.That((r.LengthM, r.EtaS.P50), Is.EqualTo((0.0, 0.0)));
 
-            int[] nodes = Search.AStar(g, g.Index(2, 3), g.Index(2, 3), P.V0Mps.P50, P, 1.0, out double cost);
+            int[] nodes = Search.AStar(g, g.Index(2, 3), g.Index(2, 3), P.V0Mps.P50, P, Weights.Fastest, out double cost);
             Assert.That(nodes, Is.EqualTo(new[] { g.Index(2, 3) }));
             Assert.That(cost, Is.EqualTo(0));
         }

@@ -93,8 +93,8 @@ namespace MartianMap.Routing
 
             int s = NearestNode(grid, start);
             int t = NearestNode(grid, goal);
-            int[] nodes = Search.AStar(grid, s, t, p.V0Mps.P50, p, 1.0, out _);
-            return nodes == null ? Route.NotFound : Cost.Trace(grid, Smoothing.Smooth(grid, nodes, p.V0Mps.P50, p, 1.0), p);
+            int[] nodes = Search.AStar(grid, s, t, p.V0Mps.P50, p, Weights.Fastest, out _);
+            return nodes == null ? Route.NotFound : Cost.Trace(grid, Smoothing.Smooth(grid, nodes, p.V0Mps.P50, p, Weights.Fastest), p);
         }
 
         /// <summary>
