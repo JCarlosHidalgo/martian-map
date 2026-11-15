@@ -19,7 +19,7 @@ namespace MartianMap.Terrain
         public static LoadedZone CreateFixtureLike()
         {
             const double scale = 0.001;
-            var zone = NewZone("synth", "Synthetic tile", 1, 1, layers: true);
+            var zone = NewZone("synth", "Test tile", 1, 1, layers: true);
             var height = new ushort[S * S];
             var hazard = new byte[S * S];
             var ortho = new byte[S * S];
@@ -58,7 +58,7 @@ namespace MartianMap.Terrain
         /// <summary>A procedural crater field of <paramref name="tilesX"/> × <paramref name="tilesY"/> tiles at 1 m/px.</summary>
         public static LoadedZone CreateDemo(int tilesX = 4, int tilesY = 3, int seed = 42)
         {
-            var zone = NewZone("demo", "Demo crater field", tilesX, tilesY, layers: true);
+            var zone = NewZone("demo", "Crater field", tilesX, tilesY, layers: true);
             var widthM = tilesX * TileData.Cells;
             var heightM = tilesY * TileData.Cells;
             var field = new TerrainField(seed, widthM, heightM);
