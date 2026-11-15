@@ -41,6 +41,10 @@ namespace MartianMap.HUD
                 var settingsData = new SerializedObject(settings);
                 settingsData.FindProperty("_font").objectReferenceValue = font;
                 settingsData.ApplyModifiedPropertiesWithoutUndo();
+                var astronaut = root.GetComponent<AstronautHud>() ?? root.AddComponent<AstronautHud>();
+                var astronautData = new SerializedObject(astronaut);
+                astronautData.FindProperty("_font").objectReferenceValue = font;
+                astronautData.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             }
             finally

@@ -26,9 +26,11 @@ namespace MartianMap.HUD
         private Button _planButton;
         private ZoneInfo _zone;
         private EnuPoint _home;
+        private EnuPoint _start;
         private bool _ready;
 
         public MissionDefinition Mission { get; private set; }
+        public EnuPoint? AstronautPosition => _ready ? _start : (EnuPoint?)null;
         public string Status { get; private set; } = HudStrings.WaitingForMission;
 
         private void Awake() => BuildView();
@@ -96,7 +98,29 @@ namespace MartianMap.HUD
             }
 
             SetStatus(HudStrings.RouteRequested);
-            MapEvents.Emit(new RouteRequested(Array.AsReadOnly(stops), _home, Mission.Budget, Mission.Mode, _home, Alternative.Fastest));
+            MapEvents.Emit(new RouteRequested(Array.AsReadOnly(stops), _home, Mission.Budget, Mission.Mode, _start, Alternative.Fastest));
+        }
+
+        /// <summary>Moves the simulated astronaut inside the active zone, retaining the return base.</summary>
+        public bool MoveAstronaut(Vector2 enuM)
+        {
+            if (!_ready || float.IsNaN(enuM.x) || float.IsInfinity(enuM.x) ||
+                float.IsNaN(enuM.y) || float.IsInfinity(enuM.y))
+            {
+                return false;
+            }
+
+            double[] bounds = _zone.ExtentEnuM;
+            if (enuM.x < bounds[0] || enuM.y < bounds[1] || enuM.x >= bounds[2] || enuM.y >= bounds[3])
+            {
+                return false;
+            }
+
+            _start = new EnuPoint(enuM.x, enuM.y);
+            _route.text = HudStrings.RoutePositionChanged;
+            SetStatus(HudStrings.AstronautMoved);
+            MapEvents.Emit(new AstronautMoved(enuM));
+            return true;
         }
 
         private void OnZoneLoaded(ZoneLoaded message)
@@ -121,9 +145,11 @@ namespace MartianMap.HUD
             try
             {
                 _home = Mission.ResolveHome(_zone);
+                _start = _home;
                 _ready = true;
                 _planButton.interactable = true;
                 SetStatus(HudFormatting.Format(HudStrings.Ready, _home.E, _home.N));
+                MapEvents.Emit(new AstronautMoved(new Vector2((float)_start.E, (float)_start.N)));
             }
             catch (ArgumentException error)
             {

@@ -4,6 +4,10 @@ namespace MartianMap.HUD
     public static class HudStrings
     {
         public const string Brand = "MARTIAN MAP  /  SCIENCE OPERATIONS";
+        public const string AstronautCoordinates = "ASTRONAUT\nE {0:0.#} m, N {1:0.#} m";
+        public const string AstronautHelp = "Hold on the map to move the astronaut.\nSIMULATED POSITION — no tracking sensor.";
+        public const string AstronautMoved = "Astronaut moved. Request a route from the new position.";
+        public const string RoutePositionChanged = "Position changed. Request a new route.";
         public const string Settings = "SETTINGS";
         public const string SettingsTitle = "TABLET SETTINGS";
         public const string HabitatUrl = "Habitat server URL";

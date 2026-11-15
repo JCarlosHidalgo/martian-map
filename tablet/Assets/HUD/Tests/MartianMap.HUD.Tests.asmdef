@@ -6,6 +6,7 @@
     "MartianMap.Terrain",
     "MartianMap.Routing",
     "MartianMap.Edits",
+    "Unity.InputSystem",
     "Unity.TextMeshPro",
     "UnityEngine.UI"
   ],

@@ -10,7 +10,8 @@ the C6 fixture. Its 50 microgray budget is a project design value, not a NASA ex
 
 `Plan route` stays disabled until a matching zone arrives through `MapEvents.ZoneLoaded`.
 It then emits `RouteRequested` with C4 `Stop`, `Budget`, `EnuPoint`, and `StopMode` values.
-The first route starts at the mission base. Terrain and Routing own route execution; the
+The first route starts at the mission base; subsequent requests use the simulated astronaut
+position. Terrain and Routing own route execution; the
 sandbox does not fabricate a computed route. A received `RouteSelected` updates the result.
 
 The reader rejects duplicate stop ids, invalid required fields, nonfinite values, and
@@ -38,6 +39,24 @@ All UI text is centralized in `HudStrings.cs`; `HudFormatting` implements the ag
 and dose-unit formats. The sandbox supplies clearly labelled modelled demonstration
 conditions only when no conditions fixture was loaded. It does not add a production C6
 fixture or enable SEP from the tablet.
+
+## Simulated astronaut position
+
+The marker starts at the mission base, including the zone habitat fallback when C6 omits
+an explicit base. Hold one finger or the left mouse button on the map for 0.65 seconds to
+move it. The marker shows ENU coordinates and is explicitly labelled as a simulated position;
+there is no tracking sensor. It follows the map camera and hides outside its viewport.
+
+Dragging beyond the hold tolerance, multiple touches, scrolling, UI controls, edit mode,
+zone changes, or loss of focus cancel the hold. Touches are resolved through C5
+`MapQuery.TryPick`. The HUD emits `AstronautMoved` on initial placement and successful moves.
+The next route request uses the new position as `start` while preserving `home` and the
+mission budget. An old route summary is marked for replanning; a move does not calculate
+a route. Routing owns terrain feasibility checks.
+
+`AstronautHud` owns the marker and gesture. `MissionHud` owns its mission-relative position
+and resets it when the mission or zone is loaded. P4 owns camera recentering in response to
+`AstronautMoved`; this change does not add a Terrain event listener.
 
 ## Settings and author registration
 
@@ -74,6 +93,8 @@ Canvas/button/event flow with a matching and mismatching zone. Settings tests us
 isolated configuration double to cover first registration, immutable authors, cache-only
 settings, rejected addresses, storage failures, cancellation, and configuration events
 without changing the developer's saved configuration.
+Astronaut tests cover hold timing/cancellation, initial placement, invalid moves, zone
+changes, unchanged return bases, and the real Input System mouse-to-map flow in the sandbox.
 
 From PowerShell at the repository root:
 
@@ -90,10 +111,10 @@ Close the editor first when running batch tests against the same project.
 ## Integration
 
 P4 can keep the existing HUD prefab instance in `Main.unity`: it retains its original GUID.
-The prefab has `MissionHud`, `ScienceHud`, `SettingsHud`, an assigned mission asset, and a font. Its Canvas and
+The prefab has `MissionHud`, `ScienceHud`, `SettingsHud`, `AstronautHud`, an assigned mission asset, and a font. Its Canvas and
 controls are created at runtime. There must be only one active EventSystem; the HUD creates
 one only when the scene does not already have one.
 
 This increment covers the mission panel, route handoff, layer controls, and source-rate
-presentation, settings, and author registration. POV media, astronaut relocation, and edit
-tools remain separate work.
+presentation, settings, author registration, and simulated astronaut relocation. POV media
+and edit tools remain separate work.
