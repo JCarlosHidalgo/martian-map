@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import shutil
@@ -311,6 +312,170 @@ class ContractValidatorTests(unittest.TestCase):
         golden.write_bytes(b"invalid\n")
         with self.assertRaisesRegex(ValueError, "SHA-256 golden"):
             ContractValidator(self.root).run()
+
+    def _mission_fixture(self) -> dict[str, Any]:
+        source = Path(__file__).parent
+        shutil.copyfile(
+            source / "schemas/mission.schema.json", self.root / "schemas/mission.schema.json"
+        )
+        return json.loads((source / "fixtures/mission/mission.json").read_text(encoding="utf-8"))
+
+    def _validate_mission(self, mission: dict[str, Any]) -> None:
+        self._json("fixtures/mission/mission.json", mission)
+        ContractValidator(self.root).run()
+
+    def test_mission_fixture_passes_real_contract_validation(self) -> None:
+        self._validate_mission(self._mission_fixture())
+
+    def test_mission_accepts_both_modes_and_an_omitted_base(self) -> None:
+        original = self._mission_fixture()
+        for mode in ("TSP", "OP"):
+            for explicit_base in (False, True):
+                with self.subTest(mode=mode, explicit_base=explicit_base):
+                    mission = copy.deepcopy(original)
+                    mission["mode"] = mode
+                    if not explicit_base:
+                        del mission["base_enu_m"]
+                    self._validate_mission(mission)
+
+    def test_mission_requires_all_documented_fields_and_rejects_unknown_fields(self) -> None:
+        original = self._mission_fixture()
+        for scope, fields in (
+            ("root", ("schema_version", "zone_id", "name", "stops", "budget", "mode")),
+            ("stop", ("id", "name", "enu_m", "objective", "science_value", "dwell_s")),
+            ("budget", ("t_s", "dose_uGy")),
+        ):
+            for field in (*fields, "unexpected"):
+                with self.subTest(scope=scope, field=field):
+                    mission = copy.deepcopy(original)
+                    target = (
+                        mission["stops"][0]
+                        if scope == "stop"
+                        else mission["budget"]
+                        if scope == "budget"
+                        else mission
+                    )
+                    if field == "unexpected":
+                        target[field] = "unsupported"
+                    else:
+                        del target[field]
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+
+    def test_mission_checks_science_values_times_and_budgets(self) -> None:
+        original = self._mission_fixture()
+        for field, invalid in (
+            ("science_value", (-1, 11, 0.5, True, "5")),
+            ("dwell_s", (-1, True, "600")),
+            ("t_s", (-1, True, "14400")),
+            ("dose_uGy", (-1, True, "50")),
+        ):
+            for value in invalid:
+                with self.subTest(field=field, value=value):
+                    mission = copy.deepcopy(original)
+                    target = (
+                        mission["stops"][0]
+                        if field in ("science_value", "dwell_s")
+                        else mission["budget"]
+                    )
+                    target[field] = value
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+        for science_value in (0, 10):
+            with self.subTest(science_value=science_value):
+                mission = copy.deepcopy(original)
+                mission["stops"][0].update(science_value=science_value, dwell_s=0)
+                mission["budget"] = {"t_s": 0, "dose_uGy": 0}
+                self._validate_mission(mission)
+        mission = copy.deepcopy(original)
+        mission["stops"][0]["dwell_s"] = 0.5
+        self._validate_mission(mission)
+
+    def test_mission_coordinates_are_two_numbers_in_metres(self) -> None:
+        original = self._mission_fixture()
+        for scope in ("base", "stop"):
+            for value in (None, [], [0], [0, 0, 0], ["0", 0], [True, 0], {"e": 0, "n": 0}):
+                with self.subTest(scope=scope, value=value):
+                    mission = copy.deepcopy(original)
+                    target = mission if scope == "base" else mission["stops"][0]
+                    target["base_enu_m" if scope == "base" else "enu_m"] = value
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+        mission = copy.deepcopy(original)
+        mission["base_enu_m"] = [-100.5, -20.25]
+        mission["stops"][0]["enu_m"] = [0.5, -20.25]
+        self._validate_mission(mission)
+
+    def test_mission_rejects_invalid_labels_version_zone_and_mode(self) -> None:
+        original = self._mission_fixture()
+        for field, values in (
+            ("schema_version", (2, True, "1")),
+            ("zone_id", ("SYNTH", "s", "synth\n", "s" * 33)),
+            ("name", ("", None)),
+            ("mode", ("tsp", "unknown", None)),
+            ("stops", ({}, None)),
+        ):
+            for value in values:
+                with self.subTest(field=field, value=value):
+                    mission = copy.deepcopy(original)
+                    mission[field] = value
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+        for field in ("id", "name", "objective"):
+            for value in ("", None):
+                with self.subTest(stop_field=field, value=value):
+                    mission = copy.deepcopy(original)
+                    mission["stops"][0][field] = value
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        self._validate_mission(mission)
+
+    def test_mission_fixture_matches_routing_plan_endpoints_and_dwell_times(self) -> None:
+        mission = self._mission_fixture()
+        source = Path(__file__).parent / "fixtures/routing/expected_plan.json"
+        plans = json.loads(source.read_text(encoding="utf-8"))["plans"]
+        self.assertEqual(mission["zone_id"], "synth")
+        self.assertEqual(mission["base_enu_m"], [-100, -20])
+        self.assertEqual([stop["enu_m"] for stop in mission["stops"]], [[0, -20], [100, -20]])
+        self.assertEqual([stop["science_value"] for stop in mission["stops"]], [5, 8])
+        self.assertEqual([stop["dwell_s"] for stop in mission["stops"]], [600, 600])
+        self.assertEqual(mission["budget"], {"t_s": 14400, "dose_uGy": 50})
+        self.assertEqual(mission["mode"], "TSP")
+        points = [
+            mission["base_enu_m"],
+            *[stop["enu_m"] for stop in mission["stops"]],
+            mission["base_enu_m"],
+        ]
+        for plan in plans:
+            self.assertEqual(plan["order"], [stop["id"] for stop in mission["stops"]])
+            self.assertEqual(len(plan["legs"]), len(points) - 1)
+            for index, leg in enumerate(plan["legs"]):
+                self.assertEqual(leg["polyline_enu_m"][0][:2], points[index])
+                self.assertEqual(leg["polyline_enu_m"][-1][:2], points[index + 1])
+            for percentile in ("p10", "p50", "p90"):
+                expected = sum(leg["eta_s"][percentile] for leg in plan["legs"])
+                expected += sum(stop["dwell_s"] for stop in mission["stops"])
+                self.assertAlmostEqual(plan["total_s"][percentile], expected, delta=0.01)
+
+    def test_mission_fixture_base_and_stops_are_walkable_tile_samples(self) -> None:
+        mission = self._mission_fixture()
+        directory = Path(__file__).parent / "fixtures/tile_synth_0_0_0"
+        tile = json.loads((directory / "tile.json").read_text(encoding="utf-8"))
+        hazard = (directory / "hazard.r8").read_bytes()
+        height = (directory / tile["height"]["file"]).read_bytes()
+        size = tile["size_px"]
+        origin_e, origin_n = tile["origin_enu_m"]
+        points = [mission["base_enu_m"], *[stop["enu_m"] for stop in mission["stops"]]]
+        for east, north in points:
+            with self.subTest(east=east, north=north):
+                col = (east - origin_e) / tile["m_per_px"]
+                row = size - 1 - (north - origin_n) / tile["m_per_px"]
+                self.assertEqual(col, int(col))
+                self.assertEqual(row, int(row))
+                self.assertTrue(0 <= col < size and 0 <= row < size)
+                index = int(row) * size + int(col)
+                self.assertEqual(hazard[index], 0)
+                sample = int.from_bytes(height[index * 2 : index * 2 + 2], "little")
+                self.assertNotEqual(sample, tile["height"]["nodata"])
 
     def _openapi(self, example: dict[str, Any], schema: dict[str, Any]) -> None:
         specification = {

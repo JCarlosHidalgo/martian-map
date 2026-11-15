@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "mission.schema.json",
+  "title": "mission",
+  "description": "C6 science mission read by the HUD and converted to C4 routing inputs. Coordinates are east and north in metres relative to the zone ENU origin.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "zone_id", "name", "stops", "budget", "mode"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "zone_id": {"type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}(?![\\s\\S])"},
+    "name": {"type": "string", "minLength": 1},
+    "base_enu_m": {
+      "$ref": "#/$defs/enu_point",
+      "description": "Return base in metres. When omitted, the HUD uses habitat_enu_m from the active zone.json. Explicit null is not an omitted base."
+    },
+    "stops": {
+      "type": "array",
+      "description": "Science stops in input order. Unique stop ids and positions inside the active walkable zone require semantic validation by the consumer.",
+      "items": {"$ref": "#/$defs/stop"}
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["t_s", "dose_uGy"],
+      "properties": {
+        "t_s": {"type": "number", "minimum": 0, "description": "Available mission duration in seconds, including science stops and return."},
+        "dose_uGy": {"type": "number", "minimum": 0, "description": "Absorbed-dose budget in microgray. The shared synthetic fixture uses the design value of 50; this is not a NASA exposure limit."}
+      }
+    },
+    "mode": {"enum": ["TSP", "OP"]}
+  },
+  "$defs": {
+    "enu_point": {
+      "type": "array",
+      "prefixItems": [{"type": "number"}, {"type": "number"}],
+      "items": false,
+      "minItems": 2
+    },
+    "stop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "enu_m", "objective", "science_value", "dwell_s"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "name": {"type": "string", "minLength": 1},
+        "enu_m": {"$ref": "#/$defs/enu_point"},
+        "objective": {"type": "string", "minLength": 1},
+        "science_value": {"type": "integer", "minimum": 0, "maximum": 10},
+        "dwell_s": {"type": "number", "minimum": 0, "description": "Science time spent at the stop in seconds."}
+      }
+    }
+  }
+}
