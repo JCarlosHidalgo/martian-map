@@ -49,6 +49,10 @@ namespace MartianMap.HUD
                 var routesData = new SerializedObject(routes);
                 routesData.FindProperty("_font").objectReferenceValue = font;
                 routesData.ApplyModifiedPropertiesWithoutUndo();
+                var edits = root.GetComponent<EditHud>() ?? root.AddComponent<EditHud>();
+                var editsData = new SerializedObject(edits);
+                editsData.FindProperty("_font").objectReferenceValue = font;
+                editsData.ApplyModifiedPropertiesWithoutUndo();
                 PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             }
             finally

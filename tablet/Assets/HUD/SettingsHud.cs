@@ -36,6 +36,7 @@ namespace MartianMap.HUD
         private bool _loaded;
 
         public bool CanEdit => _loaded && IsAuthorValid(_savedAuthor);
+        public string RegisteredAuthor => CanEdit ? _savedAuthor : string.Empty;
         public bool IsOpen => _modal != null && _modal.activeSelf;
         public string Status => _status != null ? _status.text : string.Empty;
 
