@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "source_id": "synth-generator-dose",
+  "t_utc": "2026-11-14T12:00:00Z",
+  "t_valid_utc": "2026-11-14T12:00:00Z",
+  "quantity": "dose_rate",
+  "value": 6.0,
+  "unit": "uGy/h",
+  "uncertainty": 0.2,
+  "basis": "modelled",
+  "derived_from": "Synthetic contract fixture from the shared mission-planning example; not a mission measurement.",
+  "modifiers": [
+    {
+      "type": "WSAEnlilSimulations",
+      "factor": 0.95,
+      "valid_from": "2026-11-14T00:00:00Z",
+      "valid_to": "2026-11-15T00:00:00Z"
+    }
+  ]
+}

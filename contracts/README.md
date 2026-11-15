@@ -1,5 +1,14 @@
 # Contract validation
 
+The C6 radiation fixture is `fixtures/conditions/conditions.json`, validated by
+`schemas/conditions.schema.json`. It is explicitly modelled synthetic data, not a mission
+measurement. Its fixed timestamps and the 0.95 modifier window match the C4 planning example
+at 2026-11-14 12:00 UTC; it is a historical test fixture, not a current conditions feed.
+Modifier windows must satisfy `valid_from < valid_to`, including at DateTime tick precision.
+P5 owns the C6 conditions contract and P1 produces live data; both should review this fixture
+before the contract is fixed. P2 can then replace the C3 response placeholders with references
+to this schema. No live NASA data acquisition is performed by this fixture.
+
 Run these commands from the repository root in Windows PowerShell after installing `uv`:
 
 ```powershell

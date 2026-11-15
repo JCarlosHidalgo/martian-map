@@ -478,6 +478,75 @@ class ContractValidatorTests(unittest.TestCase):
                 sample = int.from_bytes(height[index * 2 : index * 2 + 2], "little")
                 self.assertNotEqual(sample, tile["height"]["nodata"])
 
+    def _edit_identifier_fixture(self) -> dict[str, Any]:
+        source = Path(__file__).parent
+        for name in ("edit.schema.json", "edit_log.schema.json"):
+            shutil.copyfile(source / "schemas" / name, self.root / "schemas" / name)
+        log = json.loads((source / "fixtures/merge/log_in.json").read_text(encoding="utf-8"))
+        return log["edits"][0]
+
+    def test_edit_identifiers_reject_surrounding_whitespace_and_controls(self) -> None:
+        original = self._edit_identifier_fixture()
+        for field in ("uuid", "entity_id", "author", "creator", "zone_id"):
+            for extra in ("\n", "\r", "\r\n", "\t", " ", "\u2028", "\u2029", "\x00"):
+                for position in ("prefix", "suffix"):
+                    with self.subTest(field=field, extra=repr(extra), position=position):
+                        edit = original.copy()
+                        value = original[field]
+                        edit[field] = extra + value if position == "prefix" else value + extra
+                        self._json(
+                            "fixtures/merge/log_in.json", {"schema_version": 1, "edits": [edit]}
+                        )
+                        with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                            ContractValidator(self.root).run()
+
+    def test_edit_identifiers_accept_valid_values_and_boundaries(self) -> None:
+        original = self._edit_identifier_fixture()
+        uuids = (
+            "00000000-0000-4000-8000-000000000000",
+            "aaaaaaaa-aaaa-4aaa-9aaa-aaaaaaaaaaaa",
+            "ffffffff-ffff-4fff-bfff-ffffffffffff",
+        )
+        values = {
+            "uuid": uuids,
+            "entity_id": uuids,
+            "author": ("a-", "ev1", "a" * 16),
+            "creator": ("a-", "ev1", "a" * 16),
+            "zone_id": ("a0", "gale-south", "a" + "0" * 31),
+        }
+        for field, candidates in values.items():
+            for value in candidates:
+                with self.subTest(field=field, value=value):
+                    self._json(
+                        "fixtures/merge/log_in.json",
+                        {"schema_version": 1, "edits": [{**original, field: value}]},
+                    )
+                    ContractValidator(self.root).run()
+
+    def test_edit_identifiers_reject_invalid_formats_and_lengths(self) -> None:
+        original = self._edit_identifier_fixture()
+        invalid_uuids = (
+            "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA",
+            "aaaaaaaa-aaaa-3aaa-8aaa-aaaaaaaaaaaa",
+            "aaaaaaaaaaaa4aaa8aaaaaaaaaaaaaaa",
+        )
+        values = {
+            "uuid": invalid_uuids,
+            "entity_id": invalid_uuids,
+            "author": ("a", "a" * 17, "EV1"),
+            "creator": ("a", "a" * 17, "EV1"),
+            "zone_id": ("a", "a" * 33, "1synth", "SYNTH"),
+        }
+        for field, candidates in values.items():
+            for value in candidates:
+                with self.subTest(field=field, value=value):
+                    self._json(
+                        "fixtures/merge/log_in.json",
+                        {"schema_version": 1, "edits": [{**original, field: value}]},
+                    )
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        ContractValidator(self.root).run()
+
     def _openapi(self, example: dict[str, Any], schema: dict[str, Any]) -> None:
         specification = {
             "openapi": "3.1.0",
@@ -522,6 +591,180 @@ class ContractValidatorTests(unittest.TestCase):
     def test_invalid_openapi_is_rejected(self) -> None:
         (self.root / "openapi.yaml").write_bytes(b"openapi: 3.1.0\n")
         with self.assertRaises(OpenAPIValidationError):
+            ContractValidator(self.root).run()
+
+
+class ConditionsContractTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory(prefix="martian-map-conditions-")
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        directory = self.root / "schemas"
+        directory.mkdir()
+        source = Path(__file__).parent
+        for name in ("map.json", "map.schema.json", "conditions.schema.json"):
+            shutil.copyfile(source / "schemas" / name, directory / name)
+        self.original = json.loads(
+            (source / "fixtures/conditions/conditions.json").read_text(encoding="utf-8")
+        )
+
+    def _write(
+        self, value: dict[str, Any], relative: str = "fixtures/conditions/conditions.json"
+    ) -> Path:
+        path = self.root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes((json.dumps(value, indent=2) + "\n").encode("utf-8"))
+        return path
+
+    def test_conditions_golden_is_explicitly_synthetic_and_matches_c4_inputs(self) -> None:
+        self._write(self.original)
+        ContractValidator(self.root).run()
+        # Shared synthetic source and C4 FixtureGen inputs from the contract guide.
+        self.assertEqual(self.original["value"], 6.0)
+        self.assertEqual(self.original["uncertainty"], 0.2)
+        self.assertEqual(self.original["basis"], "modelled")
+        self.assertIn("not a mission measurement", self.original["derived_from"])
+        modifier = self.original["modifiers"][0]
+        self.assertEqual(modifier["type"], "WSAEnlilSimulations")
+        self.assertEqual(modifier["factor"], 0.95)
+        self.assertEqual(modifier["valid_from"], "2026-11-14T00:00:00Z")
+        self.assertEqual(modifier["valid_to"], "2026-11-15T00:00:00Z")
+
+    def test_conditions_required_and_unknown_fields_are_checked(self) -> None:
+        for scope, fields in (
+            (
+                "root",
+                (
+                    "schema_version",
+                    "source_id",
+                    "t_utc",
+                    "t_valid_utc",
+                    "quantity",
+                    "value",
+                    "unit",
+                    "uncertainty",
+                    "basis",
+                    "modifiers",
+                ),
+            ),
+            ("modifier", ("type", "factor", "valid_from", "valid_to")),
+        ):
+            for field in (*fields, "unexpected"):
+                with self.subTest(scope=scope, field=field):
+                    value = deepcopy(self.original)
+                    target = value if scope == "root" else value["modifiers"][0]
+                    if field == "unexpected":
+                        target[field] = True
+                    else:
+                        del target[field]
+                    self._write(value)
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        ContractValidator(self.root).run()
+
+    def test_conditions_optional_fields_and_free_activity_types_pass(self) -> None:
+        for basis, activity in (("measured", "CME"), ("modelled", "SEP")):
+            with self.subTest(basis=basis, activity=activity):
+                value = deepcopy(self.original)
+                value["basis"] = basis
+                value.pop("derived_from")
+                value["sol"] = 4710
+                value["modifiers"][0].update(
+                    type=activity, factor=2, donki_activity_id="synthetic-activity"
+                )
+                self._write(value)
+                ContractValidator(self.root).run()
+        value = deepcopy(self.original)
+        value["modifiers"] = []
+        self._write(value)
+        ContractValidator(self.root).run()
+
+    def test_conditions_reject_invalid_values_and_identifiers(self) -> None:
+        for field, candidates in (
+            ("schema_version", (2, True, "1")),
+            ("source_id", ("", "synth-dose", "SYNTH-generator-dose", "synth-generator-dose\n")),
+            ("quantity", ("temperature", None)),
+            ("unit", ("mSv/h", "uGy", None)),
+            ("basis", ("unknown", "MEASURED", None)),
+            ("value", (0, -1, True, "6", 10**400)),
+            ("uncertainty", (-0.1, True, "0.2", 10**400)),
+            ("sol", (-1, True, 0.5, 2147483648)),
+            ("modifiers", (None, {})),
+            ("derived_from", (None, "")),
+        ):
+            for candidate in candidates:
+                with self.subTest(field=field, candidate=candidate):
+                    value = deepcopy(self.original)
+                    value[field] = candidate
+                    self._write(value)
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        ContractValidator(self.root).run()
+
+    def test_conditions_reject_invalid_modifier_values(self) -> None:
+        for field, candidates in (
+            ("factor", (0, -1, True, "0.95", 10**400)),
+            ("type", ("", " ", None)),
+            ("donki_activity_id", ("", None)),
+        ):
+            for candidate in candidates:
+                with self.subTest(field=field, candidate=candidate):
+                    value = deepcopy(self.original)
+                    value["modifiers"][0][field] = candidate
+                    self._write(value)
+                    with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                        ContractValidator(self.root).run()
+
+    def test_conditions_utc_dates_support_c4_precision_and_reject_invalid_dates(self) -> None:
+        for timestamp in ("2026-11-14T12:00:00.1234567Z", "2026-11-14T12:00:00+00:00"):
+            with self.subTest(valid=timestamp):
+                value = deepcopy(self.original)
+                value["t_utc"] = timestamp
+                self._write(value)
+                ContractValidator(self.root).run()
+        for timestamp in (
+            "2026-02-30T12:00:00Z",
+            "2026-11-14T12:00:00",
+            "2026-11-14T12:00:00+01:00",
+            "2026-11-14T12:00:00.12345678Z",
+            "2026-11-14T12:00:00Z\n",
+        ):
+            with self.subTest(invalid=timestamp):
+                value = deepcopy(self.original)
+                value["t_utc"] = timestamp
+                self._write(value)
+                with self.assertRaisesRegex(ValueError, "Schema validation failed"):
+                    ContractValidator(self.root).run()
+
+    def test_conditions_modifier_windows_are_checked_in_canonical_and_bundle_copies(self) -> None:
+        self._write(self.original)
+        for relative in (
+            "fixtures/conditions/conditions.json",
+            "fixtures/bundle_synth/data/conditions.json",
+        ):
+            for end in ("2026-11-13T00:00:00Z", "2026-11-14T00:00:00.0000000+00:00"):
+                with self.subTest(relative=relative, end=end):
+                    value = deepcopy(self.original)
+                    value["modifiers"][0]["valid_to"] = end
+                    path = self._write(value, relative)
+                    with self.assertRaisesRegex(ValueError, "valid_from < valid_to"):
+                        ContractValidator(self.root).run()
+                    if relative.startswith("fixtures/bundle_synth/"):
+                        path.unlink()
+                    else:
+                        self._write(self.original)
+
+    def test_conditions_window_comparison_preserves_100_nanosecond_precision(self) -> None:
+        value = deepcopy(self.original)
+        value["modifiers"][0].update(
+            valid_from="2026-11-14T12:00:00.0000001Z",
+            valid_to="2026-11-14T12:00:00.0000002+00:00",
+        )
+        self._write(value)
+        ContractValidator(self.root).run()
+
+    def test_conditions_reject_overflowed_json_numbers(self) -> None:
+        path = self._write(self.original)
+        path.write_bytes(path.read_bytes().replace(b'"value": 6.0', b'"value": 1e999'))
+        with self.assertRaisesRegex(ValueError, "Schema validation failed"):
             ContractValidator(self.root).run()
 
 
