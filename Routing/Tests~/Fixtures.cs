@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -55,6 +56,39 @@ namespace MartianMap.Routing.Tests
             Assert.That(r.LengthM, Is.EqualTo(golden.GetProperty("length_m").GetDouble()).Within(0.0005));
             Assert.That(r.EtaS.P50, Is.EqualTo(golden.GetProperty("eta_s").GetProperty("p50").GetDouble()).Within(0.0005));
             Assert.That(r.EtaS.P90, Is.EqualTo(golden.GetProperty("eta_s").GetProperty("p90").GetDouble()).Within(0.0005));
+        }
+
+        [Test]
+        public void TheGoldenPlanIsOrderStops()
+        {
+            // expected_plan.json is OrderStops on the synthetic mission (convenciones.md): one plan
+            // per alternative; the golden rounds to 1 mm and 1 ms.
+            IReadOnlyList<Plan> plans = Router.OrderStops(
+                OrderStopsTests.Synth, OrderStopsTests.Base, OrderStopsTests.SynthStops, OrderStopsTests.SynthField,
+                new Budget(14400, 50), OrderStopsTests.SynthConditions, OrderStopsTests.T, StopMode.Tsp, Fixtures.CostParams);
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(Path.Combine(Fixtures.Dir, "expected_plan.json")));
+            JsonElement golden = doc.RootElement.GetProperty("plans");
+            Assert.That(golden.GetArrayLength(), Is.EqualTo(plans.Count));
+            for (int k = 0; k < plans.Count; k++)
+            {
+                JsonElement g = golden[k];
+                Plan plan = plans[k];
+                Assert.That(plan.Order, Is.EqualTo(g.GetProperty("order").EnumerateArray().Select(e => e.GetString())));
+                Assert.That(plan.Dropped, Is.Empty);
+                Assert.That(plan.Legs.Count, Is.EqualTo(g.GetProperty("legs").GetArrayLength()));
+                for (int l = 0; l < plan.Legs.Count; l++)
+                {
+                    Assert.That(plan.Legs[l].Cells, Is.EqualTo(g.GetProperty("legs")[l].GetProperty("cells").EnumerateArray().Select(c => c.GetInt32())));
+                }
+
+                JsonElement total = g.GetProperty("total_s");
+                Assert.That(plan.TotalS.P10, Is.EqualTo(total.GetProperty("p10").GetDouble()).Within(0.0005));
+                Assert.That(plan.TotalS.P50, Is.EqualTo(total.GetProperty("p50").GetDouble()).Within(0.0005));
+                Assert.That(plan.TotalS.P90, Is.EqualTo(total.GetProperty("p90").GetDouble()).Within(0.0005));
+                Assert.That(plan.DoseUGy, Is.EqualTo(g.GetProperty("dose_uGy").GetDouble()).Within(0.0005));
+                Assert.That(plan.LimitS, Is.EqualTo(g.GetProperty("limit_s").GetDouble()).Within(0.0005));
+                Assert.That(plan.ReturnOk, Is.EqualTo(g.GetProperty("return_ok").GetBoolean()));
+            }
         }
 
         [Test]

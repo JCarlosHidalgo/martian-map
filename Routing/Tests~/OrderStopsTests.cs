@@ -16,7 +16,7 @@ namespace MartianMap.Routing.Tests
     {
         private const double Rounding = 1e-6;
 
-        private static readonly DateTime T = new DateTime(2026, 11, 14, 12, 0, 0, DateTimeKind.Utc);
+        internal static readonly DateTime T = new DateTime(2026, 11, 14, 12, 0, 0, DateTimeKind.Utc);
 
         private static CostParams P => Fixtures.CostParams;
 
@@ -27,22 +27,22 @@ namespace MartianMap.Routing.Tests
         // The synthetic mission (convenciones.md, "Cómo se fija un contrato"): base [-100, -20];
         // s1 [0, -20] and s2 [100, -20], value 5 and 8, dwell 600 s; budget 14400 s and 50 uGy;
         // 6 uGy/h with a WSAEnlilSimulations modifier of 0.95, which counts as 1.
-        private static readonly EnuPoint Base = new EnuPoint(-100, -20);
+        internal static readonly EnuPoint Base = new EnuPoint(-100, -20);
 
-        private static Stop[] SynthStops => new[]
+        internal static Stop[] SynthStops => new[]
         {
             new Stop("s1", new EnuPoint(0, -20), 5, 600),
             new Stop("s2", new EnuPoint(100, -20), 8, 600),
         };
 
-        private static Conditions SynthConditions => new Conditions(6.0, new[]
+        internal static Conditions SynthConditions => new Conditions(6.0, new[]
         {
             new ConditionModifier(0.95, new DateTime(2026, 11, 14, 0, 0, 0, DateTimeKind.Utc), new DateTime(2026, 11, 15, 0, 0, 0, DateTimeKind.Utc)),
         });
 
-        private static CostGrid Synth { get; } = SynthFixtures.BuildSynthGrid(Fixtures.CostParams);
+        internal static CostGrid Synth { get; } = SynthFixtures.BuildSynthGrid(Fixtures.CostParams);
 
-        private static Field SynthField { get; } = Router.ReturnField(Synth, Base, Fixtures.CostParams);
+        internal static Field SynthField { get; } = Router.ReturnField(Synth, Base, Fixtures.CostParams);
 
         [Test]
         public void TheSyntheticMissionIsTheHandComputedPlan()
