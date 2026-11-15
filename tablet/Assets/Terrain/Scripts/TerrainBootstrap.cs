@@ -45,6 +45,7 @@ namespace MartianMap.Terrain
         private LocalCache _cache;
         private bool _loading;
         private bool _costParamsLoaded;
+        private bool _preloadedImported;
 
         public ZoneSource Source => source;
 
@@ -68,6 +69,7 @@ namespace MartianMap.Terrain
             // prefab needs no manual wiring.
             EnsureComponent<RouteOrchestrator>();
             EnsureComponent<EditOrchestrator>();
+            EnsureComponent<HabitatClient>();
         }
 
         private T EnsureComponent<T>() where T : Component
@@ -141,9 +143,10 @@ namespace MartianMap.Terrain
         /// </summary>
         private async Task<LoadedZone> LoadFromCacheAsync(string zoneId)
         {
-            if (_cache == null)
+            EnsureCache();
+            if (!_preloadedImported)
             {
-                _cache = LocalCache.OpenDefault();
+                _preloadedImported = true;
                 foreach (var preloaded in preloadedZones)
                 {
                     await ImportPreloadedAsync(preloaded);
@@ -167,6 +170,39 @@ namespace MartianMap.Terrain
             var zone = await _cache.LoadZoneAsync(target);
             _cache.SetActiveZone(target);
             return zone;
+        }
+
+        /// <summary>The local cache, opened on first use (the habitat client needs it whatever the source).</summary>
+        public LocalCache EnsureCache()
+        {
+            _cache ??= LocalCache.OpenDefault();
+            return _cache;
+        }
+
+        /// <summary>True when the zone on screen came from the cache (not a fixture or the demo).</summary>
+        public bool ShowsCachedZone =>
+            map != null && map.Current != null && _cache != null && _cache.ZoneVersion(map.Current.Zone.ZoneId) > 0;
+
+        /// <summary>Loads a cached zone and shows it, with P5's shapes; used when the habitat updates it.</summary>
+        public async Task ShowCachedZoneAsync(string zoneId)
+        {
+            if (_loading)
+            {
+                return;
+            }
+
+            _loading = true;
+            try
+            {
+                source = ZoneSource.Cache;
+                var zone = await LoadFromCacheAsync(zoneId);
+                await ApplyHazardShapesAsync(zone);
+                map.Show(zone);
+            }
+            finally
+            {
+                _loading = false;
+            }
         }
 
         private async Task ImportPreloadedAsync(string zoneId)
